@@ -123,6 +123,31 @@ contains
       end do
    end function knot_r
 
+   subroutine Sll(bl1, bl2, br1, br2, knot1, knot2, Z, Zmax, R, result)
+        !> @brief This subroutine calculates Sll matrix element for the H2+ molecule.
+        !> @param bl1 : real(:,:) : the B-spline coefficients for the left side and for the region 1
+        !> @param bl2 : real(:,:) : the B-spline coefficients for the left side and for the region 2 (et 3)
+        !> @param br1 : real(:,:) : the B-spline coefficients for the right side and for the region 1
+        !> @param br2 : real(:,:) : the B-spline coefficients for the right side and for the region 2 (et 3)
+        !> @param knot1 : real(:) : the knot vector for the region 1
+        !> @param knot2 : real(:) : the knot vector for the region 2
+        !> @param Z : real : the position of the nucleus
+        !> @param Zmax : real : the maximum position of the B-spline on z-axis
+        !> @param R : real : the position of the B-spline on r-axis
+        !> @param result : real(:,:) : the result of the Sll matrix element
+        type(mp_real), intent(in) :: Z, Zmax, R
+        type(mp_real), dimension(:,:), intent(in) :: bl1, bl2, br1, br2
+        type(mp_real), dimension(:), intent(in) :: knot1, knot2
+        type(mp_real), intent(out) :: result
+
+        type(mp_real), dimension(size(bl1, 1), size(bl2, 2)) :: term1, term2
+        type(mp_real) :: result1, result2
+
+        call integral(bl2, size(bl2, 1) -1, br2, size(br2, 1), knot2, result2)
+        call integral(bl1, size(bl1, 1) -1, br1, size(br1, 1), knot1, result1)
+
+    end subroutine Sll
+
    subroutine init_h2plus(d, n, n_remove, Z1, Z2, Z, Zmax, Zmin, Rmin, Rmax)
       !> @brief This subroutine initializes the B-spline coefficients for the H2+ molecule.
       !> @param d : integer : the degree of the B-spline
