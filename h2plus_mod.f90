@@ -2,6 +2,7 @@ module h2plus
    use mpmodule
    use bspline_gen
    use tools_mp
+   use TwoD_Piecewise
    implicit none
 
    type(mp_real), save :: one, zero
@@ -11,142 +12,150 @@ module h2plus
    public :: init_h2plus
 
 contains
+   subroutine integral(b1, order1, b2, order2, knot, result)
+      !> @brief Calculate the integral of the product of two Piecewise polynomial of any order
+      !> @param b1 : real(:,:) : the coef of the first Piecewise polynomial
+      !> @param order1 : integer : the max order of the first Piecewise polynomial
+      !> @param b2 : real(:,:) : the coef of the second Piecewise polynomial
+      !> @param order2 : integer : the max order of the second Piecewise polynomial
+      !> @param knot : real(:) : the knot vector
+      !> @param result : real : the result of the integral
+      implicit none
+      type(mp_real), intent(in), dimension(:, :) :: b1, b2
+      integer, intent(in) :: order1, order2
+      type(mp_real), intent(in) :: knot(:)
+      type(mp_real), intent(out) :: result
 
-   function knot_reg1(d, n, Z, Zmin) result(result)
-      !> @brief This function generates the knot vector for the B-spline. Region 1 : Z-axis from 0 (Zmin) to Z
-      !> @param d : integer : the degree of the B-spline
-      !> @param n : integer : the number of knots
-      !> @param Z : real : the position of the nucleus
-      !> @param Zmin : real : the minimum position of the B-spline on z-axis
-      !> @return result : real(:) : the knot vector of the B-spline
-      type(mp_real), intent(in) :: Z, Zmin
-      integer, intent(in) :: d, n
-      type(mp_real), dimension(:), allocatable :: result, tmp1, tmp2
+      type(mp_real), dimension(size(b1, 1)) :: int_per_knot
 
-      integer :: i
+      integer :: order_prod, i_tmp, j_tmp
+      type(mp_real), dimension(:, :), allocatable :: produit, int_init, int_final
+
       zero = '0.d0'
       one = '1.d0'
 
-      allocate (tmp1(n), tmp2(n))
+      allocate (produit(size(b1, 1), 2*size(b1, 2) - 1))
+      allocate (int_final(size(b1, 1), 2*size(b1, 2)))
+      allocate (int_init(size(b1, 1), 2*size(b1, 2)))
 
-      do i = 1, d
-         tmp1(i) = -Z
-      end do
-      do i = d + 1, n
-         tmp1(i) = -Z + Zmin*(Z/Zmin)**(((i - (d + 1))*one)/((n - d - 1)*one))
-      end do
+      produit = zero
+      order_prod = order1 + order2
+      int_final = zero
+      int_init = zero
+      int_per_knot = zero
 
-      do i = 1, d
-         tmp2(i) = Z
-      end do
-      do i = d + 1, n
-         tmp2(i) = Z - Zmin*(Z/Zmin)**(((i - (d + 1))*one)/((n - d - 1)*one))
+      do i_tmp = 1, size(b1, 1) ! Loop over the number of Piecewise polynomial
+         produit(i_tmp, :) = fusion_coef(b1(i_tmp, :), b2(i_tmp, :))
       end do
 
-      result = [tmp1, tmp2(n:1:-1)]
+      do i_tmp = 1, size(produit, 1) - 1 ! Loop over the number of Piecewise polynomial
+         do j_tmp = 1, size(produit, 2) ! Loop over the different orders
+            if (order_prod - j_tmp + 2 /= 0) then
+               if (knot(i_tmp + 1) /= zero) then
+                int_final(i_tmp, j_tmp) = produit(i_tmp, j_tmp)*(knot(i_tmp + 1)**(order_prod - j_tmp + 2))/(order_prod - j_tmp + 2)
+                  ! +2 because of the integral that add one order
+               end if
+               if (knot(i_tmp) /= zero) then
+                  int_init(i_tmp, j_tmp) = produit(i_tmp, j_tmp)*(knot(i_tmp)**(order_prod - j_tmp + 2))/(order_prod - j_tmp + 2)
+               end if
+            else
+               if (knot(i_tmp + 1) /= zero) then
+                  int_final(i_tmp, j_tmp) = produit(i_tmp, j_tmp)*log(knot(i_tmp + 1))
+               end if
+               if (knot(i_tmp) /= zero) then
+                  int_init(i_tmp, j_tmp) = produit(i_tmp, j_tmp)*log(knot(i_tmp))
+               end if
+            end if
+         end do
+      end do
 
-   end function knot_reg1
+      do i_tmp = 1, size(b1, 1) - 1 ! Loop over the number of Piecewise polynomial
+         int_per_knot(i_tmp) = zero
+         do j_tmp = 1, size(produit, 2) ! Loop over the different orders
+            int_per_knot(i_tmp) = int_per_knot(i_tmp) + int_final(i_tmp, j_tmp) - int_init(i_tmp, j_tmp)
+         end do
+      end do
 
-   function knot_reg2(d, n, Z, Zmin, Zmax) result(result)
-      !> @brief This function generates the knot vector for the B-spline. Region 2 : Z-axis from Z to Zmax
-      !> @param d : integer : the degree of the B-spline
-      !> @param n : integer : the number of knots
+      result = zero
+      do i_tmp = 1, size(b1, 1) - 1
+         result = result + int_per_knot(i_tmp)
+      end do
+
+   end subroutine integral
+
+   subroutine integral_r_z(b1, b2, n_remove, result)
+      !> @brief This subroutine calculates the integral of the B-spline coefficients for the H2+ molecule.
+      !> @param b1 : TwoDpiecewise : the B-spline coefficients for the left side
+      !> @param b2 : TwoDpiecewise : the B-spline coefficients for the right side
+      !> @param result : real : the result of the integral
+      type(TwoDpiecewise), intent(in) :: b1, b2
+      integer, intent(in) :: n_remove
+      type(mp_real), dimension(:, :, :), intent(out) :: result
+
+      integer :: i, j, k, tmp1, tmp2
+      type(mp_real), dimension(:, :), allocatable :: result1, result2, result3, resultr
+
+      allocate (result1(size(b1%coef1, 1) - 2*n_remove, size(b2%coef1, 1) - 2*n_remove))
+      allocate (result2(size(b1%coef2, 1) - 2*n_remove, size(b2%coef2, 1) - 2*n_remove))
+      allocate (result3(size(b1%coef3, 1) - 2*n_remove, size(b2%coef3, 1) - 2*n_remove))
+      allocate (resultr(size(b1%coefr, 1) - 2*n_remove, size(b2%coefr, 1) - 2*n_remove))
+
+      result1 = zero
+      result2 = zero
+      result3 = zero
+      resultr = zero
+
+      print *, size(b1%coef2, 1), size(b2%coef2, 1), n_remove
+
+      do i = 1 + n_remove, size(b1%coef1, 1) - n_remove
+         do j = 1 + n_remove, size(b2%coef1, 1) - n_remove
+            call integral(b1%coef1(i, :, :), b1%d, b2%coef1(j, :, :), b2%d, b1%knot1, result1(i - n_remove, j - n_remove))
+         end do
+      end do
+      do i = 1 + n_remove, size(b1%coef2, 1) - n_remove
+         do j = 1 + n_remove, size(b2%coef2, 1) - n_remove
+            call integral(b1%coef2(i, :, :), b1%d, b2%coef2(j, :, :), b2%d, b1%knot2, result2(i - n_remove, j - n_remove))
+         end do
+      end do
+      do i = 1 + n_remove, size(b1%coef3, 1) - n_remove
+         do j = 1 + n_remove, size(b2%coef3, 1) - n_remove
+            call integral(b1%coef3(i, :, :), b1%d, b2%coef3(j, :, :), b2%d, b1%knot3, result3(i - n_remove, j - n_remove))
+         end do
+      end do
+      do i = 1 + n_remove, size(b1%coefr, 1) - n_remove
+         do j = 1 + n_remove, size(b2%coefr, 1) - n_remove
+            call integral(b1%coefr(i, :, :), b1%d, b2%coefr(j, :, :), b2%d, b1%knotr, resultr(i - n_remove, j - n_remove))
+         end do
+      end do
+
+      do i = 1, size(result, 3)
+         tmp1 = 1
+         tmp2 = 1
+         result(tmp1:size(result2, 1), tmp2:size(result2, 2), i) = result2
+         tmp1 = size(result2, 1) + 1
+         tmp2 = size(result2, 2) + 1
+         result(tmp1:size(result1, 1)+tmp1-1, tmp2:size(result1, 2)+tmp2-1, i) = result1
+         tmp1 = size(result1, 1) + size(result2, 1) + 1
+         tmp2 = size(result1, 2) + size(result2, 2) + 1
+         result(tmp1:size(result3, 1)+tmp1-1, tmp2:size(result3, 2)+tmp2-1, i) = result3
+      end do
+   end subroutine integral_r_z
+
+   subroutine Sll(b1, b2, Z, Zmax, R, n_remove, result)
+      !> @brief This subroutine calculates Sll matrix element for the H2+ molecule.
+      !> @param b1 : TwoDpiecewise : the B-spline coefficients for the left side
+      !> @param b2 : TwoDpiecewise : the B-spline coefficients for the right side
       !> @param Z : real : the position of the nucleus
-      !> @param Zmin : real : the minimum position of the B-spline on z-axis
       !> @param Zmax : real : the maximum position of the B-spline on z-axis
-      !> @return result : real(:) : the knot vector of the B-spline
-      type(mp_real), intent(in) :: Z, Zmin, Zmax
-      integer, intent(in) :: d, n
-      type(mp_real), dimension(:), allocatable :: result
+      !> @param R : real : the position of the B-spline on r-axis
+      !> @param result : real(:,:) : the result of the Sll matrix element
+      type(mp_real), intent(in) :: Z, Zmax, R
+      type(TwoDpiecewise), intent(in) :: b1, b2
+      integer, intent(in) :: n_remove
+      type(mp_real), dimension(:, :, :), intent(out) :: result
 
-      integer :: i
-
-      allocate (result(n))
-
-      do i = 1, d
-         result(i) = Z
-      end do
-      do i = d + 1, n - d + 1
-         result(i) = Z + Zmin*((Zmax - Z)/Zmin)**(((i - (d + 1))*one)/((n - 2*d)*one))
-      end do
-      do i = n - d + 2, n
-         result(i) = Zmax
-      end do
-   end function knot_reg2
-
-   function knot_reg3(d, n, Z, Zmin, Zmax) result(result)
-      !> @brief This function generates the knot vector for the B-spline. Region 3 : R-axis from 0 (Rmin) to Rmax
-      !> @param d : integer : the degree of the B-spline
-      !> @param n : integer : the number of knots
-      !> @param Z : real : the position of the nucleus
-      !> @param Zmin : real : the minimum position of the B-spline on z-axis
-      !> @param Zmax : real : the maximum position of the B-spline on z-axis
-      !> @return result : real(:) : the knot vector of the B-spline
-      type(mp_real), intent(in) :: Z, Zmin, Zmax
-      integer, intent(in) :: d, n
-      type(mp_real), dimension(:), allocatable :: result, tmp
-
-      integer :: i
-
-      allocate (result(n), tmp(n))
-
-      tmp = knot_reg2(d, n, Z, Zmin, Zmax)
-      do i = 1, n
-         result(n - i + 1) = -tmp(i)
-      end do
-   end function knot_reg3
-
-   function knot_r(d, n, Rmin, Rmax) result(result)
-      !> @brief This function generates the knot vector for the B-spline. Region 4 : R-axis from Rmin to Rmax on r-axis
-      !> @param d : integer : the degree of the B-spline
-      !> @param n : integer : the number of knots
-      !> @param Rmin : real : the minimum position of the B-spline on r-axis
-      !> @param Rmax : real : the maximum position of the B-spline on r-axis
-      !> @return result : real(:) : the knot vector of the B-spline
-      integer, intent(in) :: d, n
-      type(mp_real), intent(in) :: Rmin, Rmax
-      type(mp_real), dimension(:), allocatable :: result
-      integer :: i
-
-      zero = '0.d0'
-
-      allocate (result(n))
-
-      do i = 1, d
-         result(i) = zero
-      end do
-      do i = d + 1, n - d + 1
-         result(i) = Rmin*((Rmax - Rmin)/Rmin)**(((i - (d + 1))*one)/((n - 2*d)*one))
-      end do
-      do i = n - d + 2, n
-         result(i) = Rmax
-      end do
-   end function knot_r
-
-   subroutine Sll(bl1, bl2, br1, br2, knot1, knot2, Z, Zmax, R, result)
-        !> @brief This subroutine calculates Sll matrix element for the H2+ molecule.
-        !> @param bl1 : real(:,:) : the B-spline coefficients for the left side and for the region 1
-        !> @param bl2 : real(:,:) : the B-spline coefficients for the left side and for the region 2 (et 3)
-        !> @param br1 : real(:,:) : the B-spline coefficients for the right side and for the region 1
-        !> @param br2 : real(:,:) : the B-spline coefficients for the right side and for the region 2 (et 3)
-        !> @param knot1 : real(:) : the knot vector for the region 1
-        !> @param knot2 : real(:) : the knot vector for the region 2
-        !> @param Z : real : the position of the nucleus
-        !> @param Zmax : real : the maximum position of the B-spline on z-axis
-        !> @param R : real : the position of the B-spline on r-axis
-        !> @param result : real(:,:) : the result of the Sll matrix element
-        type(mp_real), intent(in) :: Z, Zmax, R
-        type(mp_real), dimension(:,:), intent(in) :: bl1, bl2, br1, br2
-        type(mp_real), dimension(:), intent(in) :: knot1, knot2
-        type(mp_real), intent(out) :: result
-
-        type(mp_real), dimension(size(bl1, 1), size(bl2, 2)) :: term1, term2
-        type(mp_real) :: result1, result2
-
-        call integral(bl2, size(bl2, 1) -1, br2, size(br2, 1), knot2, result2)
-        call integral(bl1, size(bl1, 1) -1, br1, size(br1, 1), knot1, result1)
-
-    end subroutine Sll
+      call integral_r_z(b1, b2, n_remove, result)
+   end subroutine Sll
 
    subroutine init_h2plus(d, n, n_remove, Z1, Z2, Z, Zmax, Zmin, Rmin, Rmax)
       !> @brief This subroutine initializes the B-spline coefficients for the H2+ molecule.
@@ -163,47 +172,23 @@ contains
       type(mp_real), intent(in) :: Z1, Z2, Z, Zmax, Zmin, Rmin, Rmax
       integer, intent(in) :: d, n, n_remove
 
-      integer :: i
-      type(mp_real), dimension(:), allocatable :: knot1, knot2, knot3, knotr
-      type(mp_real), dimension(:, :, :), allocatable :: bspline_1, bspline_2, bspline_3, bspline_r
+      type(TwoDpiecewise) :: b1, b2
+      type(mp_real), dimension(:, :, :), allocatable :: result_Sll
 
       zero = '0.d0'
       one = '1.d0'
 
-      ! Generate the knot vector
-      print *, "Generate the knot vector"
-      allocate (knot1(2*n + d), knot2(n + d), knot3(n + d), knotr(n + d))
-
-      knot1 = knot_reg1(d, n + d, Z, Zmin)
-      knot2 = knot_reg2(d, n + d, Z, Zmin, Zmax)
-      knot3 = knot_reg3(d, n + d, Z, Zmin, Zmax)
-      knotr = knot_r(d, n + d, Rmin, Rmax)
-
-      ! Generate the B-splines
-      print *, "Generate the B-splines"
-
-      allocate (bspline_1(2*n, size(knot1), d), &
-                bspline_2(n, size(knot2), d), &
-                bspline_3(n, size(knot3), d), &
-                bspline_r(n, size(knotr), d))
-
-      do i = 1, 2*n
-         call init_bspine(d, i, knot1, bspline_1(i, :, :), .false.)
-      end do
-
-      do i = 1, n
-         call init_bspine(d, i, knot2, bspline_2(i, :, :), .false.)
-      end do
-
-      do i = 1, n
-         call init_bspine(d, i, knot3, bspline_3(i, :, :), .false.)
-      end do
-
-      do i = 1, n
-         call init_bspine(d, i, knotr, bspline_r(i, :, :), .false.)
-      end do
+      print *, "Initializing Knot vectors and B-splines for H2+ molecule"
+      call b1%init(d, n, Z, Zmax, Zmin, Rmin, Rmax)
+      call b2%init(d, n, Z, Zmax, Zmin, Rmin, Rmax)
 
       print *, "B-splines generated"
+
+      print *, "Calculating Sll matrix element"
+      allocate (result_Sll(4*n - 6*n_remove, 4*n - 6*n_remove, n - 2*n_remove))
+      call Sll(b1, b2, Z, Zmax, Rmin, n_remove, result_Sll)
+      print *, "Sll matrix element calculated"
+
    end subroutine init_h2plus
 
 end module h2plus

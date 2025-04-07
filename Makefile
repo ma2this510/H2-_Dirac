@@ -83,19 +83,22 @@ tools_mp.o : tools_mp.f90
 bspline_gen.o : bspline_gen.f90
 	$(FC) $(FFLAGS) -c bspline_gen.f90
 
+TwoD_Piecewise.o : TwoD_Piecewise.f90
+	$(FC) $(FFLAGS) -c TwoD_Piecewise.f90
+
 h2plus_mod.o : h2plus_mod.f90
 	$(FC) $(FFLAGS) -c h2plus_mod.f90
 
 main.o : main.f90
 	$(FC) $(FFLAGS) -c main.f90
 
-main.out : mpfun eigen tools_mp.o bspline_gen.o h2plus_mod.o main.o $(MARG)
-	$(FC) $(FFLAGS) -fmax-stack-var-size=0 -o main.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o tools_mp.o bspline_gen.o h2plus_mod.o main.o
+main.out : mpfun eigen tools_mp.o bspline_gen.o TwoD_Piecewise.o h2plus_mod.o main.o $(MARG)
+	$(FC) $(FFLAGS) -fmax-stack-var-size=0 -o main.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o tools_mp.o bspline_gen.o TwoD_Piecewise.o h2plus_mod.o main.o
 
-debug.out : mpfun eigen tools_mp.o bspline_gen.o h2plus_mod.f90 main.f90 $(MARG)
+debug.out : mpfun eigen tools_mp.o bspline_gen.o TwoD_Piecewise.f90 h2plus_mod.f90 main.f90 $(MARG)
 	$(FC) $(DEBUG_FLAGS) -c h2plus_mod.f90
 	$(FC) $(DEBUG_FLAGS) -c main.f90
-	$(FC) $(DEBUG_FLAGS) -o debug.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o tools_mp.o bspline_gen.o h2plus_mod.o main.o
+	$(FC) $(DEBUG_FLAGS) -o debug.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o tools_mp.o bspline_gen.o TwoD_Piecewise.o h2plus_mod.o main.o
 
 run : main.out
 	./main.out
