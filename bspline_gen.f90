@@ -9,7 +9,7 @@ module bspline_gen
     public :: fusion_coef
     public :: print_table
     public :: init_bspine
-    public :: knot_reg1, knot_reg2, knot_reg3, knot_r
+    public :: knot_xi, knot_eta
 
 
     contains
@@ -204,115 +204,88 @@ module bspline_gen
 
    end subroutine init_bspine
 
-   function knot_reg1(d, n, Z, Zmin) result(result)
-      !> @brief This function generates the knot vector for the B-spline. Region 1 : Z-axis from 0 (Zmin) to Z
+   function knot_xi(d, n, n_remove, ximin, ximax) result(result)
+      !> @brief This function generates the knot vector for xi.
       !> @param d : integer : the degree of the B-spline
-      !> @param n : integer : the number of knots
-      !> @param Z : real : the position of the nucleus
-      !> @param Zmin : real : the minimum position of the B-spline on z-axis
+      !> @param n : integer : the number of usable B-splines
+      !> @param n_remove : integer : the number of knots to remove from each end
+      !> @param ximin : real : the minimum position of the B-spline on xi-axis
+      !> @param ximax : real : the maximum position of the B-spline on xi-axis
       !> @return result : real(:) : the knot vector of the B-spline
-      type(mp_real), intent(in) :: Z, Zmin
-      integer, intent(in) :: d, n
-      type(mp_real), dimension(:), allocatable :: result, tmp1, tmp2
+      type(mp_real), intent(in) :: ximin, ximax
+      integer, intent(in) :: d, n, n_remove
+      type(mp_real), dimension(:), allocatable :: result
 
-      integer :: i
+      type(mp_real) :: one, zero
+
+      integer :: ntot, i, itot
+
       zero = '0.d0'
       one = '1.d0'
+      
+      ntot = n + d + 2 +2*n_remove
 
-      allocate (tmp1(n), tmp2(n))
+      allocate (result(ntot))
 
-      do i = 1, d
-         tmp1(i) = -Z
-      end do
-      do i = d + 1, n
-         tmp1(i) = -Z + Zmin*(Z/Zmin)**(((i - (d + 1))*one)/((n - d - 1)*one))
-      end do
+      itot = 0
 
-      do i = 1, d
-         tmp2(i) = Z
-      end do
-      do i = d + 1, n
-         tmp2(i) = Z - Zmin*(Z/Zmin)**(((i - (d + 1))*one)/((n - d - 1)*one))
+      do i = 1, d - 1
+         itot = itot + 1
+         result(itot) = ximin
       end do
 
-      result = [tmp1, tmp2(n:1:-1)]
+      do i = 1, n - d + 4 + 2*n_remove
+         itot = itot + 1
+         result(itot) = ximin * (ximax/ximin)**(((i - 1)*one)/((n - d + 3 + 2*n_remove)*one))
+      end do
+         
+      do i = 1, d - 1
+         itot = itot + 1
+         result(itot) = ximax
+      end do
 
-   end function knot_reg1
+      end function knot_xi
 
-   function knot_reg2(d, n, Z, Zmin, Zmax) result(result)
-      !> @brief This function generates the knot vector for the B-spline. Region 2 : Z-axis from Z to Zmax
+   function knot_eta(d, n, n_remove, eta_slp) result(result)
+      !> @brief This function generates the knot vector for eta.
       !> @param d : integer : the degree of the B-spline
-      !> @param n : integer : the number of knots
-      !> @param Z : real : the position of the nucleus
-      !> @param Zmin : real : the minimum position of the B-spline on z-axis
-      !> @param Zmax : real : the maximum position of the B-spline on z-axis
+      !> @param n : integer : the number of usable B-splines
+      !> @param n_remove : integer : the number of knots to remove from each end
+      !> @param eta_slp : real : the parameter for the generation of the knot vector on eta
       !> @return result : real(:) : the knot vector of the B-spline
-      type(mp_real), intent(in) :: Z, Zmin, Zmax
-      integer, intent(in) :: d, n
+      integer, intent(in) :: d, n, n_remove
+      type(mp_real), intent(in) :: eta_slp
       type(mp_real), dimension(:), allocatable :: result
 
-      integer :: i
-
-      allocate (result(n))
-
-      do i = 1, d
-         result(i) = Z
-      end do
-      do i = d + 1, n - d + 1
-         result(i) = Z + Zmin*((Zmax - Z)/Zmin)**(((i - (d + 1))*one)/((n - 2*d)*one))
-      end do
-      do i = n - d + 2, n
-         result(i) = Zmax
-      end do
-   end function knot_reg2
-
-   function knot_reg3(d, n, Z, Zmin, Zmax) result(result)
-      !> @brief This function generates the knot vector for the B-spline. Region 3 : R-axis from 0 (Rmin) to Rmax
-      !> @param d : integer : the degree of the B-spline
-      !> @param n : integer : the number of knots
-      !> @param Z : real : the position of the nucleus
-      !> @param Zmin : real : the minimum position of the B-spline on z-axis
-      !> @param Zmax : real : the maximum position of the B-spline on z-axis
-      !> @return result : real(:) : the knot vector of the B-spline
-      type(mp_real), intent(in) :: Z, Zmin, Zmax
-      integer, intent(in) :: d, n
-      type(mp_real), dimension(:), allocatable :: result, tmp
-
-      integer :: i
-
-      allocate (result(n), tmp(n))
-
-      tmp = knot_reg2(d, n, Z, Zmin, Zmax)
-      do i = 1, n
-         result(n - i + 1) = -tmp(i)
-      end do
-   end function knot_reg3
-
-   function knot_r(d, n, Rmin, Rmax) result(result)
-      !> @brief This function generates the knot vector for the B-spline. Region 4 : R-axis from Rmin to Rmax on r-axis
-      !> @param d : integer : the degree of the B-spline
-      !> @param n : integer : the number of knots
-      !> @param Rmin : real : the minimum position of the B-spline on r-axis
-      !> @param Rmax : real : the maximum position of the B-spline on r-axis
-      !> @return result : real(:) : the knot vector of the B-spline
-      integer, intent(in) :: d, n
-      type(mp_real), intent(in) :: Rmin, Rmax
-      type(mp_real), dimension(:), allocatable :: result
-      integer :: i
+      type(mp_real) :: one, zero
+      integer :: ntot, i, itot
 
       zero = '0.d0'
+      one = '1.d0'
+      ntot = n + d + 2 + 2*n_remove
 
-      allocate (result(n))
+      allocate (result(ntot))
+      itot = 0
 
       do i = 1, d
-         result(i) = zero
+         itot = itot + 1
+         result(itot) = -1*one
       end do
-      do i = d + 1, n - d + 1
-         result(i) = Rmin*((Rmax - Rmin)/Rmin)**(((i - (d + 1))*one)/((n - 2*d)*one))
-      end do
-      do i = n - d + 2, n
-         result(i) = Rmax
-      end do
-   end function knot_r
 
+      do i = 1, (n - d + 2 + 2*n_remove)/2
+         itot = itot + 1
+         result(itot) = -1*one + eta_slp*(one/eta_slp)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
+      end do 
+
+      do i = (n - d + 2 + 2*n_remove)/2, 1, -1
+         itot = itot + 1
+         result(itot) = one - eta_slp*(one/eta_slp)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
+      end do
+
+      do i = 1, d
+         itot = itot + 1
+         result(itot) = one
+      end do
+
+   end function knot_eta
 end module bspline_gen

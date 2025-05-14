@@ -4,28 +4,31 @@ program main
     use h2plus
     implicit none
 
-    integer :: d, n_remove, n, i
-    type(mp_real) :: Z1, Z2, Z, Zmax, Zmin, Rmin, Rmax, c, zero, one
+    integer :: d, n, n_remove, jz2
+    type(mp_real) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, zero, one
 
     zero = '0.d0'
     one = '1.d0'
 
     !-------------------------------------------------
     ! Define Important Constants
-    d = 3 ! Order of the B-Spline (order Mathematica + 1)
-    n = 20 ! Number of B-Spline knots per region
+    d = 8 ! Order of the B-Spline (order Mathematica + 1)
+    n = 8 ! Number of Usable B-spline 
     n_remove = 2 ! Number of knots to remove from each end
-    Z1 = '2.0d0' ! number of protons for the first atom
-    Z2 = '3.0d0' ! number of protons for the second atom
+    Z1 = '1.0d0' ! number of protons for the first atom
+    Z2 = '1.0d0' ! number of protons for the second atom
+    m = '1.0d0' ! mass of the electron
     C = '137.0359895d0' ! check CODATA 1986
-    Z = '1.0d1' ! position of both nuclei
-    Zmax = '50.0d0' ! maximum position of the B-spline on z-axis
-    Zmin = '1.0d-4' ! minimum position of the B-spline on z-axis
-    Rmin = '1.0d-4' ! minimum position of the B-spline on r-axis
-    Rmax = '1.0d1' ! maximum position of the B-spline on r-axis
+    R = '1.0d0' ! distance between the two nuclei
+    ximax = '50.0d0' ! maximum position of the B-spline on z-axis
+    ximin = '1.0d-4' ! minimum position of the B-spline on z-axis
+    jz2 = one ! Quantum number will be divided by 2
+    epsilon = '1.0d-10' ! machine epsilon
+    eta_slp = '6.0d-1' ! paramet for the generation of the knot vector on eta
     !-------------------------------------------------
 
-    call init_h2plus(d, n, n_remove, Z1, Z2, Z, Zmax, Zmin, Rmin, Rmax)
+
+    call init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp)
 end program main
 
 function epsilonn(alpha)
