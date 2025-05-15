@@ -12,7 +12,7 @@ program main
 
     !-------------------------------------------------
     ! Define Important Constants
-    d = 6 ! Order of the B-Spline (order Mathematica + 1)
+    d = 4 ! Order of the B-Spline (order Mathematica + 1)
     n = 4 ! Number of Usable B-spline 
     n_remove = 1 ! Number of knots to remove from each end
     Z1 = '1.0d0' ! number of protons for the first atom
@@ -24,7 +24,7 @@ program main
     ximin = '1.0d0' ! minimum position of the B-spline on z-axis
     jz2 = one ! Quantum number will be divided by 2
     epsilon = '1.0d-10' ! machine epsilon
-    eta_slp = '6.0d-1' ! paramet for the generation of the knot vector on eta
+    eta_slp = '1.0d-1' ! paramet for the generation of the knot vector on eta
     !-------------------------------------------------
 
 

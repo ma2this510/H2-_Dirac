@@ -1,18 +1,17 @@
 module bspline_gen
-    use mpmodule
-    implicit none
+   use mpmodule
+   implicit none
 
-    type(mp_real), save :: one, zero
+   type(mp_real), save :: one, zero
 
-    private 
+   private
 
-    public :: fusion_coef
-    public :: print_table
-    public :: init_bspine
-    public :: knot_xi, knot_eta
+   public :: fusion_coef
+   public :: print_table
+   public :: init_bspine
+   public :: knot_xi, knot_eta
 
-
-    contains
+contains
 
    function fusion_coef(coef1, coef2)
       !> @brief This function calculates the product of two polynoms
@@ -222,8 +221,8 @@ module bspline_gen
 
       zero = '0.d0'
       one = '1.d0'
-      
-      ntot = n + d + 2 +2*n_remove
+
+      ntot = n + d + 2*n_remove
 
       allocate (result(ntot))
 
@@ -234,17 +233,17 @@ module bspline_gen
          result(itot) = ximin
       end do
 
-      do i = 1, n - d + 4 + 2*n_remove
+      do i = 1, n - d + 2 + 2*n_remove
          itot = itot + 1
-         result(itot) = ximin * (ximax/ximin)**(((i - 1)*one)/((n - d + 3 + 2*n_remove)*one))
+         result(itot) = ximin*(ximax/ximin)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
       end do
-         
+
       do i = 1, d - 1
          itot = itot + 1
          result(itot) = ximax
       end do
 
-      end function knot_xi
+   end function knot_xi
 
    function knot_eta(d, n, n_remove, eta_slp) result(result)
       !> @brief This function generates the knot vector for eta.
@@ -262,7 +261,7 @@ module bspline_gen
 
       zero = '0.d0'
       one = '1.d0'
-      ntot = n + d + 2 + 2*n_remove
+      ntot = n + d + 2*n_remove
 
       allocate (result(ntot))
       itot = 0
@@ -272,14 +271,14 @@ module bspline_gen
          result(itot) = -1*one
       end do
 
-      do i = 1, (n - d + 2 + 2*n_remove)/2
+      do i = 1, (n - d + 2*n_remove)/2
          itot = itot + 1
-         result(itot) = -1*one + eta_slp*(one/eta_slp)**(((i - 1)*2*one)/((n - d + 1 + 2*n_remove)*one))
-      end do 
+         result(itot) = -1*one + eta_slp*(one/eta_slp)**(((i - 1)*2*one)/((n - d - 1 + 2*n_remove)*one))
+      end do
 
-      do i = (n - d + 2 + 2*n_remove)/2, 1, -1
+      do i = (n - d + 2*n_remove)/2, 1, -1
          itot = itot + 1
-         result(itot) = one - eta_slp*(one/eta_slp)**(((i - 1)*2*one)/((n - d + 1 + 2*n_remove)*one))
+         result(itot) = one - eta_slp*(one/eta_slp)**(((i - 1)*2*one)/((n - d - 1 + 2*n_remove)*one))
       end do
 
       do i = 1, d
