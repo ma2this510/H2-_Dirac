@@ -11,7 +11,7 @@ module h2plus
    public :: init_h2plus
 
 contains
-   subroutine int_s11one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, S11)
+   subroutine int_s11one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, result)
       !> @brief This subroutine calculates the S11 integral for the H2+ molecule.
       !> @param b_i_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
@@ -26,9 +26,9 @@ contains
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
       !> @param jz2 : real : the quantum number (2*jz)
-      !> @return S11 : real : the value of the S11 integral
+      !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R, epsilon
-      type(mp_real), intent(out) :: S11
+      type(mp_real), intent(out) :: result
       type(mp_real), dimension(:), intent(in) :: knot_xi, knot_eta
       type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
       integer, intent(in) :: n_remove, jz2
@@ -74,17 +74,89 @@ contains
          end do
       end do
 
-      S11 = zero
+      result = zero
       do i1 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of xi
          do i2 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of eta
-            S11 = S11 + diff(i1, i2)
+            result = result + diff(i1, i2)
          end do
       end do
 
    end subroutine int_s11one
 
-   subroutine int_s22one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, S11)
-      !> @brief This subroutine calculates the S11 integral for the H2+ molecule.
+   subroutine int_s22one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, result)
+      !> @brief This subroutine calculates the S22 integral for the H2+ molecule.
+      !> @param b_i_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param n_remove : integer : the number of knots to remove from each end
+      !> @param knot_xi : real(:) : the knot vector for the xi direction
+      !> @param knot_eta : real(:) : the knot vector for the eta direction
+      !> @param Z1 : real : the number of protons for the first atom
+      !> @param Z2 : real : the number of protons for the second atom
+      !> @param m : real : the mass of the electron
+      !> @param C : real : the speed of light
+      !> @param R : real : the distance between the two nuclei
+      !> @param jz2 : real : the quantum number (2*jz)
+      !> @return result : real : the value of the result integral
+      type(mp_real), intent(in) :: Z1, Z2, m, C, R, epsilon
+      type(mp_real), intent(out) :: result
+      type(mp_real), dimension(:), intent(in) :: knot_xi, knot_eta
+      type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
+      integer, intent(in) :: n_remove, jz2
+
+      type(mp_real), dimension(:, :), allocatable :: prod_xi, prod_eta, val_max_max, val_min_min, val_max_min, val_min_max, diff
+      integer :: i, i1, i2, j1, j2, alpha, beta
+
+      zero = '0.0d0'
+
+      allocate (prod_xi(size(b_i_xi, 1), size(b_i_xi, 2)+size(b_j_xi, 2)-1), prod_eta(size(b_i_xi, 1), size(b_i_eta, 2)+size(b_j_eta, 2)-1))
+
+      ! Calculate the product of the B-spline coefficients
+      do i = 1, size(b_i_xi, 1) ! Loop over the polynomials
+         ! Calculate the product of the B-spline coefficients
+         prod_xi(i, :) = fusion_coef(b_i_xi(i, :), b_j_xi(i, :))
+         prod_eta(i, :) = fusion_coef(b_i_eta(i, :), b_j_eta(i, :))
+      end do
+
+      allocate (val_max_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_min_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_max_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_min_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                diff(size(b_i_xi, 1), size(b_i_eta, 1)))
+
+      ! Calculate the value of the result integral at each knot and take the difference
+      do i1 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of xi
+         do i2 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of eta
+            val_min_min(i1, i2) = zero
+            val_max_max(i1, i2) = zero
+            val_min_max(i1, i2) = zero
+            val_max_min(i1, i2) = zero
+            do j1 = 1, size(prod_xi, 2) ! Loop over the order of xi
+               do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
+                  alpha = size(prod_xi, 1) - j1
+                  beta = size(prod_eta, 1) - j2
+                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)**2*(5 + beta - (3 + beta)*knot_eta(i2)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2)**4 + beta*(-1 + knot_eta(i2)**4))*knot_xi(i1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2)**2 + beta*(-1 + knot_eta(i2)**2))*knot_xi(i1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
+                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2+1)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)**2*(5 + beta - (3 + beta)*knot_eta(i2+1)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2+1)**4 + beta*(-1 + knot_eta(i2+1)**4))*knot_xi(i1+1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1+1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
+                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2+1)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)**2*(5 + beta - (3 + beta)*knot_eta(i2+1)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2+1)**4 + beta*(-1 + knot_eta(i2+1)**4))*knot_xi(i1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
+                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)**2*(5 + beta - (3 + beta)*knot_eta(i2)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2)**4 + beta*(-1 + knot_eta(i2)**4))*knot_xi(i1+1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2)**2 + beta*(-1 + knot_eta(i2)**2))*knot_xi(i1+1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
+               end do
+            end do
+            diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
+         end do
+      end do
+
+      result = zero
+      do i1 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of xi
+         do i2 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of eta
+            result = result + diff(i1, i2)
+         end do
+      end do
+
+   end subroutine int_s22one
+
+   subroutine int_C11one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, result)
+      !> @brief This subroutine calculates the C11one integral for the H2+ molecule.
       !> @param b_i_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
@@ -100,7 +172,7 @@ contains
       !> @param jz2 : real : the quantum number (2*jz)
       !> @return S11 : real : the value of the S11 integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R, epsilon
-      type(mp_real), intent(out) :: S11
+      type(mp_real), intent(out) :: result
       type(mp_real), dimension(:), intent(in) :: knot_xi, knot_eta
       type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
       integer, intent(in) :: n_remove, jz2
@@ -136,24 +208,96 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 1) - j1
                   beta = size(prod_eta, 1) - j2
-                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)**2*(5 + beta - (3 + beta)*knot_eta(i2)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2)**4 + beta*(-1 + knot_eta(i2)**4))*knot_xi(i1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2)**2 + beta*(-1 + knot_eta(i2)**2))*knot_xi(i1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
-                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2+1)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)**2*(5 + beta - (3 + beta)*knot_eta(i2+1)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2+1)**4 + beta*(-1 + knot_eta(i2+1)**4))*knot_xi(i1+1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1+1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
-                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2+1)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)**2*(5 + beta - (3 + beta)*knot_eta(i2+1)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2+1)**4 + beta*(-1 + knot_eta(i2+1)**4))*knot_xi(i1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
-                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)**2*(5 + beta - (3 + beta)*knot_eta(i2)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2)**4 + beta*(-1 + knot_eta(i2)**4))*knot_xi(i1+1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2)**2 + beta*(-1 + knot_eta(i2)**2))*knot_xi(i1+1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
+                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knot_eta(i2)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2+1)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1+1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1+1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2+1)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knot_eta(i2)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1+1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1+1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
                end do
             end do
             diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
          end do
       end do
 
-      S11 = zero
+      result = zero
       do i1 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of xi
          do i2 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of eta
-            S11 = S11 + diff(i1, i2)
+            result = result + diff(i1, i2)
          end do
       end do
 
-   end subroutine int_s22one
+   end subroutine int_C11one
+
+   subroutine int_C11two(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, result)
+      !> @brief This subroutine calculates the C11two integral for the H2+ molecule.
+      !> @param b_i_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param n_remove : integer : the number of knots to remove from each end
+      !> @param knot_xi : real(:) : the knot vector for the xi direction
+      !> @param knot_eta : real(:) : the knot vector for the eta direction
+      !> @param Z1 : real : the number of protons for the first atom
+      !> @param Z2 : real : the number of protons for the second atom
+      !> @param m : real : the mass of the electron
+      !> @param C : real : the speed of light
+      !> @param R : real : the distance between the two nuclei
+      !> @param jz2 : real : the quantum number (2*jz)
+      !> @return result : real : the value of the result integral
+      type(mp_real), intent(in) :: Z1, Z2, m, C, R, epsilon
+      type(mp_real), intent(out) :: result
+      type(mp_real), dimension(:), intent(in) :: knot_xi, knot_eta
+      type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
+      integer, intent(in) :: n_remove, jz2
+
+      type(mp_real), dimension(:, :), allocatable :: prod_xi, prod_eta, val_max_max, val_min_min, val_max_min, val_min_max, diff
+      integer :: i, i1, i2, j1, j2, alpha, beta
+
+      zero = '0.0d0'
+
+      allocate (prod_xi(size(b_i_xi, 1), size(b_i_xi, 2)+size(b_j_xi, 2)-1), prod_eta(size(b_i_xi, 1), size(b_i_eta, 2)+size(b_j_eta, 2)-1))
+
+      ! Calculate the product of the B-spline coefficients
+      do i = 1, size(b_i_xi, 1) ! Loop over the polynomials
+         ! Calculate the product of the B-spline coefficients
+         prod_xi(i, :) = fusion_coef(b_i_xi(i, :), b_j_xi(i, :))
+         prod_eta(i, :) = fusion_coef(b_i_eta(i, :), b_j_eta(i, :))
+      end do
+
+      allocate (val_max_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_min_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_max_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_min_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                diff(size(b_i_xi, 1), size(b_i_eta, 1)))
+
+      ! Calculate the value of the S11 integral at each knot and take the difference
+      do i1 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of xi
+         do i2 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of eta
+            val_min_min(i1, i2) = zero
+            val_max_max(i1, i2) = zero
+            val_min_max(i1, i2) = zero
+            val_max_min(i1, i2) = zero
+            do j1 = 1, size(prod_xi, 2) ! Loop over the order of xi
+               do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
+                  alpha = size(prod_xi, 1) - j1
+                  beta = size(prod_eta, 1) - j2
+                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R*knot_eta(i2)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2)))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2+1)))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1+1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1+1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2+1)))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R*knot_eta(i2)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2)))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1+1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1+1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+               end do
+            end do
+            diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
+         end do
+      end do
+
+      result = zero
+      do i1 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of xi
+         do i2 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of eta
+            result = result + diff(i1, i2)
+         end do
+      end do
+
+   end subroutine int_C11two
 
    subroutine init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp)
       !> @brief This subroutine initializes the B-spline coefficients for the H2+ molecule.
@@ -174,7 +318,7 @@ contains
       integer, intent(in) :: d, n, n_remove, jz2
 
       type(mp_real), dimension(:), allocatable :: knotxi, knoteta
-      type(mp_real), dimension(:, :), allocatable :: S11one, S22one
+      type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one
       type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_eta
 
       integer :: ntot, i, j
@@ -203,6 +347,7 @@ contains
       ! Calculate the S11 integral
       allocate (S11one(n**2, n**2))
 
+      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, S11one, n, d, n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon)
       do i = 1, n**2 ! Loop over the number of B-splines
          do j = 1, n**2
             i2 = indexToPair(i, n)
@@ -214,22 +359,62 @@ contains
                             n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon, S11one(i, j))
          end do
       end do
+      !$OMP END PARALLEL DO
 
       print *, "Calculating the S22 integral..."
       ! Calculate the S22 integral
       allocate (S22one(n**2, n**2))
 
+      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, S22one, n, d, n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon)
       do i = 1, n**2 ! Loop over the number of B-splines
          do j = 1, n**2
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            S11one(i, j) = zero
+            S22one(i, j) = zero
             call int_s22one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon, S22one(i, j))
          end do
       end do
+      !$OMP END PARALLEL DO
+
+      print *, "Calculating the C11one integral..."
+      ! Calculate the C11one integral
+      allocate (C11one(n**2, n**2))
+
+      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C11one, n, d, n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon)
+      do i = 1, n**2 ! Loop over the number of B-splines
+         do j = 1, n**2
+            i2 = indexToPair(i, n)
+            j2 = indexToPair(j, n)
+
+            C11one(i, j) = zero
+            call int_C11one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
+                            bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
+                            n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon, C11one(i, j))
+         end do
+      end do
+      !$OMP END PARALLEL DO
+
+      ! Save matrices to separate files
+      open (unit=2, file='S11one.csv', status='replace')
+      do i = 1, n**2
+         call write_csv(S11one(i, :), 2, 30, 10)
+      end do
+      close (2)
+
+      open (unit=3, file='S22one.csv', status='replace')
+      do i = 1, n**2
+         call write_csv(S22one(i, :), 3, 30, 10)
+      end do
+      close (3)
+
+      open (unit=4, file='C11one.csv', status='replace')
+      do i = 1, n**2
+         call write_csv(C11one(i, :), 4, 30, 10)
+      end do
+      close (4)
 
       ! Save logs
       open (unit=1, file='log_file', status='replace')
@@ -255,7 +440,11 @@ contains
          call write_lists(S22one(i, :), 1, 30, 10)
       end do
       write (1, '(a)') "--------------------------------------------------------------"
-
+      write (1, '(a)') "C11one integral: "
+      do i = 1, n**2
+         call write_lists(C11one(i, :), 1, 30, 10)
+      end do
+      write (1, '(a)') "--------------------------------------------------------------"
 
       close (1)
 

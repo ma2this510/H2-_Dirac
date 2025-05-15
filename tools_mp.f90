@@ -5,6 +5,7 @@ module tools_mp
    private 
 
    public :: write_lists
+   public :: write_csv
    public :: multiply_elem
    public :: indexToPair
 
@@ -61,6 +62,31 @@ module tools_mp
       write (i1, *)  ! End the line after the list is printed
 
    end subroutine write_lists_cmplx
+
+   subroutine write_csv(r1s, i1, i2, i3)
+      !> @brief Write a list of mp_real with a comma separator
+      !> @param r1s : mp_real(:) : the list of mp_real
+      !> @param i1 : integer : the unit number
+      !> @param i2 : integer : the field width
+      !> @param i3 : integer : the number of decimal
+      implicit none
+      integer, intent(in) :: i1, i2, i3
+      type(mp_real), intent(in), dimension(:) :: r1s
+
+      character(i2) :: str_tmp(1)
+      integer :: i_tmp
+
+      do i_tmp = 1, size(r1s) - 1
+         str_tmp = ""
+         call mpeform(r1s(i_tmp), i2, i3, str_tmp)
+         write (i1, '(a)', advance='no') str_tmp
+         write (i1, '(a)', advance='no') ','
+      end do
+      call mpeform(r1s(size(r1s)), i2, i3, str_tmp)
+      write (i1, '(a)', advance='no') str_tmp
+      write (i1, *)  ! End the line after the list is printed
+
+   end subroutine write_csv
 
    function multiply_elem(scal, mat) result(result)
       !> @brief Multiply a scalar with a matrix
