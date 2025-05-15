@@ -274,12 +274,12 @@ module bspline_gen
 
       do i = 1, (n - d + 2 + 2*n_remove)/2
          itot = itot + 1
-         result(itot) = -1*one + eta_slp*(one/eta_slp)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
+         result(itot) = -1*one + eta_slp*(one/eta_slp)**(((i - 1)*2*one)/((n - d + 1 + 2*n_remove)*one))
       end do 
 
       do i = (n - d + 2 + 2*n_remove)/2, 1, -1
          itot = itot + 1
-         result(itot) = one - eta_slp*(one/eta_slp)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
+         result(itot) = one - eta_slp*(one/eta_slp)**(((i - 1)*2*one)/((n - d + 1 + 2*n_remove)*one))
       end do
 
       do i = 1, d

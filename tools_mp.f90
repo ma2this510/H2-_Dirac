@@ -6,6 +6,7 @@ module tools_mp
 
    public :: write_lists
    public :: multiply_elem
+   public :: indexToPair
 
    interface write_lists
       module procedure write_lists_real
@@ -81,5 +82,18 @@ module tools_mp
 
    end function multiply_elem
 
+   function indexToPair(index, n) result(pair)
+      !> @brief Convert a linear index to a pair of indices
+      !> @param index : integer : the linear index
+      !> @param n : integer : the size of the second dimension
+      !> @return pair : integer(2) : the pair of indices
+      implicit none
+      integer, intent(in) :: index, n
+      integer, dimension(2) :: pair
+
+      pair(1) = (index - 1) / n + 1
+      pair(2) = mod(index - 1, n) + 1
+
+   end function indexToPair
 
 end module tools_mp
