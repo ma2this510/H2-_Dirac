@@ -581,6 +581,144 @@ contains
 
    end subroutine int_C22three
 
+   subroutine int_C12three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, result)
+      !> @brief This subroutine calculates the C12three integral for the H2+ molecule.
+      !> @param b_i_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param n_remove : integer : the number of knots to remove from each end
+      !> @param knot_xi : real(:) : the knot vector for the xi direction
+      !> @param knot_eta : real(:) : the knot vector for the eta direction
+      !> @param Z1 : real : the number of protons for the first atom
+      !> @param Z2 : real : the number of protons for the second atom
+      !> @param m : real : the mass of the electron
+      !> @param C : real : the speed of light
+      !> @param R : real : the distance between the two nuclei
+      !> @param jz2 : real : the quantum number (2*jz)
+      !> @return result : real : the value of the result integral
+      type(mp_real), intent(in) :: Z1, Z2, m, C, R, epsilon
+      type(mp_real), intent(out) :: result
+      type(mp_real), dimension(:), intent(in) :: knot_xi, knot_eta
+      type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
+      integer, intent(in) :: n_remove, jz2
+
+      type(mp_real), dimension(:, :), allocatable :: val_max_max, val_min_min, val_max_min, val_min_max, diff
+      integer :: i, i1, i2, j1, j2, j3, j4, alpha, beta, gamma, delta
+
+      zero = '0.0d0'
+
+      allocate (val_max_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_min_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_max_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_min_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                diff(size(b_i_xi, 1), size(b_i_eta, 1)))
+
+      ! Calculate the value of the S11 integral at each knot and take the difference
+      do i1 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of xi
+         do i2 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of eta
+            val_min_min(i1, i2) = zero
+            val_max_max(i1, i2) = zero
+            val_min_max(i1, i2) = zero
+            val_max_min(i1, i2) = zero
+            do j1 = 1, size(b_i_xi, 2) ! Loop over the order of xi i
+               do j2 = 1, size(b_i_eta, 2) ! Loop over the order of eta i
+                  do j3 = 1, size(b_j_xi, 2) ! Loop over the order of xi j
+                     do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
+                        alpha = size(b_i_xi, 1) - j1
+                        beta = size(b_i_eta, 1) - j2
+                        gamma = size(b_j_xi, 1) - j3
+                        delta = size(b_j_eta, 1) - j4
+                        val_min_min(i1, i2) = val_min_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2)**(1 + beta + gamma)*knot_xi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2)**2/(3 + beta + gamma))
+                        val_max_max(i1, i2) = val_max_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(1 + beta + gamma)*knot_xi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1+1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2+1)**2/(3 + beta + gamma))
+                        val_min_max(i1, i2) = val_min_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(1 + beta + gamma)*knot_xi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2+1)**2/(3 + beta + gamma))
+                        val_max_min(i1, i2) = val_max_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2)**(1 + beta + gamma)*knot_xi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1+1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2)**2/(3 + beta + gamma))
+                     end do
+                  end do
+               end do
+            end do
+            diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
+         end do
+      end do
+
+      result = zero
+      do i1 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of xi
+         do i2 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of eta
+            result = result + diff(i1, i2)
+         end do
+      end do
+
+   end subroutine int_C12three
+
+   subroutine int_C21three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, result)
+      !> @brief This subroutine calculates the C21three integral for the H2+ molecule.
+      !> @param b_i_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param n_remove : integer : the number of knots to remove from each end
+      !> @param knot_xi : real(:) : the knot vector for the xi direction
+      !> @param knot_eta : real(:) : the knot vector for the eta direction
+      !> @param Z1 : real : the number of protons for the first atom
+      !> @param Z2 : real : the number of protons for the second atom
+      !> @param m : real : the mass of the electron
+      !> @param C : real : the speed of light
+      !> @param R : real : the distance between the two nuclei
+      !> @param jz2 : real : the quantum number (2*jz)
+      !> @return result : real : the value of the result integral
+      type(mp_real), intent(in) :: Z1, Z2, m, C, R, epsilon
+      type(mp_real), intent(out) :: result
+      type(mp_real), dimension(:), intent(in) :: knot_xi, knot_eta
+      type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
+      integer, intent(in) :: n_remove, jz2
+
+      type(mp_real), dimension(:, :), allocatable :: val_max_max, val_min_min, val_max_min, val_min_max, diff
+      integer :: i, i1, i2, j1, j2, j3, j4, alpha, beta, gamma, delta
+
+      zero = '0.0d0'
+
+      allocate (val_max_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_min_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_max_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                val_min_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
+                diff(size(b_i_xi, 1), size(b_i_eta, 1)))
+
+      ! Calculate the value of the S11 integral at each knot and take the difference
+      do i1 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of xi
+         do i2 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of eta
+            val_min_min(i1, i2) = zero
+            val_max_max(i1, i2) = zero
+            val_min_max(i1, i2) = zero
+            val_max_min(i1, i2) = zero
+            do j1 = 1, size(b_i_xi, 2) ! Loop over the order of xi i
+               do j2 = 1, size(b_i_eta, 2) ! Loop over the order of eta i
+                  do j3 = 1, size(b_j_xi, 2) ! Loop over the order of xi j
+                     do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
+                        alpha = size(b_i_xi, 1) - j1
+                        beta = size(b_i_eta, 1) - j2
+                        gamma = size(b_j_xi, 1) - j3
+                        delta = size(b_j_eta, 1) - j4
+                        val_min_min(i1, i2) = val_min_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2)**(1 + beta + gamma)*knot_xi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2)**2/(3 + beta + gamma))
+                        val_max_max(i1, i2) = val_max_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(1 + beta + gamma)*knot_xi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1+1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2+1)**2/(3 + beta + gamma))
+                        val_min_max(i1, i2) = val_min_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(1 + beta + gamma)*knot_xi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2+1)**2/(3 + beta + gamma))
+                        val_max_min(i1, i2) = val_max_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2)**(1 + beta + gamma)*knot_xi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1+1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2)**2/(3 + beta + gamma))
+                     end do
+                  end do
+               end do
+            end do
+            diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
+         end do
+      end do
+
+      result = zero
+      do i1 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of xi
+         do i2 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of eta
+            result = result + diff(i1, i2)
+         end do
+      end do
+
+   end subroutine int_C21three
+
    subroutine init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp)
       !> @brief This subroutine initializes the B-spline coefficients for the H2+ molecule.
       !> @param d : integer : the degree of the B-spline
@@ -600,10 +738,11 @@ contains
       integer, intent(in) :: d, n, n_remove, jz2
 
       type(mp_real), dimension(:), allocatable :: knotxi, knoteta
-      type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three,C22three
+      type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three, C22three,C12three, C21three, C_mat, S_mat, vect
+      type(mp_real), dimension(:), allocatable :: w, fv1, fv2
       type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_eta
 
-      integer :: ntot, i, j
+      integer :: ntot, i, j, ierr
       integer, dimension(2) :: i2, j2
 
       ntot = n + d + 2*n_remove
@@ -745,8 +884,8 @@ contains
 
             C11three(i, j) = zero
             call int_C11three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
-                            bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
-                            n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon, C11three(i, j))
+                              bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
+                              n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon, C11three(i, j))
          end do
       end do
       !$OMP END PARALLEL DO
@@ -763,12 +902,97 @@ contains
 
             C22three(i, j) = zero
             call int_C22three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
-                            bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
-                            n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon, C22three(i, j))
+                              bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
+                              n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon, C22three(i, j))
          end do
       end do
       !$OMP END PARALLEL DO
       print *, "WARNING: C22three integral not hermitian, check the code!"
+
+      print *, "Calculating the C12three integral..."
+      ! Calculate the C12three integral
+      allocate (C12three(n**2, n**2))
+
+      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C12three, n, d, n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon)
+      do i = 1, n**2 ! Loop over the number of B-splines
+         do j = 1, n**2
+            i2 = indexToPair(i, n)
+            j2 = indexToPair(j, n)
+
+            C12three(i, j) = zero
+            call int_C12three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
+                              bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
+                              n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon, C12three(i, j))
+         end do
+      end do
+      !$OMP END PARALLEL DO
+      print *, "WARNING: C12three integral not hermitian, check the code!"
+
+      print *, "Calculating the C21three integral..."
+      ! Calculate the C21three integral
+      allocate (C21three(n**2, n**2))
+
+      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C21three, n, d, n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon)
+      do i = 1, n**2 ! Loop over the number of B-splines
+         do j = 1, n**2
+            i2 = indexToPair(i, n)
+            j2 = indexToPair(j, n)
+
+            C21three(i, j) = zero
+            call int_C21three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
+                              bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
+                              n_remove, knotxi, knoteta, Z1, Z2, m, C, R, jz2, epsilon, C21three(i, j))
+         end do
+      end do
+      !$OMP END PARALLEL DO
+      print *, "WARNING: C21three integral not hermitian, check the code!"
+
+      print *, "Generating the C Matrix..."
+      ! Generate the C matrix
+      allocate (C_mat(4*n**2, 4*n**2))
+
+      C_mat = zero
+      do i = 1, n**2
+         do j = 1, n**2
+            ! Diagonal blocks
+            C_mat(i, j) = C11one(i, j)
+            C_mat(i + n**2, j + n**2) = C22one(i, j)
+            C_mat(i + 2*n**2, j + 2*n**2) = C11two(i, j)
+            C_mat(i + 3*n**2, j + 3*n**2) = C22two(i, j)
+            ! Off-diagonal blocks
+            C_mat(i, j + 2*n**2) = C11three(i, j)
+            C_mat(i, j + 3*n**2) = C12three(i, j)
+            C_mat(i + n**2, j + 2*n**2) = C21three(i, j)
+            C_mat(i + n**2, j + 3*n**2) = C22three(i, j)
+            C_mat(i + 2*n**2, j) = C11three(j, i)
+            C_mat(i + 2*n**2, j + n**2) = C21three(j, i)
+            C_mat(i + 3*n**2, j) = C12three(j, i)
+            C_mat(i + 3*n**2, j + n**2) = C22three(j, i)
+         end do
+      end do
+
+      print *, "Generating the S Matrix..."
+      ! Generate the S matrix
+      allocate (S_mat(4*n**2, 4*n**2))
+      
+      S_mat = zero
+      do i = 1, n**2
+         do j = 1, n**2
+            ! Diagonal blocks
+            S_mat(i, j) = S11one(i, j)
+            S_mat(i + n**2, j + n**2) = S22one(i, j)
+            S_mat(i + 2*n**2, j + 2*n**2) = S11one(i, j)
+            S_mat(i + 3*n**2, j + 3*n**2) = S22one(i, j)
+         end do
+      end do
+
+      print *, "Calculating the eigenvalues..."
+      ! Calculate the eigenvalues and eigenvectors
+      allocate (w(4*n**2), fv1(4*n**2), fv2(4*n**2))
+
+      call rsg(4*n**2, 4*n**2, C_mat, S_mat, w, 0, vect, fv1, fv2, ierr)
+
+      print *, "Error code: ", ierr
 
       print *, "Saving results to files..."
       ! Save matrices to separate files
@@ -819,6 +1043,18 @@ contains
          call write_csv(C22three(i, :), 9, 30, 10)
       end do
       close (9)
+
+      open (unit=10, file='C12three.csv', status='replace')
+      do i = 1, n**2
+         call write_csv(C12three(i, :), 10, 30, 10)
+      end do
+      close (10)
+
+      open (unit=11, file='C21three.csv', status='replace')
+      do i = 1, n**2
+         call write_csv(C21three(i, :), 11, 30, 10)
+      end do
+      close (11)
 
       print *, "Saving logs to file..."
       ! Save logs
@@ -881,6 +1117,21 @@ contains
          call write_lists(C22three(i, :), 1, 30, 10)
       end do
       write (1, '(a)') "--------------------------------------------------------------"
+      write (1, '(a)') "C12three integral: "
+      do i = 1, n**2
+         call write_lists(C12three(i, :), 1, 30, 10)
+      end do
+      write (1, '(a)') "--------------------------------------------------------------"
+      write (1, '(a)') "C21three integral: "
+      do i = 1, n**2
+         call write_lists(C21three(i, :), 1, 30, 10)
+      end do
+      write (1, '(a)') "--------------------------------------------------------------"
+      write (1, '(a)') "Eigenvalues: "
+      do i = 1, 4*n**2
+         write (1, '(i4, a, i4)', advance='no') i, " "
+         call mpwrite(1, 30, 10, w(i))
+      end do
       close (1)
 
    end subroutine init_h2plus
