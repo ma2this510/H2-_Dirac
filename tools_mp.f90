@@ -2,10 +2,11 @@ module tools_mp
    use mpmodule
    implicit none
 
-   private 
+   private
 
    public :: write_lists
    public :: write_csv
+   public :: progress_bar
    public :: multiply_elem
    public :: indexToPair
 
@@ -14,8 +15,7 @@ module tools_mp
       module procedure write_lists_cmplx
    end interface
 
-   contains
-
+contains
 
    subroutine write_lists_real(r1s, i1, i2, i3)
       !> @brief Write a list of mp_real
@@ -88,6 +88,50 @@ module tools_mp
 
    end subroutine write_csv
 
+   subroutine progress_bar(iteration, maximum)
+!
+! Prints progress bar.
+! Maciej Żok, 2010 MIT License
+! https://github.com/macie/fortran-libs
+!
+! Args:
+!     iteration - iteration number
+!     maximum - total iterations
+!
+      implicit none
+      integer :: iteration, maximum
+      integer :: counter
+      integer :: step, done
+
+      step = nint(iteration*100/(1.0*maximum))
+      done = floor(step/10.0)  ! mark every 10%
+
+      do counter = 1, 36                    ! clear whole line - 36 chars
+         write (6, '(a)', advance='no') '\b'  ! (\b - backslash)
+      end do
+
+      write (6, '(a)', advance='no') ' -> In progress... ['
+      if (done .LE. 0) then
+         do counter = 1, 10
+            write (6, '(a)', advance='no') '='
+         end do
+      else if ((done .GT. 0) .and. (done .LT. 10)) then
+         do counter = 1, done
+            write (6, '(a)', advance='no') '#'
+         end do
+         do counter = done + 1, 10
+            write (6, '(a)', advance='no') '='
+         end do
+      else
+         do counter = 1, 10
+            write (6, '(a)', advance='no') '#'
+         end do
+      end if
+      write (6, '(a)', advance='no') '] '
+      write (6, '(I3.1)', advance='no') step
+      write (6, '(a)', advance='no') '%'
+   end
+
    function multiply_elem(scal, mat) result(result)
       !> @brief Multiply a scalar with a matrix
       !> @param scal : mp_real : the scalar
@@ -95,14 +139,14 @@ module tools_mp
       !> @return result : mp_real(:,:) : the result of the multiplication
       implicit none
       type(mp_real), intent(in) :: scal
-      type(mp_real), intent(in), dimension(:,:) :: mat
+      type(mp_real), intent(in), dimension(:, :) :: mat
       type(mp_real), dimension(size(mat, 1), size(mat, 2)) :: result
-      
+
       integer :: i_tmp, j_tmp
 
       do i_tmp = 1, size(mat, 1)
          do j_tmp = 1, size(mat, 2)
-            result(i_tmp, j_tmp) = scal * mat(i_tmp, j_tmp)
+            result(i_tmp, j_tmp) = scal*mat(i_tmp, j_tmp)
          end do
       end do
 
@@ -117,7 +161,7 @@ module tools_mp
       integer, intent(in) :: index, n
       integer, dimension(2) :: pair
 
-      pair(1) = (index - 1) / n + 1
+      pair(1) = (index - 1)/n + 1
       pair(2) = mod(index - 1, n) + 1
 
    end function indexToPair

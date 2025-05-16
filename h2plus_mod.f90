@@ -127,7 +127,7 @@ contains
 
       ! Calculate the value of the result integral at each knot and take the difference
       do i1 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of xi
-         do i2 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of eta
+         do i2 = 1, size(b_i_eta, 1) - 1 ! Loop over the polynomials of eta
             val_min_min(i1, i2) = zero
             val_max_max(i1, i2) = zero
             val_min_max(i1, i2) = zero
@@ -719,7 +719,7 @@ contains
 
    end subroutine int_C21three
 
-   subroutine init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp)
+   subroutine init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
       !> @brief This subroutine initializes the B-spline coefficients for the H2+ molecule.
       !> @param d : integer : the degree of the B-spline
       !> @param n : integer : the number of usable B-splines
@@ -734,13 +734,16 @@ contains
       !> @param jz2 : real : the quantum number (2*jz)
       !> @param epsilon : real : the machine epsilon
       !> @param eta_slp : real : the parameter for the generation of the knot vector on eta
+      !> @param save_step : boolean : whether to save matrices to a file
       type(mp_real), intent(in) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp
       integer, intent(in) :: d, n, n_remove, jz2
+      logical, intent(in) :: save_step
 
       type(mp_real), dimension(:), allocatable :: knotxi, knoteta
       type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three, C22three,C12three, C21three, C_mat, S_mat, vect
       type(mp_real), dimension(:), allocatable :: w, fv1, fv2
       type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_eta
+      logical :: debug_bool = .true.
 
       integer :: ntot, i, j, ierr
       integer, dimension(2) :: i2, j2
@@ -782,6 +785,15 @@ contains
       end do
       !$OMP END PARALLEL DO
 
+      if (save_step) then
+         print *, "Saving S11one matrix to file..."
+         open (unit=2, file='S11one.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(S11one(i, :), 2, 30, 10)
+         end do
+         close (2)
+      end if
+
       print *, "Calculating the S22 integral..."
       ! Calculate the S22 integral
       allocate (S22one(n**2, n**2))
@@ -799,6 +811,15 @@ contains
          end do
       end do
       !$OMP END PARALLEL DO
+
+      if (save_step) then
+         print *, "Saving S22one matrix to file..."
+         open (unit=3, file='S22one.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(S22one(i, :), 3, 30, 10)
+         end do
+         close (3)
+      end if
 
       print *, "Calculating the C11one integral..."
       ! Calculate the C11one integral
@@ -818,6 +839,15 @@ contains
       end do
       !$OMP END PARALLEL DO
 
+      if (save_step) then
+         print *, "Saving C11one matrix to file..."
+         open (unit=4, file='C11one.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(C11one(i, :), 4, 30, 10)
+         end do
+         close (4)
+      end if
+
       print *, "Calculating the C11two integral..."
       ! Calculate the C11two integral
       allocate (C11two(n**2, n**2))
@@ -835,6 +865,15 @@ contains
          end do
       end do
       !$OMP END PARALLEL DO
+
+      if (save_step) then
+         print *, "Saving C11two matrix to file..."
+         open (unit=5, file='C11two.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(C11two(i, :), 5, 30, 10)
+         end do
+         close (5)
+      end if
 
       print *, "Calculating the C22one integral..."
       ! Calculate the C22one integral
@@ -854,6 +893,15 @@ contains
       end do
       !$OMP END PARALLEL DO
 
+      if (save_step) then
+         print *, "Saving C22one matrix to file..."
+         open (unit=16, file='C22one.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(C22one(i, :), 16, 30, 10)
+         end do
+         close (16)
+      end if
+
       print *, "Calculating the C22two integral..."
       ! Calculate the C22two integral
       allocate (C22two(n**2, n**2))
@@ -871,6 +919,15 @@ contains
          end do
       end do
       !$OMP END PARALLEL DO
+
+      if (save_step) then
+         print *, "Saving C22two matrix to file..."
+         open (unit=7, file='C22two.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(C22two(i, :), 7, 30, 10)
+         end do
+         close (7)
+      end if
 
       print *, "Calculating the C11three integral..."
       ! Calculate the C11three integral
@@ -890,6 +947,15 @@ contains
       end do
       !$OMP END PARALLEL DO
 
+      if (save_step) then
+         print *, "Saving C11three matrix to file..."
+         open (unit=8, file='C11three.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(C11three(i, :), 8, 30, 10)
+         end do
+         close (8)
+      end if
+
       print *, "Calculating the C22three integral..."
       ! Calculate the C22three integral
       allocate (C22three(n**2, n**2))
@@ -907,7 +973,15 @@ contains
          end do
       end do
       !$OMP END PARALLEL DO
-      print *, "WARNING: C22three integral not hermitian, check the code!"
+
+      if (save_step) then
+         print *, "Saving C22three matrix to file..."
+         open (unit=9, file='C22three.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(C22three(i, :), 9, 30, 10)
+         end do
+         close (9)
+      end if
 
       print *, "Calculating the C12three integral..."
       ! Calculate the C12three integral
@@ -926,7 +1000,15 @@ contains
          end do
       end do
       !$OMP END PARALLEL DO
-      print *, "WARNING: C12three integral not hermitian, check the code!"
+
+      if (save_step) then
+         print *, "Saving C12three matrix to file..."
+         open (unit=10, file='C12three.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(C12three(i, :), 10, 30, 10)
+         end do
+         close (10)
+      end if
 
       print *, "Calculating the C21three integral..."
       ! Calculate the C21three integral
@@ -945,7 +1027,15 @@ contains
          end do
       end do
       !$OMP END PARALLEL DO
-      print *, "WARNING: C21three integral not hermitian, check the code!"
+
+      if (save_step) then
+         print *, "Saving C21three matrix to file..."
+         open (unit=11, file='C21three.csv', status='replace')
+         do i = 1, n**2
+            call write_csv(C21three(i, :), 11, 30, 10)
+         end do
+         close (11)
+      end if
 
       print *, "Generating the C Matrix..."
       ! Generate the C matrix
@@ -974,7 +1064,7 @@ contains
       print *, "Generating the S Matrix..."
       ! Generate the S matrix
       allocate (S_mat(4*n**2, 4*n**2))
-      
+
       S_mat = zero
       do i = 1, n**2
          do j = 1, n**2
@@ -986,6 +1076,26 @@ contains
          end do
       end do
 
+      if (debug_bool) then
+         print *, "Check if C is hermitian..."
+         do i = 1, 4*n**2
+            do j = 1, 4*n**2
+               if (C_mat(i, j) - C_mat(j, i) > epsilon) then
+                  print *, "C is not hermitian at (", i, ",", j, ")"
+               end if
+            end do
+         end do
+
+         print *, "Check if S is hermitian..."
+         do i = 1, 4*n**2
+            do j = 1, 4*n**2
+               if (S_mat(i, j) - S_mat(j, i) > epsilon) then
+                  print *, "S is not hermitian at (", i, ",", j, ")"
+               end if
+            end do
+         end do
+      end if 
+
       print *, "Calculating the eigenvalues..."
       ! Calculate the eigenvalues and eigenvectors
       allocate (w(4*n**2), fv1(4*n**2), fv2(4*n**2))
@@ -994,72 +1104,10 @@ contains
 
       print *, "Error code: ", ierr
 
-      print *, "Saving results to files..."
-      ! Save matrices to separate files
-      open (unit=2, file='S11one.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(S11one(i, :), 2, 30, 10)
-      end do
-      close (2)
-
-      open (unit=3, file='S22one.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(S22one(i, :), 3, 30, 10)
-      end do
-      close (3)
-
-      open (unit=4, file='C11one.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(C11one(i, :), 4, 30, 10)
-      end do
-      close (4)
-
-      open (unit=5, file='C11two.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(C11two(i, :), 5, 30, 10)
-      end do
-      close (5)
-
-      open (unit=6, file='C22one.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(C22one(i, :), 6, 30, 10)
-      end do
-      close (6)
-
-      open (unit=7, file='C22two.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(C22two(i, :), 7, 30, 10)
-      end do
-      close (7)
-
-      open (unit=8, file='C11three.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(C11three(i, :), 8, 30, 10)
-      end do
-      close (8)
-
-      open (unit=9, file='C22three.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(C22three(i, :), 9, 30, 10)
-      end do
-      close (9)
-
-      open (unit=10, file='C12three.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(C12three(i, :), 10, 30, 10)
-      end do
-      close (10)
-
-      open (unit=11, file='C21three.csv', status='replace')
-      do i = 1, n**2
-         call write_csv(C21three(i, :), 11, 30, 10)
-      end do
-      close (11)
-
       print *, "Saving logs to file..."
       ! Save logs
       open (unit=1, file='log_file', status='replace')
-      write (1, '(a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d
+      write (1, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
       write (1, '(a)') "Speed of light: "
       call mpwrite(1, 30, 10, C)
       write (1, '(a)') "Mass of the electron: "
@@ -1076,56 +1124,58 @@ contains
          write (1, '(i4, a, i4, a, i4)', advance='no') i, " ", i2(1), " ", i2(2)
          write (1, '(a)') " "
       end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "S11 integral: "
-      do i = 1, n**2
-         call write_lists(S11one(i, :), 1, 30, 10)
-      end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "S22 integral: "
-      do i = 1, n**2
-         call write_lists(S22one(i, :), 1, 30, 10)
-      end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "C11one integral: "
-      do i = 1, n**2
-         call write_lists(C11one(i, :), 1, 30, 10)
-      end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "C11two integral: "
-      do i = 1, n**2
-         call write_lists(C11two(i, :), 1, 30, 10)
-      end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "C22one integral: "
-      do i = 1, n**2
-         call write_lists(C22one(i, :), 1, 30, 10)
-      end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "C22two integral: "
-      do i = 1, n**2
-         call write_lists(C22two(i, :), 1, 30, 10)
-      end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "C11three integral: "
-      do i = 1, n**2
-         call write_lists(C11three(i, :), 1, 30, 10)
-      end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "C22three integral: "
-      do i = 1, n**2
-         call write_lists(C22three(i, :), 1, 30, 10)
-      end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "C12three integral: "
-      do i = 1, n**2
-         call write_lists(C12three(i, :), 1, 30, 10)
-      end do
-      write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "C21three integral: "
-      do i = 1, n**2
-         call write_lists(C21three(i, :), 1, 30, 10)
-      end do
+      if (debug_bool) then
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "S11 integral: "
+         do i = 1, n**2
+            call write_lists(S11one(i, :), 1, 30, 10)
+         end do
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "S22 integral: "
+         do i = 1, n**2
+            call write_lists(S22one(i, :), 1, 30, 10)
+         end do
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "C11one integral: "
+         do i = 1, n**2
+            call write_lists(C11one(i, :), 1, 30, 10)
+         end do
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "C11two integral: "
+         do i = 1, n**2
+            call write_lists(C11two(i, :), 1, 30, 10)
+         end do
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "C22one integral: "
+         do i = 1, n**2
+            call write_lists(C22one(i, :), 1, 30, 10)
+         end do
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "C22two integral: "
+         do i = 1, n**2
+            call write_lists(C22two(i, :), 1, 30, 10)
+         end do
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "C11three integral: "
+         do i = 1, n**2
+            call write_lists(C11three(i, :), 1, 30, 10)
+         end do
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "C22three integral: "
+         do i = 1, n**2
+            call write_lists(C22three(i, :), 1, 30, 10)
+         end do
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "C12three integral: "
+         do i = 1, n**2
+            call write_lists(C12three(i, :), 1, 30, 10)
+         end do
+         write (1, '(a)') "--------------------------------------------------------------"
+         write (1, '(a)') "C21three integral: "
+         do i = 1, n**2
+            call write_lists(C21three(i, :), 1, 30, 10)
+         end do
+      end if
       write (1, '(a)') "--------------------------------------------------------------"
       write (1, '(a)') "Eigenvalues: "
       do i = 1, 4*n**2
