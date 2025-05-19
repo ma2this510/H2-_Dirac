@@ -110,28 +110,28 @@ contains
       type(mp_real), intent(in), dimension(size(knot), d) :: table
       integer, intent(in), optional :: file
 
-      character(15) :: str_tmp(1), str_tmp_1(1)
+      character(25) :: str_tmp(1), str_tmp_1(1)
       integer :: i_tmp, j_tmp
 
       if (present(file)) then
          do i_tmp = 1, size(knot) - 1
             write (file, *) "------------------------------------------------------------------"
-            call mpeform(knot(i_tmp), 15, 5, str_tmp)
-            call mpeform(knot(i_tmp + 1), 15, 5, str_tmp_1)
+            call mpeform(knot(i_tmp), 25, 10, str_tmp)
+            call mpeform(knot(i_tmp + 1), 25, 10, str_tmp_1)
             write (file, *) "for node", i_tmp, str_tmp, "<= x < ", str_tmp_1
             do j_tmp = 1, d
-               call mpeform(table(i_tmp, j_tmp), 15, 5, str_tmp)
+               call mpeform(table(i_tmp, j_tmp), 25, 10, str_tmp)
                write (file, *) "x^", d - j_tmp, " : ", str_tmp
             end do
          end do
       else
          do i_tmp = 1, size(knot) - 1
             print *, "------------------------------------------------------------------"
-            call mpeform(knot(i_tmp), 15, 5, str_tmp)
-            call mpeform(knot(i_tmp + 1), 15, 5, str_tmp_1)
+            call mpeform(knot(i_tmp), 25, 10, str_tmp)
+            call mpeform(knot(i_tmp + 1), 25, 10, str_tmp_1)
             print *, "for node", i_tmp, str_tmp, "<= x < ", str_tmp_1
             do j_tmp = 1, d
-               call mpeform(table(i_tmp, j_tmp), 15, 5, str_tmp)
+               call mpeform(table(i_tmp, j_tmp), 25, 10, str_tmp)
                print *, "x^", d - j_tmp, " : ", str_tmp
             end do
          end do

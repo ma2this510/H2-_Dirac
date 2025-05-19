@@ -739,7 +739,7 @@ contains
       integer, intent(in) :: d, n, n_remove, jz2
       logical, intent(in) :: save_step
 
-      type(mp_real), dimension(:), allocatable :: knotxi, knoteta
+      type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps
       type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three, C22three,C12three, C21three, C_mat, S_mat, vect
       type(mp_real), dimension(:), allocatable :: w, fv1, fv2
       type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_eta
@@ -750,6 +750,8 @@ contains
 
       ntot = n + d + 2*n_remove
       zero = '0.d0'
+
+      write (6, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
 
       print *, "Generating B-spline knots..."
       ! Generate the knot vectors for xi and eta
@@ -762,16 +764,33 @@ contains
       ! Generate the B-spline coefficients for xi and eta
       allocate (bspline_xi(n, ntot, d), bspline_eta(n, ntot, d))
 
-      do i = 1, n ! Loop over the number of B-splines
+      do i = 1 + n_remove, n + n_remove ! Loop over the number of B-splines
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on xi-axis..."
          end if
-         call init_bspine(d, i, knotxi, bspline_xi(i, :, :), debug_bool)
+         call init_bspine(d, i, knotxi, bspline_xi(i-n_remove, :, :), debug_bool)
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on eta-axis..."
          end if
-         call init_bspine(d, i, knoteta, bspline_eta(i, :, :), debug_bool)
+         call init_bspine(d, i, knoteta, bspline_eta(i-n_remove, :, :), debug_bool)
       end do
+
+      ! Modify the knots to avoid singularities. 
+      allocate (knotxi_eps(ntot), knoteta_eps(ntot))
+      knotxi_eps = knotxi
+      knoteta_eps = knoteta
+      do i = 1, d
+         knotxi_eps(i) = knotxi_eps(i) + epsilon
+         knoteta_eps(i) = knoteta_eps(i) + epsilon
+         knoteta_eps(ntot - i + 1) = knoteta_eps(ntot - i + 1) - epsilon
+      end do
+
+      if (debug_bool) then
+         print *, "Adjusted B-spline knots for xi-axis: "
+         call write_lists(knotxi_eps, 6, 25, 10)
+         print *, "Adjusted B-spline knots for eta-axis: "
+         call write_lists(knoteta_eps, 6, 25, 10)
+      end if
 
       print *, "Calculating the S11 integral..."
       ! Calculate the S11 integral
@@ -1120,16 +1139,20 @@ contains
       call mpwrite(1, 30, 10, m)
       write (1, '(a)') "Slope for eta: "
       call mpwrite(1, 30, 10, eta_slp)
-      write (1, '(a)') "Xi knot vector: "
-      call write_lists(knotxi, 1, 30, 5)
-      write (1, '(a)') "Eta knot vector: "
-      call write_lists(knoteta, 1, 30, 5)
+      write (1, '(a)') "Non-adjusted Xi knot vector: "
+      call write_lists(knotxi, 1, 30, 10)
+      write (1, '(a)') "Non-adjusted Eta knot vector: "
+      call write_lists(knoteta, 1, 30, 10)
       write (1, '(a)') "B-Spline basis function Order: "
       do i = 1, n**2
          i2 = indexToPair(i, n)
          write (1, '(i4, a, i4, a, i4)', advance='no') i, " ", i2(1), " ", i2(2)
          write (1, '(a)') " "
       end do
+      write (1, '(a)') "Adjusted Xi knot vector: "
+      call write_lists(knotxi_eps, 1, 30, 10)
+      write (1, '(a)') "Adjusted Eta knot vector: "
+      call write_lists(knoteta_eps, 1, 30, 10)
       if (debug_bool) then
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "S11 integral: "
