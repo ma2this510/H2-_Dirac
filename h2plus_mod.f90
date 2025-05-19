@@ -763,8 +763,14 @@ contains
       allocate (bspline_xi(n, ntot, d), bspline_eta(n, ntot, d))
 
       do i = 1, n ! Loop over the number of B-splines
-         call init_bspine(d, i, knotxi, bspline_xi(i, :, :), .false.)
-         call init_bspine(d, i, knoteta, bspline_eta(i, :, :), .false.)
+         if (debug_bool) then
+            print *, "Generating B-spline coefficients for B-spline ", i, "on xi-axis..."
+         end if
+         call init_bspine(d, i, knotxi, bspline_xi(i, :, :), debug_bool)
+         if (debug_bool) then
+            print *, "Generating B-spline coefficients for B-spline ", i, "on eta-axis..."
+         end if
+         call init_bspine(d, i, knoteta, bspline_eta(i, :, :), debug_bool)
       end do
 
       print *, "Calculating the S11 integral..."
