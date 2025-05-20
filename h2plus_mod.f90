@@ -9,6 +9,7 @@ module h2plus
    private
 
    public :: init_h2plus
+   public :: test_routine
 
 contains
    subroutine int_s11one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, result)
@@ -47,12 +48,13 @@ contains
          prod_eta(i, :) = fusion_coef(b_i_eta(i, :), b_j_eta(i, :))
       end do
 
-      allocate (val_max_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
-                val_min_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
-                val_max_min(size(b_i_xi, 1), size(b_i_eta, 1)), &
-                val_min_max(size(b_i_xi, 1), size(b_i_eta, 1)), &
-                diff(size(b_i_xi, 1), size(b_i_eta, 1)))
+      allocate (val_max_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
+                val_min_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
+                val_max_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
+                val_min_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
+                diff(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1))
 
+      result = zero
       ! Calculate the value of the S11 integral at each knot and take the difference
       do i1 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of xi
          do i2 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of eta
@@ -60,28 +62,118 @@ contains
             val_max_max(i1, i2) = zero
             val_min_max(i1, i2) = zero
             val_max_min(i1, i2) = zero
+            diff(i1, i2) = zero
             do j1 = 1, size(prod_xi, 2) ! Loop over the order of xi
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
-                  alpha = size(prod_xi, 1) - j1
-                  beta = size(prod_eta, 1) - j2
-                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*(knot_xi(i1)**(alpha+1)) * (knot_eta(i2)**(beta+1)) *((knot_eta(i2)**2)/((alpha+1)*(beta+3))-(knot_xi(i1)**2)/((alpha+3)*(beta+1)))
-                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*((knot_xi(i1+1))**(alpha+1))* ((knot_eta(i2+1))**(beta+1)) *((knot_eta(i2+1)**2)/((alpha+1)*(beta+3))-(knot_xi(i1+1)**2)/((alpha+3)*(beta+1)))
-                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*((knot_xi(i1))**(alpha+1))* ((knot_eta(i2+1))**(beta+1)) *((knot_eta(i2+1)**2)/((alpha+1)*(beta+3))-(knot_xi(i1)**2)/((alpha+3)*(beta+1)))
-                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*((knot_xi(i1+1))**(alpha+1))* ((knot_eta(i2))**(beta+1)) *((knot_eta(i2)**2)/((alpha+1)*(beta+3))-(knot_xi(i1+1)**2)/((alpha+3)*(beta+1)))
+                  alpha = size(prod_xi, 2) - j1
+                  beta = size(prod_eta, 2) - j2
+                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*(knot_xi(i1)**(alpha+1)) * (knot_eta(i2)**(beta+1)) *(-(knot_eta(i2)**2)/((alpha+1)*(beta+3))+(knot_xi(i1)**2)/((alpha+3)*(beta+1)))
+                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*((knot_xi(i1+1))**(alpha+1))* ((knot_eta(i2+1))**(beta+1)) *(-(knot_eta(i2+1)**2)/((alpha+1)*(beta+3))+(knot_xi(i1+1)**2)/((alpha+3)*(beta+1)))
+                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*((knot_xi(i1))**(alpha+1))* ((knot_eta(i2+1))**(beta+1)) *(-(knot_eta(i2+1)**2)/((alpha+1)*(beta+3))+(knot_xi(i1)**2)/((alpha+3)*(beta+1)))
+                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*((knot_xi(i1+1))**(alpha+1))* ((knot_eta(i2))**(beta+1)) *(-(knot_eta(i2)**2)/((alpha+1)*(beta+3))+(knot_xi(i1+1)**2)/((alpha+3)*(beta+1)))
                end do
             end do
             diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
+            result = result + val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
          end do
       end do
 
-      result = zero
-      do i1 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of xi
-         do i2 = 1 + n_remove, size(b_i_xi, 1) - n_remove ! Loop over the polynomials of eta
-            result = result + diff(i1, i2)
-         end do
-      end do
+      ! TEST 
+      print *, "diff test"
+      print *, "size diff", size(diff, 1), size(diff, 2)
+      do i1 = 1, size(diff, 1) 
+         call write_lists(diff(i1, :), 6, 25, 10)
+      end do 
+      print *, "diff test end"
+      ! print *, "min_min test"
+      ! print *, "size min_min", size(val_min_min, 1), size(val_min_min, 2)
+      ! do i1 = 1, size(val_min_min, 1) 
+      !    call write_lists(val_min_min(i1, :), 6, 25, 10)
+      ! end do 
+      ! print *, "min_min test end"
+      ! END TEST
 
    end subroutine int_s11one
+
+   subroutine int_s11one_no_dbl(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, result)
+      !> @brief This subroutine calculates the S11 integral for the H2+ molecule.
+      !> @param b_i_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
+      !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
+      !> @param n_remove : integer : the number of knots to remove from each end
+      !> @param knot_xi : real(:) : the knot vector for the xi direction
+      !> @param knot_eta : real(:) : the knot vector for the eta direction
+      !> @param Z1 : real : the number of protons for the first atom
+      !> @param Z2 : real : the number of protons for the second atom
+      !> @param m : real : the mass of the electron
+      !> @param C : real : the speed of light
+      !> @param R : real : the distance between the two nuclei
+      !> @param jz2 : real : the quantum number (2*jz)
+      !> @return result : real : the value of the result integral
+      type(mp_real), intent(in) :: Z1, Z2, m, C, R, epsilon
+      type(mp_real), intent(out) :: result
+      type(mp_real), dimension(:), intent(in) :: knot_xi, knot_eta
+      type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
+      integer, intent(in) :: n_remove, jz2
+
+      type(mp_real), dimension(:, :), allocatable :: val_max_max, val_min_min, val_max_min, val_min_max, diff
+      integer :: i1, i2, j1, j2, j3, j4, alpha, beta, gamma, delta
+
+      zero = '0.0d0'
+
+      allocate (val_max_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
+                val_min_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
+                val_max_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
+                val_min_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
+                diff(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1))
+
+      result = zero
+      ! Calculate the value of the S11 integral at each knot and take the difference
+      do i1 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of xi
+         do i2 = 1, size(b_i_eta, 1) - 1 ! Loop over the polynomials of eta
+            val_min_min(i1, i2) = zero
+            val_max_max(i1, i2) = zero
+            val_min_max(i1, i2) = zero
+            val_max_min(i1, i2) = zero
+            diff(i1, i2) = zero
+            do j1 = 1, size(b_i_xi, 2) ! Loop over the order of xi-i
+               do j2 = 1, size(b_i_eta, 2) ! Loop over the order of eta-i
+                  do j3 = 1, size(b_j_xi, 2) ! Loop over the order of xi-j
+                     do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta-j
+                        alpha = size(b_i_xi, 2) - j1
+                        beta = size(b_i_eta, 2) - j2
+                        gamma = size(b_j_xi, 2) - j3
+                        delta = size(b_j_eta, 2) - j4
+                        val_min_min(i1, i2) = val_min_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2,j2)*b_j_xi(i1, j3)*b_j_eta(i2,j4)*2*mppi()*(R**3)*(knot_xi(i1)**(alpha+gamma+1)) * (knot_eta(i2)**(beta+delta+1)) *(-(knot_eta(i2)**2)/((alpha+gamma+1)*(beta+delta+3))+(knot_xi(i1)**2)/((alpha+gamma+3)*(beta+delta+1)))
+                        val_max_max(i1, i2) = val_max_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2,j2)*b_j_xi(i1, j3)*b_j_eta(i2,j4)*2*mppi()*(R**3)*((knot_xi(i1+1))**(alpha+gamma+1))* ((knot_eta(i2+1))**(beta+delta+1)) *(-(knot_eta(i2+1)**2)/((alpha+gamma+1)*(beta+delta+3))+(knot_xi(i1+1)**2)/((alpha+gamma+3)*(beta+delta+1)))
+                        val_min_max(i1, i2) = val_min_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2,j2)*b_j_xi(i1, j3)*b_j_eta(i2,j4)*2*mppi()*(R**3)*((knot_xi(i1))**(alpha+gamma+1))* ((knot_eta(i2+1))**(beta+delta+1)) *(-(knot_eta(i2+1)**2)/((alpha+gamma+1)*(beta+delta+3))+(knot_xi(i1)**2)/((alpha+gamma+3)*(beta+delta+1)))
+                        val_max_min(i1, i2) = val_max_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2,j2)*b_j_xi(i1, j3)*b_j_eta(i2,j4)*2*mppi()*(R**3)*((knot_xi(i1+1))**(alpha+gamma+1))* ((knot_eta(i2))**(beta+delta+1)) *(-(knot_eta(i2)**2)/((alpha+gamma+1)*(beta+delta+3))+(knot_xi(i1+1)**2)/((alpha+gamma+3)*(beta+delta+1)))
+                     end do
+                  end do
+               end do
+            end do
+            diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
+            result = result + val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
+         end do
+      end do
+
+      ! TEST 
+      print *, "diff test"
+      print *, "size diff", size(diff, 1), size(diff, 2)
+      do i1 = 1, size(diff, 1) 
+         call write_lists(diff(i1, :), 6, 25, 10)
+      end do 
+      print *, "diff test end"
+      ! print *, "min_min test"
+      ! print *, "size min_min", size(val_min_min, 1), size(val_min_min, 2)
+      ! do i1 = 1, size(val_min_min, 1) 
+      !    call write_lists(val_min_min(i1, :), 6, 25, 10)
+      ! end do 
+      ! print *, "min_min test end"
+      ! ! END TEST
+
+   end subroutine int_s11one_no_dbl
 
    subroutine int_s22one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, n_remove, knot_xi, knot_eta, Z1, Z2, m, C, R, jz2, epsilon, result)
       !> @brief This subroutine calculates the S22 integral for the H2+ molecule.
@@ -134,8 +226,8 @@ contains
             val_max_min(i1, i2) = zero
             do j1 = 1, size(prod_xi, 2) ! Loop over the order of xi
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
-                  alpha = size(prod_xi, 1) - j1
-                  beta = size(prod_eta, 1) - j2
+                  alpha = size(prod_xi, 2) - j1
+                  beta = size(prod_eta, 2) - j2
                   val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)**2*(5 + beta - (3 + beta)*knot_eta(i2)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2)**4 + beta*(-1 + knot_eta(i2)**4))*knot_xi(i1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2)**2 + beta*(-1 + knot_eta(i2)**2))*knot_xi(i1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
                   val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2+1)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)**2*(5 + beta - (3 + beta)*knot_eta(i2+1)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2+1)**4 + beta*(-1 + knot_eta(i2+1)**4))*knot_xi(i1+1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1+1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
                   val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knot_eta(i2+1)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)**2*(5 + beta - (3 + beta)*knot_eta(i2+1)**2))/(1 + alpha) + ((3 + beta)*(-5 + knot_eta(i2+1)**4 + beta*(-1 + knot_eta(i2+1)**4))*knot_xi(i1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
@@ -206,8 +298,8 @@ contains
             val_max_min(i1, i2) = zero
             do j1 = 1, size(prod_xi, 2) ! Loop over the order of xi
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
-                  alpha = size(prod_xi, 1) - j1
-                  beta = size(prod_eta, 1) - j2
+                  alpha = size(prod_xi, 2) - j1
+                  beta = size(prod_eta, 2) - j2
                   val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knot_eta(i2)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
                   val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2+1)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1+1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1+1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
                   val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2+1)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
@@ -278,8 +370,8 @@ contains
             val_max_min(i1, i2) = zero
             do j1 = 1, size(prod_xi, 2) ! Loop over the order of xi
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
-                  alpha = size(prod_xi, 1) - j1
-                  beta = size(prod_eta, 1) - j2
+                  alpha = size(prod_xi, 2) - j1
+                  beta = size(prod_eta, 2) - j2
                   val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R*knot_eta(i2)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2)))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
                   val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2+1)))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1+1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1+1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
                   val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1)**(1 + alpha)*(((1 + beta)*knot_eta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knot_eta(i2+1)))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*knot_xi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knot_xi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
@@ -350,8 +442,8 @@ contains
             val_max_min(i1, i2) = zero
             do j1 = 1, size(prod_xi, 2) ! Loop over the order of xi
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
-                  alpha = size(prod_xi, 1) - j1
-                  beta = size(prod_eta, 1) - j2
+                  alpha = size(prod_xi, 2) - j1
+                  beta = size(prod_eta, 2) - j2
                   val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*R*knot_eta(i2)**(1 + beta)*knot_xi(i1)**(1 + alpha)*((knot_eta(i2)*((-Z1 + Z2)/(2 + beta) + (c**2*m*R*knot_eta(i2))/(3 + beta) + ((Z1 - Z2)*knot_eta(i2)**2)/(4 + beta) - (c**2*m*R*knot_eta(i2)**3)/(5 + beta)))/(1 + alpha) - ((Z1 + Z2)*(-3 + knot_eta(i2)**2 + beta*(-1 + knot_eta(i2)**2))*knot_xi(i1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knot_eta(i2)*(1/(2 + beta) - knot_eta(i2)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knot_eta(i2)**4/(5 + beta)))*knot_xi(i1)**2)/(3 + alpha) + ((Z1 + Z2)*(-3 + knot_eta(i2)**2 + beta*(-1 + knot_eta(i2)**2))*knot_xi(i1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knot_eta(i2)**2)*knot_xi(i1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
                   val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*((knot_eta(i2+1)*((-Z1 + Z2)/(2 + beta) + (c**2*m*R*knot_eta(i2+1))/(3 + beta) + ((Z1 - Z2)*knot_eta(i2+1)**2)/(4 + beta) - (c**2*m*R*knot_eta(i2+1)**3)/(5 + beta)))/(1 + alpha) - ((Z1 + Z2)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1+1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knot_eta(i2+1)*(1/(2 + beta) - knot_eta(i2+1)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knot_eta(i2+1)**4/(5 + beta)))*knot_xi(i1+1)**2)/(3 + alpha) + ((Z1 + Z2)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1+1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knot_eta(i2+1)**2)*knot_xi(i1+1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
                   val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1)**(1 + alpha)*((knot_eta(i2+1)*((-Z1 + Z2)/(2 + beta) + (c**2*m*R*knot_eta(i2+1))/(3 + beta) + ((Z1 - Z2)*knot_eta(i2+1)**2)/(4 + beta) - (c**2*m*R*knot_eta(i2+1)**3)/(5 + beta)))/(1 + alpha) - ((Z1 + Z2)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knot_eta(i2+1)*(1/(2 + beta) - knot_eta(i2+1)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knot_eta(i2+1)**4/(5 + beta)))*knot_xi(i1)**2)/(3 + alpha) + ((Z1 + Z2)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knot_eta(i2+1)**2)*knot_xi(i1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
@@ -422,8 +514,8 @@ contains
             val_max_min(i1, i2) = zero
             do j1 = 1, size(prod_xi, 2) ! Loop over the order of xi
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
-                  alpha = size(prod_xi, 1) - j1
-                  beta = size(prod_eta, 1) - j2
+                  alpha = size(prod_xi, 2) - j1
+                  beta = size(prod_eta, 2) - j2
                   val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2)*mppi()*R*knot_eta(i2)**(1 + beta)*knot_xi(i1)**(1 + alpha)*((knot_eta(i2)*((Z1 - Z2)/(2 + beta) + (c**2*m*R*knot_eta(i2))/(3 + beta) + ((-Z1 + Z2)*knot_eta(i2)**2)/(4 + beta) - (c**2*m*R*knot_eta(i2)**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + knot_eta(i2)**2 + beta*(-1 + knot_eta(i2)**2))*knot_xi(i1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knot_eta(i2)*(-(1/(2 + beta)) + knot_eta(i2)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knot_eta(i2)**4/(5 + beta)))*knot_xi(i1)**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + knot_eta(i2)**2 + beta*(-1 + knot_eta(i2)**2))*knot_xi(i1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knot_eta(i2)**2)*knot_xi(i1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
                   val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2)*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1+1)**(1 + alpha)*((knot_eta(i2+1)*((Z1 - Z2)/(2 + beta) + (c**2*m*R*knot_eta(i2+1))/(3 + beta) + ((-Z1 + Z2)*knot_eta(i2+1)**2)/(4 + beta) - (c**2*m*R*knot_eta(i2+1)**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1+1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knot_eta(i2+1)*(-(1/(2 + beta)) + knot_eta(i2+1)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knot_eta(i2+1)**4/(5 + beta)))*knot_xi(i1+1)**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1+1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knot_eta(i2+1)**2)*knot_xi(i1+1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
                   val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2)*mppi()*R*knot_eta(i2+1)**(1 + beta)*knot_xi(i1)**(1 + alpha)*((knot_eta(i2+1)*((Z1 - Z2)/(2 + beta) + (c**2*m*R*knot_eta(i2+1))/(3 + beta) + ((-Z1 + Z2)*knot_eta(i2+1)**2)/(4 + beta) - (c**2*m*R*knot_eta(i2+1)**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knot_eta(i2+1)*(-(1/(2 + beta)) + knot_eta(i2+1)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knot_eta(i2+1)**4/(5 + beta)))*knot_xi(i1)**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + knot_eta(i2+1)**2 + beta*(-1 + knot_eta(i2+1)**2))*knot_xi(i1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knot_eta(i2+1)**2)*knot_xi(i1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
@@ -489,8 +581,8 @@ contains
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
                         alpha = size(b_i_xi, 1) - j1
                         beta = size(b_i_eta, 1) - j2
-                        gamma = size(b_j_xi, 1) - j3
-                        delta = size(b_j_eta, 1) - j4
+                        gamma = size(b_j_xi, 2) - j3
+                        delta = size(b_j_eta, 2) - j4
                         val_min_min(i1, i2) = val_min_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2)**(beta + gamma)*knot_xi(i1)**(alpha + delta)*((delta*knot_eta(i2)**4)/((alpha + delta)*(4 + beta + gamma)) + (knot_xi(i1)**4*(2*gamma + (beta + gamma)*(knot_eta(i2)**2*(delta - gamma) + gamma)))/((4 + alpha + delta)*(beta + gamma)*(2 + beta + gamma)) - (knot_eta(i2)**2*knot_xi(i1)**2*(gamma*(1/(2 + beta + gamma) - knot_eta(i2)**2/(4 + beta + gamma)) + delta*(1/(2 + beta + gamma) + knot_eta(i2)**2/(4 + beta + gamma))))/(2 + alpha + delta))
                         val_max_max(i1, i2) = val_max_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(beta + gamma)*knot_xi(i1+1)**(alpha + delta)*((delta*knot_eta(i2+1)**4)/((alpha + delta)*(4 + beta + gamma)) + (knot_xi(i1+1)**4*(2*gamma + (beta + gamma)*(knot_eta(i2+1)**2*(delta - gamma) + gamma)))/((4 + alpha + delta)*(beta + gamma)*(2 + beta + gamma)) - (knot_eta(i2+1)**2*knot_xi(i1+1)**2*(gamma*(1/(2 + beta + gamma) - knot_eta(i2+1)**2/(4 + beta + gamma)) + delta*(1/(2 + beta + gamma) + knot_eta(i2+1)**2/(4 + beta + gamma))))/(2 + alpha + delta))
                         val_min_max(i1, i2) = val_min_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(beta + gamma)*knot_xi(i1)**(alpha + delta)*((delta*knot_eta(i2+1)**4)/((alpha + delta)*(4 + beta + gamma)) + (knot_xi(i1)**4*(2*gamma + (beta + gamma)*(knot_eta(i2+1)**2*(delta - gamma) + gamma)))/((4 + alpha + delta)*(beta + gamma)*(2 + beta + gamma)) - (knot_eta(i2+1)**2*knot_xi(i1)**2*(gamma*(1/(2 + beta + gamma) - knot_eta(i2+1)**2/(4 + beta + gamma)) + delta*(1/(2 + beta + gamma) + knot_eta(i2+1)**2/(4 + beta + gamma))))/(2 + alpha + delta))
@@ -558,8 +650,8 @@ contains
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
                         alpha = size(b_i_xi, 1) - j1
                         beta = size(b_i_eta, 1) - j2
-                        gamma = size(b_j_xi, 1) - j3
-                        delta = size(b_j_eta, 1) - j4
+                        gamma = size(b_j_xi, 2) - j3
+                        delta = size(b_j_eta, 2) - j4
                         val_min_min(i1, i2) = val_min_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*(2*mppi()*R**2*knot_eta(i2)**(beta + gamma)*knot_xi(i1)**(alpha + delta)*((knot_eta(i2)**2*knot_xi(i1)**2*(2 + delta + delta*knot_eta(i2)**2 - 2*(1 + delta)*knot_eta(i2)**4 + (-1 + knot_eta(i2)**2)**2*gamma - (2*(2 + beta - delta))/(2 + beta + gamma) + (2*(6 + beta + 2*delta)*knot_eta(i2)**4)/(6 + beta + gamma)))/(2 + alpha + delta) + (delta*knot_eta(i2)**4*(-1 + (knot_eta(i2)**2*(4 + beta + gamma))/(6 + beta + gamma)))/(alpha + delta)-(knot_xi(i1)**4*(-((gamma*(4 + beta + gamma))/(beta + gamma)) - (knot_eta(i2)**2*(2*delta - gamma)*(4 + beta + gamma))/(2 + beta + gamma) + (knot_eta(i2)**6*(delta - gamma)*(4 + beta + gamma))/(6 + beta + gamma) + knot_eta(i2)**4*(delta + gamma)))/(4 + alpha + delta)-(knot_xi(i1)**6*(8*gamma + (beta + gamma)*(delta*knot_eta(i2)**2*(4 + beta - (2 + beta)*knot_eta(i2)**2) - (-1 + knot_eta(i2)**2)*(6 + beta + (-2 - beta + delta)*knot_eta(i2)**2)*gamma + (-1 + knot_eta(i2)**2)**2*gamma**2)))/((6 + alpha + delta)*(beta + gamma)*(2 + beta + gamma))))/(4 + beta + gamma)
                         val_max_max(i1, i2) = val_max_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*(2*mppi()*R**2*knot_eta(i2+1)**(beta + gamma)*knot_xi(i1+1)**(alpha + delta)*((knot_eta(i2+1)**2*knot_xi(i1+1)**2*(2 + delta + delta*knot_eta(i2+1)**2 - 2*(1 + delta)*knot_eta(i2+1)**4 + (-1 + knot_eta(i2+1)**2)**2*gamma - (2*(2 + beta - delta))/(2 + beta + gamma) + (2*(6 + beta + 2*delta)*knot_eta(i2+1)**4)/(6 + beta + gamma)))/(2 + alpha + delta) + (delta*knot_eta(i2+1)**4*(-1 + (knot_eta(i2+1)**2*(4 + beta + gamma))/(6 + beta + gamma)))/(alpha + delta)-(knot_xi(i1+1)**4*(-((gamma*(4 + beta + gamma))/(beta + gamma)) - (knot_eta(i2+1)**2*(2*delta - gamma)*(4 + beta + gamma))/(2 + beta + gamma) + (knot_eta(i2+1)**6*(delta - gamma)*(4 + beta + gamma))/(6 + beta + gamma) + knot_eta(i2+1)**4*(delta + gamma)))/(4 + alpha + delta)-(knot_xi(i1+1)**6*(8*gamma + (beta + gamma)*(delta*knot_eta(i2+1)**2*(4 + beta - (2 + beta)*knot_eta(i2+1)**2) - (-1 + knot_eta(i2+1)**2)*(6 + beta + (-2 - beta + delta)*knot_eta(i2+1)**2)*gamma + (-1 + knot_eta(i2+1)**2)**2*gamma**2)))/((6 + alpha + delta)*(beta + gamma)*(2 + beta + gamma))))/(4 + beta + gamma)
                         val_min_max(i1, i2) = val_min_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*(2*mppi()*R**2*knot_eta(i2+1)**(beta + gamma)*knot_xi(i1)**(alpha + delta)*((knot_eta(i2+1)**2*knot_xi(i1)**2*(2 + delta + delta*knot_eta(i2+1)**2 - 2*(1 + delta)*knot_eta(i2+1)**4 + (-1 + knot_eta(i2+1)**2)**2*gamma - (2*(2 + beta - delta))/(2 + beta + gamma) + (2*(6 + beta + 2*delta)*knot_eta(i2+1)**4)/(6 + beta + gamma)))/(2 + alpha + delta) + (delta*knot_eta(i2+1)**4*(-1 + (knot_eta(i2+1)**2*(4 + beta + gamma))/(6 + beta + gamma)))/(alpha + delta)-(knot_xi(i1)**4*(-((gamma*(4 + beta + gamma))/(beta + gamma)) - (knot_eta(i2+1)**2*(2*delta - gamma)*(4 + beta + gamma))/(2 + beta + gamma) + (knot_eta(i2+1)**6*(delta - gamma)*(4 + beta + gamma))/(6 + beta + gamma) + knot_eta(i2+1)**4*(delta + gamma)))/(4 + alpha + delta)-(knot_xi(i1)**6*(8*gamma + (beta + gamma)*(delta*knot_eta(i2+1)**2*(4 + beta - (2 + beta)*knot_eta(i2+1)**2) - (-1 + knot_eta(i2+1)**2)*(6 + beta + (-2 - beta + delta)*knot_eta(i2+1)**2)*gamma + (-1 + knot_eta(i2+1)**2)**2*gamma**2)))/((6 + alpha + delta)*(beta + gamma)*(2 + beta + gamma))))/(4 + beta + gamma)
@@ -627,8 +719,8 @@ contains
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
                         alpha = size(b_i_xi, 1) - j1
                         beta = size(b_i_eta, 1) - j2
-                        gamma = size(b_j_xi, 1) - j3
-                        delta = size(b_j_eta, 1) - j4
+                        gamma = size(b_j_xi, 2) - j3
+                        delta = size(b_j_eta, 2) - j4
                         val_min_min(i1, i2) = val_min_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2)**(1 + beta + gamma)*knot_xi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2)**2/(3 + beta + gamma))
                         val_max_max(i1, i2) = val_max_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(1 + beta + gamma)*knot_xi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1+1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2+1)**2/(3 + beta + gamma))
                         val_min_max(i1, i2) = val_min_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(1 + beta + gamma)*knot_xi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2+1)**2/(3 + beta + gamma))
@@ -696,8 +788,8 @@ contains
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
                         alpha = size(b_i_xi, 1) - j1
                         beta = size(b_i_eta, 1) - j2
-                        gamma = size(b_j_xi, 1) - j3
-                        delta = size(b_j_eta, 1) - j4
+                        gamma = size(b_j_xi, 2) - j3
+                        delta = size(b_j_eta, 2) - j4
                         val_min_min(i1, i2) = val_min_min(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2)**(1 + beta + gamma)*knot_xi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2)**2/(3 + beta + gamma))
                         val_max_max(i1, i2) = val_max_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(1 + beta + gamma)*knot_xi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1+1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2+1)**2/(3 + beta + gamma))
                         val_min_max(i1, i2) = val_min_max(i1, i2) + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knot_eta(i2+1)**(1 + beta + gamma)*knot_xi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knot_xi(i1)**2/(3 + alpha + delta))*(-delta + gamma)*(-(1/(1 + beta + gamma)) + knot_eta(i2+1)**2/(3 + beta + gamma))
@@ -1214,5 +1306,76 @@ contains
       close (1)
 
    end subroutine init_h2plus
+
+   subroutine test_routine(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
+      type(mp_real), intent(in) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp
+      integer, intent(in) :: d, n, n_remove, jz2
+      logical, intent(in) :: save_step
+
+      type(mp_real) :: tmp_result
+      type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps
+      type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_eta
+      logical :: debug_bool = .true.
+
+      integer :: ntot, i, j, ierr
+      integer, dimension(2) :: i2, j2
+
+      ntot = n + d + 2*n_remove
+      zero = '0.d0'
+
+      write (6, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
+
+      print *, "Generating B-spline knots..."
+      ! Generate the knot vectors for xi and eta
+      allocate (knotxi(ntot), knoteta(ntot))
+
+      knotxi = knot_xi(d, n, n_remove, ximin, ximax)
+      knoteta = knot_eta(d, n, n_remove, eta_slp)
+
+      print *, "Generating B-spline coefficients..."
+      ! Generate the B-spline coefficients for xi and eta
+      allocate (bspline_xi(n, ntot, d), bspline_eta(n, ntot, d))
+
+      do i = 1 + n_remove, n + n_remove ! Loop over the number of B-splines
+         if (debug_bool) then
+            print *, "Generating B-spline coefficients for B-spline ", i, "on xi-axis..."
+         end if
+         call init_bspine(d, i, knotxi, bspline_xi(i-n_remove, :, :), debug_bool)
+         if (debug_bool) then
+            print *, "Generating B-spline coefficients for B-spline ", i, "on eta-axis..."
+         end if
+         call init_bspine(d, i, knoteta, bspline_eta(i-n_remove, :, :), debug_bool)
+      end do
+
+      ! Modify the knots to avoid singularities. 
+      allocate (knotxi_eps(ntot), knoteta_eps(ntot))
+      knotxi_eps = knotxi
+      knoteta_eps = knoteta
+      do i = 1, d
+         knotxi_eps(i) = knotxi_eps(i) + epsilon
+         knoteta_eps(i) = knoteta_eps(i) + epsilon
+         knoteta_eps(ntot - i + 1) = knoteta_eps(ntot - i + 1) - epsilon
+      end do
+
+      if (debug_bool) then
+         print *, "Adjusted B-spline knots for xi-axis: "
+         call write_lists(knotxi_eps, 6, 25, 10)
+         print *, "Adjusted B-spline knots for eta-axis: "
+         call write_lists(knoteta_eps, 6, 25, 10)
+      end if
+
+      print *, "Test S11one integral with cuts..."
+      ! Test the S11one integral
+      call int_s11one(bspline_xi(1, :, :), bspline_eta(1, :, :), &
+                            bspline_xi(1, :, :), bspline_eta(1, :, :), &
+                            n_remove, knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, jz2, epsilon, tmp_result)
+
+      call mpwrite(6, 30, 10, tmp_result)
+      call int_s11one_no_dbl(bspline_xi(1, :, :), bspline_eta(1, :, :), &
+                            bspline_xi(1, :, :), bspline_eta(1, :, :), &
+                            n_remove, knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, jz2, epsilon, tmp_result)
+
+      call mpwrite(6, 30, 10, tmp_result)
+   end subroutine test_routine
 
 end module h2plus
