@@ -15,12 +15,15 @@ program main
     ! Define Important Constants
     d = 4 ! Order of the B-Spline (order Mathematica + 1)
     n = 4 ! Number of Usable B-spline 
+    d = 4 ! Order of the B-Spline (order Mathematica + 1)
+    n = 4 ! Number of Usable B-spline 
     n_remove = 1 ! Number of knots to remove from each end
     Z1 = '1.0d0' ! number of protons for the first atom
     Z2 = '1.0d0' ! number of protons for the second atom
     m = '1.0d0' ! mass of the electron
     C = '137.0359895d0' ! check CODATA 1986
     R = '1.0d0' ! distance between the two nuclei
+    ximax = '50.0d0' ! maximum position of the B-spline on z-axis
     ximax = '50.0d0' ! maximum position of the B-spline on z-axis
     ximin = '1.0d0' ! minimum position of the B-spline on z-axis
     jz2 = one ! Quantum number will be divided by 2
