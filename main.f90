@@ -13,8 +13,8 @@ program main
 
     !-------------------------------------------------
     ! Define Important Constants
-    d = 7 ! Order of the B-Spline (order Mathematica + 1)
-    n = 8 ! Number of Usable B-spline 
+    d = 4 ! Order of the B-Spline (order Mathematica + 1)
+    n = 4 ! Number of Usable B-spline 
     n_remove = 1 ! Number of knots to remove from each end
     Z1 = '1.0d0' ! number of protons for the first atom
     Z2 = '1.0d0' ! number of protons for the second atom
@@ -31,7 +31,8 @@ program main
     !-------------------------------------------------
 
 
-    call init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
+    ! call init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
+    call init_h2plus_v2(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
     ! call test_routine(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
 end program main
 
