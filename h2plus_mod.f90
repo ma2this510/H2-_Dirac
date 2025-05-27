@@ -2071,7 +2071,7 @@ contains
       write (1, '(a)') "Eigenvalues: "
       do i = 1, 4*n**2
          write (1, '(i4, a, i4)', advance='no') i, " "
-         call mpwrite(1, 30, 10, w(i))
+         call mpwrite(1, 30, 10, w(i)-m*c*c)
       end do
       close (1)
 
@@ -2489,7 +2489,7 @@ contains
 
       print *, "Saving logs to file..."
       ! Save logs
-      open (unit=1, file='log_file', status='replace')
+      open (unit=1, file='log_file_2', status='replace')
       write (1, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
       write (1, '(a)') "Speed of light: "
       call mpwrite(1, 30, 10, C)
