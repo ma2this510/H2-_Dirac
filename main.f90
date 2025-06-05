@@ -19,7 +19,7 @@ program main
     Z1 = '1.0d0' ! number of protons for the first atom
     Z2 = '1.0d0' ! number of protons for the second atom
     m = '1.0d0' ! mass of the electron
-    C = '137.0359895d0' ! check CODATA 1986
+    C = '137.0359d0' ! check CODATA 1986
     R = '1.0d0' ! distance between the two nuclei
     ximax = '50.0d0' ! maximum position of the B-spline on z-axis
     ximin = '1.0d0' ! minimum position of the B-spline on z-axis
@@ -32,8 +32,6 @@ program main
 
 
     call init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
-    call init_h2plus_v2(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
-    ! call test_routine(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
 end program main
 
 function epsilonn(alpha)
