@@ -20,11 +20,11 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: jz2, alpha, beta
+      integer :: alpha, beta
       type(mp_real) :: s11one
 
       type(mp_real) :: zero, one
@@ -40,7 +40,6 @@ contains
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
-      !> @param n_remove : integer : the number of knots to remove from each end
       !> @param knotxi : real(:) : the knot vector for the xi direction
       !> @param knoteta : real(:) : the knot vector for the eta direction
       !> @param Z1 : real : the number of protons for the first atom
@@ -48,7 +47,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -110,11 +109,11 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: jz2, alpha, beta
+      integer :: alpha, beta
       type(mp_real) :: s22one
 
       type(mp_real) :: zero, one
@@ -130,7 +129,6 @@ contains
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
-      !> @param n_remove : integer : the number of knots to remove from each end
       !> @param knotxi : real(:) : the knot vector for the xi direction
       !> @param knoteta : real(:) : the knot vector for the eta direction
       !> @param Z1 : real : the number of protons for the first atom
@@ -138,7 +136,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -200,11 +198,11 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: jz2, alpha, beta
+      integer :: alpha, beta
       type(mp_real) :: c11one
 
       type(mp_real) :: zero, one
@@ -220,7 +218,6 @@ contains
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
-      !> @param n_remove : integer : the number of knots to remove from each end
       !> @param knotxi : real(:) : the knot vector for the xi direction
       !> @param knoteta : real(:) : the knot vector for the eta direction
       !> @param Z1 : real : the number of protons for the first atom
@@ -228,7 +225,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @return S11 : real : the value of the S11 integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -290,11 +287,11 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: jz2, alpha, beta
+      integer :: alpha, beta
       type(mp_real) :: c11two
 
       type(mp_real) :: zero, one
@@ -310,7 +307,6 @@ contains
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
-      !> @param n_remove : integer : the number of knots to remove from each end
       !> @param knotxi : real(:) : the knot vector for the xi direction
       !> @param knoteta : real(:) : the knot vector for the eta direction
       !> @param Z1 : real : the number of protons for the first atom
@@ -318,7 +314,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -380,11 +376,11 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: jz2, alpha, beta
+      integer :: alpha, beta
       type(mp_real) :: c22one
 
       type(mp_real) :: zero, one
@@ -401,7 +397,6 @@ contains
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
-      !> @param n_remove : integer : the number of knots to remove from each end
       !> @param knotxi : real(:) : the knot vector for the xi direction
       !> @param knoteta : real(:) : the knot vector for the eta direction
       !> @param Z1 : real : the number of protons for the first atom
@@ -409,7 +404,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -453,14 +448,6 @@ contains
          end do
       end do
 
-      ! ! Test
-      ! print *, "Begin test "
-      ! do i1 = 1, size(b_i_xi, 1) - 1
-      !    call write_lists(diff(i1, :), 6, 30, 10)
-      ! end do
-      ! print *, "End test "
-      ! ! Test end
-
    end subroutine int_C22one
 
    function fun_c22two(xi, eta, Z1, Z2, m, C, R, alpha, beta) result(c22two)
@@ -472,11 +459,11 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: jz2, alpha, beta
+      integer :: alpha, beta
       type(mp_real) :: c22two
 
       type(mp_real) :: zero, one
@@ -492,7 +479,6 @@ contains
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
-      !> @param n_remove : integer : the number of knots to remove from each end
       !> @param knotxi : real(:) : the knot vector for the xi direction
       !> @param knoteta : real(:) : the knot vector for the eta direction
       !> @param Z1 : real : the number of protons for the first atom
@@ -500,7 +486,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -534,10 +520,10 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-                  val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2)*mppi()*R*knoteta(i2)**(1 + beta)*knotxi(i1)**(1 + alpha)*((knoteta(i2)*((Z1 - Z2)/(2 + beta) + (c**2*m*R*knoteta(i2))/(3 + beta) + ((-Z1 + Z2)*knoteta(i2)**2)/(4 + beta) - (c**2*m*R*knoteta(i2)**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + knoteta(i2)**2 + beta*(-1 + knoteta(i2)**2))*knotxi(i1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knoteta(i2)*(-(1/(2 + beta)) + knoteta(i2)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knoteta(i2)**4/(5 + beta)))*knotxi(i1)**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + knoteta(i2)**2 + beta*(-1 + knoteta(i2)**2))*knotxi(i1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knoteta(i2)**2)*knotxi(i1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
-                  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2)*mppi()*R*knoteta(i2+1)**(1 + beta)*knotxi(i1+1)**(1 + alpha)*((knoteta(i2+1)*((Z1 - Z2)/(2 + beta) + (c**2*m*R*knoteta(i2+1))/(3 + beta) + ((-Z1 + Z2)*knoteta(i2+1)**2)/(4 + beta) - (c**2*m*R*knoteta(i2+1)**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + knoteta(i2+1)**2 + beta*(-1 + knoteta(i2+1)**2))*knotxi(i1+1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knoteta(i2+1)*(-(1/(2 + beta)) + knoteta(i2+1)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knoteta(i2+1)**4/(5 + beta)))*knotxi(i1+1)**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + knoteta(i2+1)**2 + beta*(-1 + knoteta(i2+1)**2))*knotxi(i1+1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knoteta(i2+1)**2)*knotxi(i1+1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
-                  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2)*mppi()*R*knoteta(i2+1)**(1 + beta)*knotxi(i1)**(1 + alpha)*((knoteta(i2+1)*((Z1 - Z2)/(2 + beta) + (c**2*m*R*knoteta(i2+1))/(3 + beta) + ((-Z1 + Z2)*knoteta(i2+1)**2)/(4 + beta) - (c**2*m*R*knoteta(i2+1)**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + knoteta(i2+1)**2 + beta*(-1 + knoteta(i2+1)**2))*knotxi(i1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knoteta(i2+1)*(-(1/(2 + beta)) + knoteta(i2+1)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knoteta(i2+1)**4/(5 + beta)))*knotxi(i1)**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + knoteta(i2+1)**2 + beta*(-1 + knoteta(i2+1)**2))*knotxi(i1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knoteta(i2+1)**2)*knotxi(i1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
-                  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2)*mppi()*R*knoteta(i2)**(1 + beta)*knotxi(i1+1)**(1 + alpha)*((knoteta(i2)*((Z1 - Z2)/(2 + beta) + (c**2*m*R*knoteta(i2))/(3 + beta) + ((-Z1 + Z2)*knoteta(i2)**2)/(4 + beta) - (c**2*m*R*knoteta(i2)**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + knoteta(i2)**2 + beta*(-1 + knoteta(i2)**2))*knotxi(i1+1))/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*knoteta(i2)*(-(1/(2 + beta)) + knoteta(i2)**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + knoteta(i2)**4/(5 + beta)))*knotxi(i1+1)**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + knoteta(i2)**2 + beta*(-1 + knoteta(i2)**2))*knotxi(i1+1)**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*knoteta(i2)**2)*knotxi(i1+1)**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
+                  val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+                  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
+                  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
+                  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             result = result + val_max_max + val_min_min - val_max_min - val_min_max
@@ -565,7 +551,13 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      c11three = (2*mppi()*eta**(beta + chi)*xi**(alpha + delta)*(-((delta*eta**2*(beta + chi))/(alpha + delta)) + (xi**2*(2*chi + (beta + chi)*(eta**2*(delta - chi) + chi)))/(2 + alpha + delta)))/((beta + chi)*(2 + beta + chi))
+      if (beta ==0 .and. delta ==0 .and. alpha ==0 .and. chi ==0) then
+         c11three = zero ! doesn't affect result
+      else if (beta ==0 .and. delta ==0) then
+         c11three = mppi()*R**2*eta**2*xi**(alpha + chi)*chi*(-(1/(alpha + chi)) + xi**2/(2 + alpha + chi))
+      else 
+         c11three = (-2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*(((beta + delta)*eta**2*chi)/(alpha + chi) + (xi**2*(-(delta*(2 + beta + delta)) + delta*(beta + delta)*eta**2 - (beta + delta)*eta**2*chi))/(2 + alpha + chi)))/((beta + delta)*(2 + beta + delta))
+      end if
    end function fun_c11three
 
    subroutine int_C11three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -631,7 +623,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -642,10 +634,12 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      if (beta ==0 .and. chi == 0) then
-         c22three = zero
+      if (beta ==0 .and. delta ==0 .and. alpha ==0 .and. chi ==0) then
+         c22three = zero ! doesn't affect result
+      else if (beta ==0 .and. delta ==0) then
+         c22three = -one*(mppi()*eta**2*(-2 + eta**2)*xi**(alpha + chi)*chi*(1/(alpha + chi) - (2*xi**2)/(2 + alpha + chi) + xi**4/(4 + alpha + chi)))/2
       else
-         c22three = (2*mppi()*R**2*eta**(beta + chi)*xi**(alpha + delta)*((eta**2*xi**2*(2 + delta + delta*eta**2 - 2*(1 + delta)*eta**4 + (-1 + eta**2)**2*chi - (2*(2 + beta - delta))/(2 + beta + chi) + (2*(6 + beta + 2*delta)*eta**4)/(6 + beta + chi)))/(2 + alpha + delta) + (delta*eta**4*(-1 + (eta**2*(4 + beta + chi))/(6 + beta + chi)))/(alpha + delta)-(xi**4*(-((chi*(4 + beta + chi))/(beta + chi)) - (eta**2*(2*delta - chi)*(4 + beta + chi))/(2 + beta + chi) + (eta**6*(delta - chi)*(4 + beta + chi))/(6 + beta + chi) + eta**4*(delta + chi)))/(4 + alpha + delta)-(xi**6*(8*chi + (beta + chi)*(delta*eta**2*(4 + beta - (2 + beta)*eta**2) - (-1 + eta**2)*(6 + beta + (-2 - beta + delta)*eta**2)*chi + (-1 + eta**2)**2*chi**2)))/((6 + alpha + delta)*(beta + chi)*(2 + beta + chi))))/(4 + beta + chi)
+         c22three = 2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*((eta**2*(1/(2 + beta + delta) - eta**2/(4 + beta + delta))*chi)/(alpha + chi) + (xi**4*(delta*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta)) + eta**2*(1/(2 + beta + delta) - eta**2/(4 + beta + delta))*chi))/(4 + alpha + chi) - (xi**2*(delta*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta)) + 2*eta**2*(1/(2 + beta + delta) - eta**2/(4 + beta + delta))*chi))/(2 + alpha + chi))
       end if
    end function fun_c22three
 
@@ -655,7 +649,6 @@ contains
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
-      !> @param n_remove : integer : the number of knots to remove from each end
       !> @param knotxi : real(:) : the knot vector for the xi direction
       !> @param knoteta : real(:) : the knot vector for the eta direction
       !> @param Z1 : real : the number of protons for the first atom
@@ -663,7 +656,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -714,11 +707,11 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: jz2, alpha, beta, chi, delta
+      integer :: alpha, beta, chi, delta
       type(mp_real) :: c12three
 
       type(mp_real) :: zero, one
@@ -734,7 +727,6 @@ contains
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
-      !> @param n_remove : integer : the number of knots to remove from each end
       !> @param knotxi : real(:) : the knot vector for the xi direction
       !> @param knoteta : real(:) : the knot vector for the eta direction
       !> @param Z1 : real : the number of protons for the first atom
@@ -742,7 +734,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -770,10 +762,10 @@ contains
                         beta = size(b_i_eta, 2) - j2
                         chi = size(b_j_xi, 2) - j3
                         delta = size(b_j_eta, 2) - j4
-                        val_min_min = val_min_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knoteta(i2)**(1 + beta + chi)*knotxi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knotxi(i1)**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + knoteta(i2)**2/(3 + beta + chi))
-                        val_max_max = val_max_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knoteta(i2+1)**(1 + beta + chi)*knotxi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knotxi(i1+1)**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + knoteta(i2+1)**2/(3 + beta + chi))
-                        val_min_max = val_min_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knoteta(i2+1)**(1 + beta + chi)*knotxi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knotxi(i1)**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + knoteta(i2+1)**2/(3 + beta + chi))
-                        val_max_min = val_max_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knoteta(i2)**(1 + beta + chi)*knotxi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knotxi(i1+1)**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + knoteta(i2)**2/(3 + beta + chi))
+                        val_min_min = val_min_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c12three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c12three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c12three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c12three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -793,11 +785,11 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: jz2, alpha, beta, chi, delta
+      integer :: alpha, beta, chi, delta
       type(mp_real) :: c21three
 
       type(mp_real) :: zero, one
@@ -813,7 +805,6 @@ contains
       !> @param b_i_eta : real(:, :) : the B-spline coefficients for the eta direction
       !> @param b_j_xi : real(:, :) : the B-spline coefficients for the xi direction
       !> @param b_j_eta : real(:, :) : the B-spline coefficients for the eta direction
-      !> @param n_remove : integer : the number of knots to remove from each end
       !> @param knotxi : real(:) : the knot vector for the xi direction
       !> @param knoteta : real(:) : the knot vector for the eta direction
       !> @param Z1 : real : the number of protons for the first atom
@@ -821,7 +812,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      !> @param jz2 : real : the quantum number (2*jz)
+      
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -849,10 +840,10 @@ contains
                         beta = size(b_i_eta, 2) - j2
                         chi = size(b_j_xi, 2) - j3
                         delta = size(b_j_eta, 2) - j4
-                        val_min_min = val_min_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knoteta(i2)**(1 + beta + chi)*knotxi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knotxi(i1)**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + knoteta(i2)**2/(3 + beta + chi))
-                        val_max_max = val_max_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knoteta(i2+1)**(1 + beta + chi)*knotxi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knotxi(i1+1)**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + knoteta(i2+1)**2/(3 + beta + chi))
-                        val_min_max = val_min_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knoteta(i2+1)**(1 + beta + chi)*knotxi(i1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knotxi(i1)**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + knoteta(i2+1)**2/(3 + beta + chi))
-                        val_max_min = val_max_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*2*mppi()*R**2*knoteta(i2)**(1 + beta + chi)*knotxi(i1+1)**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + knotxi(i1+1)**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + knoteta(i2)**2/(3 + beta + chi))
+                        val_min_min = val_min_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c21three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c21three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c21three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c21three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -1057,7 +1048,7 @@ contains
             C22one(i, j) = zero
             call int_C22one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
-                            knotxi, knoteta, Z1, Z2, m, C, R, C22one(i, j))
+                            knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22one(i, j))
          end do
       end do
       !$OMP END PARALLEL DO
@@ -1084,7 +1075,7 @@ contains
             C22two(i, j) = zero
             call int_C22two(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
-                            knotxi, knoteta, Z1, Z2, m, C, R, C22two(i, j))
+                            knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22two(i, j))
          end do
       end do
       !$OMP END PARALLEL DO
@@ -1111,7 +1102,7 @@ contains
             C11three(i, j) = zero
             call int_C11three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                               bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
-                              knotxi, knoteta, Z1, Z2, m, C, R, C11three(i, j))
+                              knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C11three(i, j))
          end do
       end do
       !$OMP END PARALLEL DO
@@ -1129,7 +1120,7 @@ contains
       ! Calculate the C22three integral
       allocate (C22three(n**2, n**2))
 
-      ! !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22three, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22three, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
          do j = 1, n**2
             i2 = indexToPair(i, n)
@@ -1141,7 +1132,7 @@ contains
                               knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22three(i, j))
          end do
       end do
-      ! !$OMP END PARALLEL DO
+      !$OMP END PARALLEL DO
 
       if (save_step) then
          print *, "Saving C22three matrix to file..."
@@ -1165,7 +1156,7 @@ contains
             C12three(i, j) = zero
             call int_C12three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                               bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
-                              knotxi, knoteta, Z1, Z2, m, C, R, C12three(i, j))
+                              knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C12three(i, j))
          end do
       end do
       !$OMP END PARALLEL DO
@@ -1192,7 +1183,7 @@ contains
             C21three(i, j) = zero
             call int_C21three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                               bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
-                              knotxi, knoteta, Z1, Z2, m, C, R, C21three(i, j))
+                              knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C21three(i, j))
          end do
       end do
       !$OMP END PARALLEL DO
