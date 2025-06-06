@@ -718,7 +718,7 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      c12three = 2*mppi()*R**2*eta**(1 + beta + chi)*xi**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + xi**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + eta**2/(3 + beta + chi))
+      c12three = (2*mppi()*eta**(1 + beta + delta)*xi**(1 + alpha + chi)*((3 + alpha + chi)*(delta*(3 + beta + delta - (1 + beta + delta)*eta**2) + (1 + beta + delta)*eta**2*(-2 + chi) - (3 + beta + delta)*chi) + xi**2*(1 + alpha + chi)*(2*(3 + beta + delta) - delta*(3 + beta + delta) + delta*(1 + beta + delta)*eta**2 + (3 + beta + delta)*chi - (1 + beta + delta)*eta**2*chi)))/((1 + beta + delta)*(3 + beta + delta)*(1 + alpha + chi)*(3 + alpha + chi))
    end function fun_c12three
 
    subroutine int_C12three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -796,7 +796,7 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      c21three = 2*mppi()*R**2*eta**(1 + beta + chi)*xi**(1 + alpha + delta)*(-(1/(1 + alpha + delta)) + xi**2/(3 + alpha + delta))*(-delta + chi)*(-(1/(1 + beta + chi)) + eta**2/(3 + beta + chi))
+      c21three = 2*mppi()*eta**(1 + beta + delta)*(-(1/(1 + beta + delta)) + eta**2/(3 + beta + delta))*xi**(1 + alpha + chi)*(delta - chi)*(-(1/(1 + alpha + chi)) + xi**2/(3 + alpha + chi))
    end function fun_c21three
 
    subroutine int_C21three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
