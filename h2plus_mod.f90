@@ -387,7 +387,8 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      c22one = 2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*((eta*((-Z1 + Z2)/(2 + beta) + (c**2*m*R*eta)/(3 + beta) + ((Z1 - Z2)*eta**2)/(4 + beta) - (c**2*m*R*eta**3)/(5 + beta)))/(1 + alpha) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) + (((Z1 - Z2)*eta*(1/(2 + beta) - eta**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + eta**4/(5 + beta)))*xi**2)/(3 + alpha) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*eta**2)*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
+      ! c22one = 2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*((eta*((-Z1 + Z2)/(2 + beta) + (c**2*m*R*eta)/(3 + beta) + ((Z1 - Z2)*eta**2)/(4 + beta) - (c**2*m*R*eta**3)/(5 + beta)))/(1 + alpha) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) + (((Z1 - Z2)*eta*(1/(2 + beta) - eta**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + eta**4/(5 + beta)))*xi**2)/(3 + alpha) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*eta**2)*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
+      c22one = 2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*((eta*(-(c**2*m*R*(8 + 6*beta + beta**2)*eta*(-5 + 3*eta**2 + beta*(-1 + eta**2))) + Z1*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2)) - Z2*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2))))/((1 + alpha)*(2 + beta)*(3 + beta)*(4 + beta)*(5 + beta)) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) + ((-((Z1 - Z2)*(5 + 6*beta + beta**2)*eta*(2*(-2 + eta**2) + beta*(-1 + eta**2))) + c**2*m*R*(8 + 6*beta + beta**2)*(-5 + eta**4 + beta*(-1 + eta**4)))*xi**2)/((3 + alpha)*(1 + beta)*(2 + beta)*(4 + beta)*(5 + beta)) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) - (c**2*m*R*(-3 + eta**2 + beta*(-1 + eta**2))*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
 
    end function fun_c22one
 
@@ -470,7 +471,8 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      c22two = (-2)*mppi()*R*eta**(1 + beta)*xi**(1 + alpha)*((eta*((Z1 - Z2)/(2 + beta) + (c**2*m*R*eta)/(3 + beta) + ((-Z1 + Z2)*eta**2)/(4 + beta) - (c**2*m*R*eta**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*eta*(-(1/(2 + beta)) + eta**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + eta**4/(5 + beta)))*xi**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*eta**2)*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
+      ! c22two = (-2)*mppi()*R*eta**(1 + beta)*xi**(1 + alpha)*((eta*((Z1 - Z2)/(2 + beta) + (c**2*m*R*eta)/(3 + beta) + ((-Z1 + Z2)*eta**2)/(4 + beta) - (c**2*m*R*eta**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*eta*(-(1/(2 + beta)) + eta**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + eta**4/(5 + beta)))*xi**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*eta**2)*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
+      c22two = -2*mppi()*R*eta**(1 + beta)*xi**(1 + alpha)*((eta*(-(c**2*m*R*(8 + 6*beta + beta**2)*eta*(-5 + 3*eta**2 + beta*(-1 + eta**2))) - Z1*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2)) + Z2*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2))))/((1 + alpha)*(2 + beta)*(3 + beta)*(4 + beta)*(5 + beta)) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) + (((Z1 - Z2)*(5 + 6*beta + beta**2)*eta*(2*(-2 + eta**2) + beta*(-1 + eta**2)) + c**2*m*R*(8 + 6*beta + beta**2)*(-5 + eta**4 + beta*(-1 + eta**4)))*xi**2)/((3 + alpha)*(1 + beta)*(2 + beta)*(4 + beta)*(5 + beta)) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) - (c**2*m*R*(-3 + eta**2 + beta*(-1 + eta**2))*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
    end function fun_c22two
 
    subroutine int_C22two(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -742,7 +744,7 @@ contains
       type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
 
       type(mp_real) :: val_max_max, val_min_min, val_max_min, val_min_max
-      integer :: i, i1, i2, j1, j2, j3, j4, alpha, beta, chi, delta
+      integer :: i1, i2, j1, j2, j3, j4, alpha, beta, chi, delta
 
       zero = '0.0d0'
 
@@ -796,7 +798,7 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      c21three = 2*mppi()*eta**(1 + beta + delta)*(-(1/(1 + beta + delta)) + eta**2/(3 + beta + delta))*xi**(1 + alpha + chi)*(delta - chi)*(-(1/(1 + alpha + chi)) + xi**2/(3 + alpha + chi))
+      c21three = (2*mppi()*R**2*eta**(1 + beta + delta)*(-3 - beta - delta + (1 + beta + delta)*eta**2)*xi**(1 + alpha + chi)*(delta - chi)*(-3 + alpha*(-1 + xi**2) - chi + xi**2*(1 + chi)))/((1 + beta + delta)*(3 + beta + delta)*(1 + alpha + chi)*(3 + alpha + chi))
    end function fun_c21three
 
    subroutine int_C21three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -824,7 +826,7 @@ contains
 
       zero = '0.0d0'
 
-      ! Calculate the value of the S11 integral at each knot and take the difference
+      ! Calculate the value of the C21(3) integral at each knot and take the difference
       result = zero
       do i1 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of xi
          do i2 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of eta

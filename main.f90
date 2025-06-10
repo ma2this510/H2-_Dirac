@@ -24,8 +24,8 @@ program main
     ximax = '50.0d0' ! maximum position of the B-spline on z-axis
     ximin = '1.0d0' ! minimum position of the B-spline on z-axis
     jz2 = one ! Quantum number will be divided by 2
-    epsilon = '1.0d-9' ! machine epsilon
-    ! epsilon = zero ! machine epsilon
+    ! epsilon = '1.0d-9' ! machine epsilon
+    epsilon = zero ! machine epsilon
     eta_slp = '5.0d-1' ! paramet for the generation of the knot vector on eta
     !-------------------------------------------------
     save_step = .true. ! Save matrices at each step
