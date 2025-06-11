@@ -20,7 +20,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -31,7 +31,7 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      s11one = 2*mppi()*(R**3)*(xi**(alpha+1)) * (eta**(beta+1)) *(-(eta**2)/((alpha+1)*(beta+3))+(xi**2)/((alpha+3)*(beta+1)))
+s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha + 1)*(beta + 3)) + (xi**2)/((alpha + 3)*(beta + 1)))
    end function fun_s11one
 
    subroutine int_s11one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -47,7 +47,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -68,11 +68,11 @@ contains
          prod_eta(i, :) = fusion_coef(b_i_eta(i, :), b_j_eta(i, :))
       end do
 
-      allocate (val_max_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_min_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_max_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_min_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                diff(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1))
+      allocate (val_max_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_min_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_max_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_min_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                diff(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1))
 
       result = zero
       ! Calculate the value of the S11 integral at each knot and take the difference
@@ -109,7 +109,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -136,7 +136,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -157,11 +157,11 @@ contains
          prod_eta(i, :) = fusion_coef(b_i_eta(i, :), b_j_eta(i, :))
       end do
 
-      allocate (val_max_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_min_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_max_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_min_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                diff(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1))
+      allocate (val_max_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_min_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_max_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_min_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                diff(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1))
 
       ! Calculate the value of the result integral at each knot and take the difference
       result = zero
@@ -198,7 +198,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -225,7 +225,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @return S11 : real : the value of the S11 integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -246,11 +246,11 @@ contains
          prod_eta(i, :) = fusion_coef(b_i_eta(i, :), b_j_eta(i, :))
       end do
 
-      allocate (val_max_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_min_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_max_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_min_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                diff(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1))
+      allocate (val_max_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_min_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_max_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_min_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                diff(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1))
 
       ! Calculate the value of the S11 integral at each knot and take the difference
       result = zero
@@ -287,7 +287,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -314,7 +314,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -335,11 +335,11 @@ contains
          prod_eta(i, :) = fusion_coef(b_i_eta(i, :), b_j_eta(i, :))
       end do
 
-      allocate (val_max_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_min_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_max_min(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                val_min_max(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1), &
-                diff(size(b_i_xi, 1)-1, size(b_i_eta, 1)-1))
+      allocate (val_max_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_min_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_max_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                val_min_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
+                diff(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1))
 
       ! Calculate the value of the integral at each knot and take the difference
       result = zero
@@ -376,7 +376,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -405,7 +405,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -439,10 +439,10 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-                  val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
-                  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-                  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-                  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+      val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
+  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1), knoteta(i2 + 1), Z1, Z2, m, C, R, alpha, beta)
+  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1 + 1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             result = result + val_max_max + val_min_min - val_max_min - val_min_max
@@ -460,7 +460,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -488,7 +488,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -522,10 +522,10 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-                  val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
-                  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-                  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-                  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+      val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
+  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1), knoteta(i2 + 1), Z1, Z2, m, C, R, alpha, beta)
+  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1 + 1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             result = result + val_max_max + val_min_min - val_max_min - val_min_max
@@ -553,12 +553,14 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      if (beta ==0 .and. delta ==0 .and. alpha ==0 .and. chi ==0) then
+      if (beta == 0 .and. delta == 0 .and. alpha == 0 .and. chi == 0) then
          c11three = zero ! doesn't affect result
-      else if (beta ==0 .and. delta ==0) then
-         c11three = mppi()*R**2*eta**2*xi**(alpha + chi)*chi*(-(1/(alpha + chi)) + xi**2/(2 + alpha + chi))
-      else 
-         c11three = (-2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*(((beta + delta)*eta**2*chi)/(alpha + chi) + (xi**2*(-(delta*(2 + beta + delta)) + delta*(beta + delta)*eta**2 - (beta + delta)*eta**2*chi))/(2 + alpha + chi)))/((beta + delta)*(2 + beta + delta))
+         ! else if (alpha ==0 .and. chi ==0) then ! No idea why this case break everything
+         !    c11three = mppi()*R**2*delta*eta**(beta + delta)*(1/(beta + delta) - eta**2/(2 + beta + delta))*xi**2
+      else if (beta == 0 .and. delta == 0) then
+         c11three = mppi()*R**2*eta**2*chi*(-(xi**(alpha + chi)/(alpha + chi)) + xi**(2 + alpha + chi)/(2 + alpha + chi))
+      else
+         c11three = (-2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*(((beta + delta)*eta**2*chi)/(alpha + chi) - (xi**2*(-(delta**2*(-1 + eta**2)) + one*beta*eta**2*chi + delta*(2 + beta - beta*eta**2 + eta**2*chi)))/(2 + alpha + chi)))/(one*(beta + delta)*(2 + beta + delta))
       end if
    end function fun_c11three
 
@@ -625,7 +627,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -636,10 +638,12 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-      if (beta ==0 .and. delta ==0 .and. alpha ==0 .and. chi ==0) then
+      if (beta == 0 .and. delta == 0 .and. alpha == 0 .and. chi == 0) then
          c22three = zero ! doesn't affect result
-      else if (beta ==0 .and. delta ==0) then
-         c22three = -one*(mppi()*eta**2*(-2 + eta**2)*xi**(alpha + chi)*chi*(1/(alpha + chi) - (2*xi**2)/(2 + alpha + chi) + xi**4/(4 + alpha + chi)))/2
+      else if (alpha == 0 .and. chi == 0) then
+         c22three = (mppi()*R**2*delta*eta**(beta + delta)*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta))*xi**2*(-2 + xi**2))/2
+      else if (beta == 0 .and. delta == 0) then
+         c22three = -one*(mppi()*R**2*eta**2*(-2 + eta**2)*xi**(alpha + chi)*chi*(1/(alpha + chi) - (2*xi**2)/(2 + alpha + chi) + xi**4/(4 + alpha + chi)))/2
       else
          c22three = 2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*((eta**2*(1/(2 + beta + delta) - eta**2/(4 + beta + delta))*chi)/(alpha + chi) + (xi**4*(delta*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta)) + eta**2*(1/(2 + beta + delta) - eta**2/(4 + beta + delta))*chi))/(4 + alpha + chi) - (xi**2*(delta*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta)) + 2*eta**2*(1/(2 + beta + delta) - eta**2/(4 + beta + delta))*chi))/(2 + alpha + chi))
       end if
@@ -658,7 +662,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -709,7 +713,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -736,7 +740,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -787,7 +791,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
       type(mp_real) :: xi, eta, m, C, R, Z1, Z2
@@ -814,7 +818,7 @@ contains
       !> @param m : real : the mass of the electron
       !> @param C : real : the speed of light
       !> @param R : real : the distance between the two nuclei
-      
+
       !> @return result : real : the value of the result integral
       type(mp_real), intent(in) :: Z1, Z2, m, C, R
       type(mp_real), intent(out) :: result
@@ -853,7 +857,7 @@ contains
             result = result + val_max_max + val_min_min - val_max_min - val_min_max
          end do
       end do
-      
+
    end subroutine int_C21three
 
    subroutine init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
@@ -905,14 +909,14 @@ contains
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on xi-axis..."
          end if
-         call init_bspine(d, i, knotxi, bspline_xi(i-n_remove, :, :), debug_bool)
+         call init_bspine(d, i, knotxi, bspline_xi(i - n_remove, :, :), debug_bool)
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on eta-axis..."
          end if
-         call init_bspine(d, i, knoteta, bspline_eta(i-n_remove, :, :), debug_bool)
+         call init_bspine(d, i, knoteta, bspline_eta(i - n_remove, :, :), debug_bool)
       end do
 
-      ! Modify the knots to avoid singularities. 
+      ! Modify the knots to avoid singularities.
       allocate (knotxi_eps(ntot), knoteta_eps(ntot))
       knotxi_eps = knotxi
       knoteta_eps = knoteta
@@ -1122,7 +1126,7 @@ contains
       ! Calculate the C22three integral
       allocate (C22three(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22three, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22three, n, d, knotxi_eps, knoteta_eps, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
          do j = 1, n**2
             i2 = indexToPair(i, n)
@@ -1256,7 +1260,7 @@ contains
                end if
             end do
          end do
-      end if 
+      end if
 
       print *, "Calculating the eigenvalues..."
       ! Calculate the eigenvalues and eigenvectors
@@ -1271,15 +1275,15 @@ contains
       open (unit=1, file='log_file', status='replace')
       write (1, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
       write (1, '(a)') "Speed of light: "
-      call mpwrite(1, 30, 10, C)
+      call mpwrite(1, 35, 15, C)
       write (1, '(a)') "Mass of the electron: "
-      call mpwrite(1, 30, 10, m)
+      call mpwrite(1, 35, 15, m)
       write (1, '(a)') "Slope for eta: "
-      call mpwrite(1, 30, 10, eta_slp)
+      call mpwrite(1, 35, 15, eta_slp)
       write (1, '(a)') "Non-adjusted Xi knot vector: "
-      call write_lists(knotxi, 1, 30, 10)
+      call write_lists(knotxi, 1, 35, 15)
       write (1, '(a)') "Non-adjusted Eta knot vector: "
-      call write_lists(knoteta, 1, 30, 10)
+      call write_lists(knoteta, 1, 35, 15)
       write (1, '(a)') "B-Spline basis function Order: "
       do i = 1, n**2
          i2 = indexToPair(i, n)
@@ -1287,66 +1291,69 @@ contains
          write (1, '(a)') " "
       end do
       write (1, '(a)') "Adjusted Xi knot vector: "
-      call write_lists(knotxi_eps, 1, 30, 10)
+      call write_lists(knotxi_eps, 1, 35, 15)
       write (1, '(a)') "Adjusted Eta knot vector: "
-      call write_lists(knoteta_eps, 1, 30, 10)
+      call write_lists(knoteta_eps, 1, 35, 15)
       if (debug_bool) then
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "S11 integral: "
          do i = 1, n**2
-            call write_lists(S11one(i, :), 1, 30, 10)
+            call write_lists(S11one(i, :), 1, 35, 15)
          end do
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "S22 integral: "
          do i = 1, n**2
-            call write_lists(S22one(i, :), 1, 30, 10)
+            call write_lists(S22one(i, :), 1, 35, 15)
          end do
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "C11one integral: "
          do i = 1, n**2
-            call write_lists(C11one(i, :), 1, 30, 10)
+            call write_lists(C11one(i, :), 1, 35, 15)
          end do
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "C11two integral: "
          do i = 1, n**2
-            call write_lists(C11two(i, :), 1, 30, 10)
+            call write_lists(C11two(i, :), 1, 35, 15)
          end do
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "C22one integral: "
          do i = 1, n**2
-            call write_lists(C22one(i, :), 1, 30, 10)
+            call write_lists(C22one(i, :), 1, 35, 15)
          end do
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "C22two integral: "
          do i = 1, n**2
-            call write_lists(C22two(i, :), 1, 30, 10)
+            call write_lists(C22two(i, :), 1, 35, 15)
          end do
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "C11three integral: "
          do i = 1, n**2
-            call write_lists(C11three(i, :), 1, 30, 10)
+            call write_lists(C11three(i, :), 1, 35, 15)
          end do
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "C22three integral: "
          do i = 1, n**2
-            call write_lists(C22three(i, :), 1, 30, 10)
+            call write_lists(C22three(i, :), 1, 35, 15)
          end do
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "C12three integral: "
          do i = 1, n**2
-            call write_lists(C12three(i, :), 1, 30, 10)
+            call write_lists(C12three(i, :), 1, 35, 15)
          end do
          write (1, '(a)') "--------------------------------------------------------------"
          write (1, '(a)') "C21three integral: "
          do i = 1, n**2
-            call write_lists(C21three(i, :), 1, 30, 10)
+            call write_lists(C21three(i, :), 1, 35, 15)
          end do
       end if
       write (1, '(a)') "--------------------------------------------------------------"
       write (1, '(a)') "Eigenvalues: "
       do i = 1, 4*n**2
          write (1, '(i4, a, i4)', advance='no') i, " "
-         call mpwrite(1, 30, 10, w(i)-m*c*c)
+         call mpwrite(1, 35, 15, w(i))
+         write (1, '(i4, a, i4)', advance='no') i, " Translated by mc^2 : "
+         call mpwrite(1, 35, 15, w(i) - m*c*c)
+         write (1, '(a)') " "
       end do
       close (1)
 
