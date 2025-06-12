@@ -641,11 +641,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       if (beta == 0 .and. delta == 0 .and. alpha == 0 .and. chi == 0) then
          c22three = zero ! doesn't affect result
       else if (alpha == 0 .and. chi == 0) then
-         c22three = (mppi()*R**2*delta*eta**(beta + delta)*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta))*xi**2*(-2 + xi**2))/2
+         c22three = -2*mppi()*R**2*delta*eta**(beta + delta)*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta))*(-1*xi**2/2 + xi**4/4)
       else if (beta == 0 .and. delta == 0) then
-         c22three = -one*(mppi()*R**2*eta**2*(-2 + eta**2)*xi**(alpha + chi)*chi*(1/(alpha + chi) - (2*xi**2)/(2 + alpha + chi) + xi**4/(4 + alpha + chi)))/2
+         c22three = -2*mppi()*R**2*(-1*eta**2/2 + eta**4/4)*xi**(alpha + chi)*chi*(1/(alpha + chi) - (2*xi**2)/(2 + alpha + chi) + xi**4/(4 + alpha + chi))
       else
-         c22three = 2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*((eta**2*(1/(2 + beta + delta) - eta**2/(4 + beta + delta))*chi)/(alpha + chi) + (xi**4*(delta*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta)) + eta**2*(1/(2 + beta + delta) - eta**2/(4 + beta + delta))*chi))/(4 + alpha + chi) - (xi**2*(delta*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta)) + 2*eta**2*(1/(2 + beta + delta) - eta**2/(4 + beta + delta))*chi))/(2 + alpha + chi))
+         c22three = -2*mppi()*R**2*((-(eta**(2 + beta + delta)/(2 + beta + delta)) + eta**(4 + beta + delta)/(4 + beta + delta))*xi**(alpha + chi)*chi*(1/(alpha + chi) - (2*xi**2)/(2 + alpha + chi) + xi**4/(4 + alpha + chi)) + delta*eta**(beta + delta)*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta))*(-(xi**(2 + alpha + chi)/(2 + alpha + chi)) + xi**(4 + alpha + chi)/(4 + alpha + chi)))
       end if
    end function fun_c22three
 

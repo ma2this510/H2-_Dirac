@@ -1,6 +1,6 @@
 FC = gfortran
 FFLAGS = -O3 -fopenmp -march=native -ffast-math -ffree-line-length-none -ffree-line-length-0
-DEBUG_FLAGS = -fopenmp -g -Wall -Wextra -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=-99999 -ffree-line-length-0
+DEBUG_FLAGS = -fopenmp -g -Wall -Wextra -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=-99999 -ffree-line-length-0 -Wunused-dummy-argument
 MARG = Makefile
 
 # MPfun part
@@ -100,6 +100,7 @@ debug.out : mpfun eigen tools_mp.o bspline_gen.f90 h2plus_mod.f90 main.f90 $(MAR
 
 run : main.out
 	./main.out
+	@bash -c 'source ~/.bashrc && push "Finished NKB H2+ calculation"'
 
 clean :
 	rm -f *.o *.mod *.out
