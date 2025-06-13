@@ -638,14 +638,14 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       zero = '0.0d0'
       one = '1.0d0'
 
-      if (beta == 0 .and. delta == 0 .and. alpha == 0 .and. chi == 0) then
+      if (delta == 0 .and. chi == 0) then
          c22three = zero ! doesn't affect result
-      else if (alpha == 0 .and. chi == 0) then
-         c22three = -2*mppi()*R**2*delta*eta**(beta + delta)*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta))*(-1*xi**2/2 + xi**4/4)
-      else if (beta == 0 .and. delta == 0) then
-         c22three = -2*mppi()*R**2*(-1*eta**2/2 + eta**4/4)*xi**(alpha + chi)*chi*(1/(alpha + chi) - (2*xi**2)/(2 + alpha + chi) + xi**4/(4 + alpha + chi))
+      else if (chi == 0) then
+         c22three = -2*mppi()*(R**2)*delta*(eta**(beta + delta))*(one/(beta + delta) - (2*(eta**2))/(2 + beta + delta) + (eta**4)/(4 + beta + delta))*(-one*((xi**(2 + alpha))/(2 + alpha)) + (xi**(4 + alpha))/(4 + alpha))
+      else if (delta == 0) then
+         c22three = 2*mppi()*(R**2)*(-one*((eta**(2 + beta))/(2 + beta)) + (eta**(4 + beta))/(4 + beta))*(xi**(alpha + chi))*chi*(one/(alpha + chi) - (2*(xi**2))/(2 + alpha + chi) + (xi**4)/(4 + alpha + chi))
       else
-         c22three = -2*mppi()*R**2*((-(eta**(2 + beta + delta)/(2 + beta + delta)) + eta**(4 + beta + delta)/(4 + beta + delta))*xi**(alpha + chi)*chi*(1/(alpha + chi) - (2*xi**2)/(2 + alpha + chi) + xi**4/(4 + alpha + chi)) + delta*eta**(beta + delta)*(1/(beta + delta) - (2*eta**2)/(2 + beta + delta) + eta**4/(4 + beta + delta))*(-(xi**(2 + alpha + chi)/(2 + alpha + chi)) + xi**(4 + alpha + chi)/(4 + alpha + chi)))
+         c22three = 2*mppi()*(R**2)*(((-eta**(2+beta+delta))/(2+beta+delta)+(eta**(4+beta+delta))/(4+beta+delta))*(xi**(alpha+chi))*chi*(one/(alpha+chi)-2*(xi**2)/(2+alpha+chi)+(xi**4)/(4+alpha+chi))-delta*(eta**(beta+delta))*(one/(beta+delta)-2*(eta**2)/(2+beta+delta)+(eta**4)/(4+beta+delta))*((xi**(4+alpha+chi))/(4+alpha+chi)-(xi**(2+alpha+chi))/(2+alpha+chi)))
       end if
    end function fun_c22three
 
@@ -674,7 +674,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
 
       zero = '0.0d0'
 
-      ! Calculate the value of the S11 integral at each knot and take the difference
+      ! Calculate the value of the C22 integral at each knot and take the difference
       result = zero
       do i1 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of xi
          do i2 = 1, size(b_i_xi, 1) - 1 ! Loop over the polynomials of eta
@@ -701,7 +701,6 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             result = result + val_max_max + val_min_min - val_max_min - val_min_max
          end do
       end do
-
    end subroutine int_C22three
 
    function fun_c12three(xi, eta, Z1, Z2, m, C, R, alpha, beta, chi, delta) result(c12three)
@@ -891,8 +890,12 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
 
       ntot = n + d + 2*n_remove
       zero = '0.d0'
+      one = '1.d0'
 
       write (6, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
+
+      write (6, '(a)') "Value of mc²:"
+      call mpwrite(6, 35, 15, m*c*c)
 
       print *, "Generating B-spline knots..."
       ! Generate the knot vectors for xi and eta
