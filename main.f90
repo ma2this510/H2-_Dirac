@@ -34,7 +34,7 @@ program main
 
     call init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
 end program main
-
+ 
 function epsilonn(alpha)
     !> @brief Calculate the machine epsilon
     !> @param alpha The value to calculate the machine epsilon
@@ -46,4 +46,3 @@ function epsilonn(alpha)
  
     return
  end function epsilonn
- 

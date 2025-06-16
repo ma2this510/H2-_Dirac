@@ -555,12 +555,12 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
 
       if (beta == 0 .and. delta == 0 .and. alpha == 0 .and. chi == 0) then
          c11three = zero ! doesn't affect result
-         ! else if (alpha ==0 .and. chi ==0) then ! No idea why this case break everything
-         !    c11three = mppi()*R**2*delta*eta**(beta + delta)*(1/(beta + delta) - eta**2/(2 + beta + delta))*xi**2
+      else if (alpha ==0 .and. chi ==0) then ! No idea why this case break everything
+         c11three = mppi()*R**2*delta*eta**(beta + delta)*(one/(beta + delta) - eta**2/(2 + beta + delta))*xi**2
       else if (beta == 0 .and. delta == 0) then
-         c11three = mppi()*R**2*eta**2*chi*(-(xi**(alpha + chi)/(alpha + chi)) + xi**(2 + alpha + chi)/(2 + alpha + chi))
+         c11three = mppi()*R**2*eta**2*chi*(-one*(xi**(alpha + chi)/(alpha + chi)) + xi**(2 + alpha + chi)/(2 + alpha + chi))
       else
-         c11three = (-2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*(((beta + delta)*eta**2*chi)/(alpha + chi) - (xi**2*(-(delta**2*(-1 + eta**2)) + one*beta*eta**2*chi + delta*(2 + beta - beta*eta**2 + eta**2*chi)))/(2 + alpha + chi)))/(one*(beta + delta)*(2 + beta + delta))
+         c11three = (-2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*(((beta + delta)*eta**2*chi)/(alpha + chi) - (xi**2*(-one*(delta**2*(eta**2-one)) + one*beta*eta**2*chi + delta*(2 + beta - beta*eta**2 + eta**2*chi)))/(2 + alpha + chi)))/(one*(beta + delta)*(2 + beta + delta))
       end if
    end function fun_c11three
 
@@ -801,7 +801,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       zero = '0.0d0'
       one = '1.0d0'
 
-      c21three = (2*mppi()*R**2*eta**(1 + beta + delta)*(-3 - beta - delta + (1 + beta + delta)*eta**2)*xi**(1 + alpha + chi)*(delta - chi)*(-3 + alpha*(-1 + xi**2) - chi + xi**2*(1 + chi)))/((1 + beta + delta)*(3 + beta + delta)*(1 + alpha + chi)*(3 + alpha + chi))
+      c21three = 2*mppi()*(R**2)*(eta**(1 + beta + delta))*(-one*(one/(one + beta + delta)) + (eta**2)/(3 + beta + delta))*(xi**(1 + alpha + chi))*(delta - chi)*(-one*(one/(one + alpha + chi)) + (xi**2)/(3 + alpha + chi))
    end function fun_c21three
 
    subroutine int_C21three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -879,6 +879,8 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       integer, intent(in) :: d, n, n_remove, jz2
       logical, intent(in) :: save_step
 
+      double precision :: tm0, tm1
+      
       type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps
       type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three, C22three,C12three, C21three, C_mat, S_mat, vect
       type(mp_real), dimension(:), allocatable :: w, fv1, fv2
@@ -898,13 +900,18 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       call mpwrite(6, 35, 15, m*c*c)
 
       print *, "Generating B-spline knots..."
+      tm0 = second()
       ! Generate the knot vectors for xi and eta
       allocate (knotxi(ntot), knoteta(ntot))
 
       knotxi = knot_xi(d, n, n_remove, ximin, ximax)
       knoteta = knot_eta(d, n, n_remove, eta_slp)
 
+      tm1 = second()
+      print *, "Time taken to generate knots: ", tm1 - tm0, " seconds"
+
       print *, "Generating B-spline coefficients..."
+      tm0 = second()
       ! Generate the B-spline coefficients for xi and eta
       allocate (bspline_xi(n, ntot, d), bspline_eta(n, ntot, d))
 
@@ -936,7 +943,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          call write_lists(knoteta_eps, 6, 25, 10)
       end if
 
+      tm1 = second()
+      print *, "Time taken to generate B-spline coefficients: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the S11 integral..."
+      tm0 = second()
       ! Calculate the S11 integral
       allocate (S11one(n**2, n**2))
 
@@ -963,7 +974,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (2)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate S11one integral: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the S22 integral..."
+      tm0 = second()
       ! Calculate the S22 integral
       allocate (S22one(n**2, n**2))
 
@@ -990,7 +1005,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (3)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate S22one integral: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the C11one integral..."
+      tm0 = second()
       ! Calculate the C11one integral
       allocate (C11one(n**2, n**2))
 
@@ -1017,7 +1036,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (4)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate C11one integral: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the C11two integral..."
+      tm0 = second()
       ! Calculate the C11two integral
       allocate (C11two(n**2, n**2))
 
@@ -1044,7 +1067,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (5)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate C11two integral: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the C22one integral..."
+      tm0 = second()
       ! Calculate the C22one integral
       allocate (C22one(n**2, n**2))
 
@@ -1071,7 +1098,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (16)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate C22one integral: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the C22two integral..."
+      tm0 = second()
       ! Calculate the C22two integral
       allocate (C22two(n**2, n**2))
 
@@ -1098,7 +1129,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (7)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate C22two integral: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the C11three integral..."
+      tm0 = second()
       ! Calculate the C11three integral
       allocate (C11three(n**2, n**2))
 
@@ -1125,7 +1160,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (8)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate C11three integral: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the C22three integral..."
+      tm0 = second()
       ! Calculate the C22three integral
       allocate (C22three(n**2, n**2))
 
@@ -1152,7 +1191,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (9)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate C22three integral: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the C12three integral..."
+      tm0 = second()
       ! Calculate the C12three integral
       allocate (C12three(n**2, n**2))
 
@@ -1179,7 +1222,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (10)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate C12three integral: ", tm1 - tm0, " seconds"
+
       print *, "Calculating the C21three integral..."
+      tm0 = second()
       ! Calculate the C21three integral
       allocate (C21three(n**2, n**2))
 
@@ -1206,7 +1253,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          close (11)
       end if
 
+      tm1 = second()
+      print *, "Time taken to calculate C21three integral: ", tm1 - tm0, " seconds"
+
       print *, "Generating the C Matrix..."
+      tm0 = second()
       ! Generate the C matrix
       allocate (C_mat(4*n**2, 4*n**2))
 
@@ -1230,7 +1281,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          end do
       end do
 
+      tm1 = second()
+      print *, "Time taken to generate C matrix: ", tm1 - tm0, " seconds"
+
       print *, "Generating the S Matrix..."
+      tm0 = second()
       ! Generate the S matrix
       allocate (S_mat(4*n**2, 4*n**2))
 
@@ -1245,12 +1300,17 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          end do
       end do
 
+      tm1 = second()
+      print *, "Time taken to generate S matrix: ", tm1 - tm0, " seconds"
+      print *, "C matrix and S matrix generated successfully."
+
       if (debug_bool) then
          print *, "Check if C is hermitian..."
          do i = 1, 4*n**2
             do j = 1, 4*n**2
-               if (C_mat(i, j) - C_mat(j, i) > epsilon) then
-                  print *, "C is not hermitian at (", i, ",", j, ")"
+               if (C_mat(i, j) - C_mat(j, i) > epsilonn(one)) then
+                  print *, "C is not hermitian at (", i, ",", j, ") :"
+                  call mpwrite(6, 35, 15, C_mat(i, j) - C_mat(j, i))
                end if
             end do
          end do
@@ -1258,20 +1318,25 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          print *, "Check if S is hermitian..."
          do i = 1, 4*n**2
             do j = 1, 4*n**2
-               if (S_mat(i, j) - S_mat(j, i) > epsilon) then
-                  print *, "S is not hermitian at (", i, ",", j, ")"
+               if (S_mat(i, j) - S_mat(j, i) > epsilonn(one)) then
+                  print *, "S is not hermitian at (", i, ",", j, ") :"
+                  call mpwrite(6, 35, 15, S_mat(i, j) - S_mat(j, i))
                end if
             end do
          end do
       end if
 
       print *, "Calculating the eigenvalues..."
+      tm0 = second()
       ! Calculate the eigenvalues and eigenvectors
       allocate (w(4*n**2), fv1(4*n**2), fv2(4*n**2))
 
       call rsg(4*n**2, 4*n**2, C_mat, S_mat, w, 0, vect, fv1, fv2, ierr)
 
       print *, "Error code: ", ierr
+
+      tm1 = second()
+      print *, "Time taken to calculate eigenvalues: ", tm1 - tm0, " seconds"
 
       print *, "Saving logs to file..."
       ! Save logs
@@ -1361,5 +1426,17 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       close (1)
 
    end subroutine init_h2plus
+
+   function epsilonn(alpha)
+    !> @brief Calculate the machine epsilon
+    !> @param alpha The value to calculate the machine epsilon
+    USE mpmodule
+    implicit type(mp_real) (a - h, o - z)
+ 
+    ten = '10.d0'
+    epsilonn = ten**(-mpipl)
+ 
+    return
+ end function epsilonn
 
 end module h2plus
