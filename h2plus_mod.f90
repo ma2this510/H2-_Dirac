@@ -556,11 +556,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       if (beta == 0 .and. delta == 0 .and. alpha == 0 .and. chi == 0) then
          c11three = zero ! doesn't affect result
       else if (alpha ==0 .and. chi ==0) then ! No idea why this case break everything
-         c11three = mppi()*R**2*delta*eta**(beta + delta)*(one/(beta + delta) - eta**2/(2 + beta + delta))*xi**2
+         c11three = c*mppi()*R**2*delta*eta**(beta + delta)*(one/(beta + delta) - eta**2/(2 + beta + delta))*xi**2
       else if (beta == 0 .and. delta == 0) then
-         c11three = mppi()*R**2*eta**2*chi*(-one*(xi**(alpha + chi)/(alpha + chi)) + xi**(2 + alpha + chi)/(2 + alpha + chi))
+         c11three = c*mppi()*R**2*eta**2*chi*(-one*(xi**(alpha + chi)/(alpha + chi)) + xi**(2 + alpha + chi)/(2 + alpha + chi))
       else
-         c11three = (-2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*(((beta + delta)*eta**2*chi)/(alpha + chi) - (xi**2*(-one*(delta**2*(eta**2-one)) + one*beta*eta**2*chi + delta*(2 + beta - beta*eta**2 + eta**2*chi)))/(2 + alpha + chi)))/(one*(beta + delta)*(2 + beta + delta))
+         c11three = c*(-2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*(((beta + delta)*eta**2*chi)/(alpha + chi) - (xi**2*(-one*(delta**2*(eta**2-one)) + one*beta*eta**2*chi + delta*(2 + beta - beta*eta**2 + eta**2*chi)))/(2 + alpha + chi)))/(one*(beta + delta)*(2 + beta + delta))
       end if
    end function fun_c11three
 
@@ -641,11 +641,11 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       if (delta == 0 .and. chi == 0) then
          c22three = zero ! doesn't affect result
       else if (chi == 0) then
-         c22three = -2*mppi()*(R**2)*delta*(eta**(beta + delta))*(one/(beta + delta) - (2*(eta**2))/(2 + beta + delta) + (eta**4)/(4 + beta + delta))*(-one*((xi**(2 + alpha))/(2 + alpha)) + (xi**(4 + alpha))/(4 + alpha))
+         c22three = -c*2*mppi()*(R**2)*delta*(eta**(beta + delta))*(one/(beta + delta) - (2*(eta**2))/(2 + beta + delta) + (eta**4)/(4 + beta + delta))*(-one*((xi**(2 + alpha))/(2 + alpha)) + (xi**(4 + alpha))/(4 + alpha))
       else if (delta == 0) then
-         c22three = 2*mppi()*(R**2)*(-one*((eta**(2 + beta))/(2 + beta)) + (eta**(4 + beta))/(4 + beta))*(xi**(alpha + chi))*chi*(one/(alpha + chi) - (2*(xi**2))/(2 + alpha + chi) + (xi**4)/(4 + alpha + chi))
+         c22three = c*2*mppi()*(R**2)*(-one*((eta**(2 + beta))/(2 + beta)) + (eta**(4 + beta))/(4 + beta))*(xi**(alpha + chi))*chi*(one/(alpha + chi) - (2*(xi**2))/(2 + alpha + chi) + (xi**4)/(4 + alpha + chi))
       else
-         c22three = 2*mppi()*(R**2)*(((-eta**(2+beta+delta))/(2+beta+delta)+(eta**(4+beta+delta))/(4+beta+delta))*(xi**(alpha+chi))*chi*(one/(alpha+chi)-2*(xi**2)/(2+alpha+chi)+(xi**4)/(4+alpha+chi))-delta*(eta**(beta+delta))*(one/(beta+delta)-2*(eta**2)/(2+beta+delta)+(eta**4)/(4+beta+delta))*((xi**(4+alpha+chi))/(4+alpha+chi)-(xi**(2+alpha+chi))/(2+alpha+chi)))
+         c22three = c*2*mppi()*(R**2)*(((-eta**(2+beta+delta))/(2+beta+delta)+(eta**(4+beta+delta))/(4+beta+delta))*(xi**(alpha+chi))*chi*(one/(alpha+chi)-2*(xi**2)/(2+alpha+chi)+(xi**4)/(4+alpha+chi))-delta*(eta**(beta+delta))*(one/(beta+delta)-2*(eta**2)/(2+beta+delta)+(eta**4)/(4+beta+delta))*((xi**(4+alpha+chi))/(4+alpha+chi)-(xi**(2+alpha+chi))/(2+alpha+chi)))
       end if
    end function fun_c22three
 
@@ -723,7 +723,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       zero = '0.0d0'
       one = '1.0d0'
 
-      c12three = (2*mppi()*eta**(1 + beta + delta)*xi**(1 + alpha + chi)*((3 + alpha + chi)*(delta*(3 + beta + delta - (1 + beta + delta)*eta**2) + (1 + beta + delta)*eta**2*(-2 + chi) - (3 + beta + delta)*chi) + xi**2*(1 + alpha + chi)*(2*(3 + beta + delta) - delta*(3 + beta + delta) + delta*(1 + beta + delta)*eta**2 + (3 + beta + delta)*chi - (1 + beta + delta)*eta**2*chi)))/((1 + beta + delta)*(3 + beta + delta)*(1 + alpha + chi)*(3 + alpha + chi))
+      c12three = c*(2*mppi()*eta**(1 + beta + delta)*xi**(1 + alpha + chi)*((3 + alpha + chi)*(delta*(3 + beta + delta - (1 + beta + delta)*eta**2) + (1 + beta + delta)*eta**2*(-2 + chi) - (3 + beta + delta)*chi) + xi**2*(1 + alpha + chi)*(2*(3 + beta + delta) - delta*(3 + beta + delta) + delta*(1 + beta + delta)*eta**2 + (3 + beta + delta)*chi - (1 + beta + delta)*eta**2*chi)))/((1 + beta + delta)*(3 + beta + delta)*(1 + alpha + chi)*(3 + alpha + chi))
    end function fun_c12three
 
    subroutine int_C12three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -801,7 +801,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       zero = '0.0d0'
       one = '1.0d0'
 
-      c21three = 2*mppi()*(R**2)*(eta**(1 + beta + delta))*(-one*(one/(one + beta + delta)) + (eta**2)/(3 + beta + delta))*(xi**(1 + alpha + chi))*(delta - chi)*(-one*(one/(one + alpha + chi)) + (xi**2)/(3 + alpha + chi))
+      c21three = c*2*mppi()*(R**2)*(eta**(1 + beta + delta))*(-one*(one/(one + beta + delta)) + (eta**2)/(3 + beta + delta))*(xi**(1 + alpha + chi))*(delta - chi)*(-one*(one/(one + alpha + chi)) + (xi**2)/(3 + alpha + chi))
    end function fun_c21three
 
    subroutine int_C21three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -896,9 +896,6 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
 
       write (6, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
 
-      write (6, '(a)') "Value of mc²:"
-      call mpwrite(6, 35, 15, m*c*c)
-
       print *, "Generating B-spline knots..."
       tm0 = second()
       ! Generate the knot vectors for xi and eta
@@ -951,9 +948,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       ! Calculate the S11 integral
       allocate (S11one(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, S11one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, S11one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = i, n**2
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
@@ -961,6 +958,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             call int_s11one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, S11one(i, j))
+            if (i /= j) then
+               S11one(j, i) = S11one(i, j)
+            end if
          end do
       end do
       !$OMP END PARALLEL DO
@@ -982,9 +982,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       ! Calculate the S22 integral
       allocate (S22one(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, S22one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, S22one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = i, n**2
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
@@ -992,6 +992,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             call int_s22one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, S22one(i, j))
+            if (i /= j) then
+               S22one(j, i) = S22one(i, j)
+            end if
          end do
       end do
       !$OMP END PARALLEL DO
@@ -1013,9 +1016,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       ! Calculate the C11one integral
       allocate (C11one(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C11one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C11one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = i, n**2
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
@@ -1023,6 +1026,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             call int_C11one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, C11one(i, j))
+            if (i /= j) then
+               C11one(j, i) = C11one(i, j)
+            end if
          end do
       end do
       !$OMP END PARALLEL DO
@@ -1044,9 +1050,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       ! Calculate the C11two integral
       allocate (C11two(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C11two, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C11two, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = i, n**2
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
@@ -1054,6 +1060,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             call int_C11two(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, C11two(i, j))
+            if (i /= j) then
+               C11two(j, i) = C11two(i, j)
+            end if
          end do
       end do
       !$OMP END PARALLEL DO
@@ -1075,9 +1084,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       ! Calculate the C22one integral
       allocate (C22one(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = i, n**2
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
@@ -1085,6 +1094,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             call int_C22one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22one(i, j))
+            if (i /= j) then
+               C22one(j, i) = C22one(i, j)
+            end if
          end do
       end do
       !$OMP END PARALLEL DO
@@ -1106,9 +1118,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       ! Calculate the C22two integral
       allocate (C22two(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22two, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22two, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = i, n**2
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
@@ -1116,6 +1128,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             call int_C22two(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22two(i, j))
+            if (i /= j) then
+               C22two(j, i) = C22two(i, j)
+            end if
          end do
       end do
       !$OMP END PARALLEL DO
@@ -1415,15 +1430,43 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          end do
       end if
       write (1, '(a)') "--------------------------------------------------------------"
+      write (1, '(a)') "Value of mc²:"
+      call mpwrite(1, 35, 15, m*c*c)
+      write (1, '(a)') "--------------------------------------------------------------"
       write (1, '(a)') "Eigenvalues: "
       do i = 1, 4*n**2
          write (1, '(i4, a, i4)', advance='no') i, " "
-         call mpwrite(1, 35, 15, w(i))
-         write (1, '(i4, a, i4)', advance='no') i, " Translated by mc^2 : "
-         call mpwrite(1, 35, 15, w(i) - m*c*c)
+         call mpwrite(1, 35, 15, w(4*n**2-i+1))
+         write (1, '(i4, a, i4)', advance='no') i, " Translated by -mc^2 : "
+         call mpwrite(1, 35, 15, w(4*n**2-i+1) - m*c*c)
          write (1, '(a)') " "
       end do
       close (1)
+
+      open (unit=12, file='eigenvalues.txt', status='replace')
+      write (12, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
+      write (12, '(a)') "Speed of light: "
+      call mpwrite(12, 35, 15, C)
+      write (12, '(a)') "Mass of the electron: "
+      call mpwrite(12, 35, 15, m)
+      write (12, '(a)') "Slope for eta: "
+      call mpwrite(12, 35, 15, eta_slp)
+      write (12, '(a)') "Non-adjusted Xi knot vector: "
+      call write_lists(knotxi, 12, 35, 15)
+      write (12, '(a)') "Non-adjusted Eta knot vector: "
+      call write_lists(knoteta, 12, 35, 15)
+      write (12, '(a)') "Epsilon: "
+      call mpwrite(12, 35, 15, epsilon)
+      do i = 1, 4*n**2
+         if (w(4*n**2-i) > -m*c*c .and. w(4*n**2-i) < m*c*c) then
+            write (12, '(i4, a, i4)', advance='no') i, " "
+            call mpwrite(12, 35, 15, w(4*n**2-i+1))
+            write (12, '(i4, a, i4)', advance='no') i, " Translated by -mc^2 : "
+            call mpwrite(12, 35, 15, w(4*n**2-i+1) - m*c*c)
+            write (12, '(a)') " "
+         end if
+      end do
+
 
    end subroutine init_h2plus
 

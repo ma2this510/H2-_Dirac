@@ -8,13 +8,15 @@ program main
     type(mp_real) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, zero, one
     logical :: save_step
 
+    double precision :: tm0, tm1
+
     zero = '0.d0'
     one = '1.d0'
 
     !-------------------------------------------------
     ! Define Important Constants
     d = 4 ! Order of the B-Spline (order Mathematica + 1)
-    n = 4 ! Number of Usable B-spline 
+    n = 8 ! Number of Usable B-spline 
     n_remove = 1 ! Number of knots to remove from each end
     Z1 = '1.0d0' ! number of protons for the first atom
     Z2 = '1.0d0' ! number of protons for the second atom
@@ -24,15 +26,18 @@ program main
     ximax = '50.0d0' ! maximum position of the B-spline on z-axis
     ximin = '1.0d0' ! minimum position of the B-spline on z-axis
     jz2 = one ! Quantum number will be divided by 2
-    ! epsilon = '1.0d-9' ! machine epsilon
-    epsilon = zero ! machine epsilon
-    eta_slp = '5.0d-1' ! paramet for the generation of the knot vector on eta
+    epsilon = '1.0d-3' ! machine epsilon
+    ! epsilon = zero ! machine epsilon
+    eta_slp = '1.0d-2' ! paramet for the generation of the knot vector on eta
     !-------------------------------------------------
     save_step = .true. ! Save matrices at each step
     !-------------------------------------------------
 
-
+    ! Start the timer
+    tm0 = second()
     call init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
+    tm1 = second()
+    print *, 'Elapsed time for global execution: ', tm1 - tm0, ' seconds'
 end program main
  
 function epsilonn(alpha)
