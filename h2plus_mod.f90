@@ -209,7 +209,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       zero = '0.0d0'
       one = '1.0d0'
 
-      c11one = (-2*mppi()*R*eta**(1 + beta)*xi**(1 + alpha)*(((1 + beta)*eta*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*eta))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*xi)/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*xi**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+      c11one = (-2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*(((1 + beta)*eta*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*eta))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*xi)/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*xi**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
    end function fun_c11one
 
    subroutine int_C11one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -265,10 +265,10 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knoteta(i2)**(1 + beta)*knotxi(i1)**(1 + alpha)*(((1 + beta)*knoteta(i2)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knoteta(i2)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knotxi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knotxi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
-                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knoteta(i2+1)**(1 + beta)*knotxi(i1+1)**(1 + alpha)*(((1 + beta)*knoteta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knoteta(i2+1)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knotxi(i1+1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knotxi(i1+1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
-                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knoteta(i2+1)**(1 + beta)*knotxi(i1)**(1 + alpha)*(((1 + beta)*knoteta(i2+1)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knoteta(i2+1)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knotxi(i1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knotxi(i1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
-                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(-2*mppi()*R*knoteta(i2)**(1 + beta)*knotxi(i1+1)**(1 + alpha)*(((1 + beta)*knoteta(i2)*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*knoteta(i2)))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*knotxi(i1+1))/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*knotxi(i1+1)**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
+                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
+                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
@@ -298,7 +298,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       zero = '0.0d0'
       one = '1.0d0'
 
-      c11two = (2*mppi()*R*eta**(1 + beta)*xi**(1 + alpha)*(((1 + beta)*eta*((Z1 - Z2)*(3 + beta) + c**2*m*R*(2 + beta)*eta))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*xi)/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*xi**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+      c11two = (2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*(((1 + beta)*eta*((Z1 - Z2)*(3 + beta) + c**2*m*R*(2 + beta)*eta))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*xi)/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*xi**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
    end function fun_c11two
 
    subroutine int_C11two(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -321,7 +321,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       type(mp_real), dimension(:), intent(in) :: knotxi, knoteta
       type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
 
-      type(mp_real), dimension(:, :), allocatable :: prod_xi, prod_eta, val_max_max, val_min_min, val_max_min, val_min_max, diff
+      type(mp_real), dimension(:, :), allocatable :: prod_xi, prod_eta, val_max_max, val_min_min, val_max_min, val_min_max
       integer :: i, i1, i2, j1, j2, alpha, beta
 
       zero = '0.0d0'
@@ -338,8 +338,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       allocate (val_max_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
                 val_min_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
                 val_max_min(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
-                val_min_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1), &
-                diff(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1))
+                val_min_max(size(b_i_xi, 1) - 1, size(b_i_eta, 1) - 1))
 
       ! Calculate the value of the integral at each knot and take the difference
       result = zero
@@ -349,7 +348,6 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             val_max_max(i1, i2) = zero
             val_min_max(i1, i2) = zero
             val_max_min(i1, i2) = zero
-            diff(i1, i2) = zero
             do j1 = 1, size(prod_xi, 2) ! Loop over the order of xi
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
@@ -360,7 +358,6 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
                   val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11two(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
-            diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
             result = result + val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
          end do
       end do
@@ -472,7 +469,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       one = '1.0d0'
 
       ! c22two = (-2)*mppi()*R*eta**(1 + beta)*xi**(1 + alpha)*((eta*((Z1 - Z2)/(2 + beta) + (c**2*m*R*eta)/(3 + beta) + ((-Z1 + Z2)*eta**2)/(4 + beta) - (c**2*m*R*eta**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*eta*(-(1/(2 + beta)) + eta**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + eta**4/(5 + beta)))*xi**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*eta**2)*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
-      c22two = -2*mppi()*R*eta**(1 + beta)*xi**(1 + alpha)*((eta*(-(c**2*m*R*(8 + 6*beta + beta**2)*eta*(-5 + 3*eta**2 + beta*(-1 + eta**2))) - Z1*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2)) + Z2*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2))))/((1 + alpha)*(2 + beta)*(3 + beta)*(4 + beta)*(5 + beta)) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) + (((Z1 - Z2)*(5 + 6*beta + beta**2)*eta*(2*(-2 + eta**2) + beta*(-1 + eta**2)) + c**2*m*R*(8 + 6*beta + beta**2)*(-5 + eta**4 + beta*(-1 + eta**4)))*xi**2)/((3 + alpha)*(1 + beta)*(2 + beta)*(4 + beta)*(5 + beta)) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) - (c**2*m*R*(-3 + eta**2 + beta*(-1 + eta**2))*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
+      c22two = -2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*((eta*(-(c**2*m*R*(8 + 6*beta + beta**2)*eta*(-5 + 3*eta**2 + beta*(-1 + eta**2))) - Z1*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2)) + Z2*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2))))/((1 + alpha)*(2 + beta)*(3 + beta)*(4 + beta)*(5 + beta)) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) + (((Z1 - Z2)*(5 + 6*beta + beta**2)*eta*(2*(-2 + eta**2) + beta*(-1 + eta**2)) + c**2*m*R*(8 + 6*beta + beta**2)*(-5 + eta**4 + beta*(-1 + eta**4)))*xi**2)/((3 + alpha)*(1 + beta)*(2 + beta)*(4 + beta)*(5 + beta)) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) - (c**2*m*R*(-3 + eta**2 + beta*(-1 + eta**2))*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
    end function fun_c22two
 
    subroutine int_C22two(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -555,7 +552,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
 
       if (beta == 0 .and. delta == 0 .and. alpha == 0 .and. chi == 0) then
          c11three = zero ! doesn't affect result
-      else if (alpha ==0 .and. chi ==0) then ! No idea why this case break everything
+      else if (alpha == 0 .and. chi == 0) then ! No idea why this case break everything
          c11three = c*mppi()*R**2*delta*eta**(beta + delta)*(one/(beta + delta) - eta**2/(2 + beta + delta))*xi**2
       else if (beta == 0 .and. delta == 0) then
          c11three = c*mppi()*R**2*eta**2*chi*(-one*(xi**(alpha + chi)/(alpha + chi)) + xi**(2 + alpha + chi)/(2 + alpha + chi))
@@ -583,7 +580,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       type(mp_real), dimension(:), intent(in) :: knotxi, knoteta
       type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
 
-      type(mp_real) :: val_max_max, val_min_min, val_max_min, val_min_max
+      type(mp_real) :: val_max_max, val_min_min, val_max_min, val_min_max, prefactor
       integer :: i1, i2, j1, j2, j3, j4, alpha, beta, chi, delta
 
       zero = '0.0d0'
@@ -597,17 +594,18 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             val_min_max = zero
             val_max_min = zero
             do j1 = 1, size(b_i_xi, 2) ! Loop over the order of xi i
+               alpha = size(b_i_xi, 2) - j1
                do j2 = 1, size(b_i_eta, 2) ! Loop over the order of eta i
+                  beta = size(b_i_eta, 2) - j2
                   do j3 = 1, size(b_j_xi, 2) ! Loop over the order of xi j
+                     chi = size(b_j_xi, 2) - j3
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
-                        alpha = size(b_i_xi, 2) - j1
-                        beta = size(b_i_eta, 2) - j2
-                        chi = size(b_j_xi, 2) - j3
                         delta = size(b_j_eta, 2) - j4
-                        val_min_min = val_min_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c11three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_max = val_max_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c11three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_min_max = val_min_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c11three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_min = val_max_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c11three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        prefactor = b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)
+                        val_min_min = val_min_min + prefactor*fun_c11three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + prefactor*fun_c11three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + prefactor*fun_c11three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + prefactor*fun_c11three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -669,7 +667,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       type(mp_real), dimension(:), intent(in) :: knotxi, knoteta
       type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
 
-      type(mp_real) :: val_max_max, val_min_min, val_max_min, val_min_max
+      type(mp_real) :: val_max_max, val_min_min, val_max_min, val_min_max, prefactor
       integer :: i1, i2, j1, j2, j3, j4, alpha, beta, chi, delta
 
       zero = '0.0d0'
@@ -683,17 +681,18 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             val_min_max = zero
             val_max_min = zero
             do j1 = 1, size(b_i_xi, 2) ! Loop over the order of xi i
+               alpha = size(b_i_xi, 2) - j1
                do j2 = 1, size(b_i_eta, 2) ! Loop over the order of eta i
+                  beta = size(b_i_eta, 2) - j2
                   do j3 = 1, size(b_j_xi, 2) ! Loop over the order of xi j
+                     chi = size(b_j_xi, 2) - j3
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
-                        alpha = size(b_i_xi, 2) - j1
-                        beta = size(b_i_eta, 2) - j2
-                        chi = size(b_j_xi, 2) - j3
                         delta = size(b_j_eta, 2) - j4
-                        val_min_min = val_min_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c22three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_max = val_max_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c22three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_min_max = val_min_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c22three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_min = val_max_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c22three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        prefactor = b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)
+                        val_min_min = val_min_min + prefactor*fun_c22three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + prefactor*fun_c22three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + prefactor*fun_c22three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + prefactor*fun_c22three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -723,7 +722,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       zero = '0.0d0'
       one = '1.0d0'
 
-      c12three = c*(2*mppi()*eta**(1 + beta + delta)*xi**(1 + alpha + chi)*((3 + alpha + chi)*(delta*(3 + beta + delta - (1 + beta + delta)*eta**2) + (1 + beta + delta)*eta**2*(-2 + chi) - (3 + beta + delta)*chi) + xi**2*(1 + alpha + chi)*(2*(3 + beta + delta) - delta*(3 + beta + delta) + delta*(1 + beta + delta)*eta**2 + (3 + beta + delta)*chi - (1 + beta + delta)*eta**2*chi)))/((1 + beta + delta)*(3 + beta + delta)*(1 + alpha + chi)*(3 + alpha + chi))
+      c12three = (2*c*mppi()*R**2*eta**(1 + beta + delta)*xi**(1 + alpha + chi)*((3 + alpha + chi)*(delta*(3 + beta + delta - (1 + beta + delta)*eta**2) + (1 + beta + delta)*eta**2*(-2 + chi) - (3 + beta + delta)*chi) + xi**2*(1 + alpha + chi)*(2*(3 + beta + delta) - delta*(3 + beta + delta) + delta*(1 + beta + delta)*eta**2 + (3 + beta + delta)*chi - (1 + beta + delta)*eta**2*chi)))/((1 + beta + delta)*(3 + beta + delta)*(1 + alpha + chi)*(3 + alpha + chi))
    end function fun_c12three
 
    subroutine int_C12three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -746,7 +745,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       type(mp_real), dimension(:), intent(in) :: knotxi, knoteta
       type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
 
-      type(mp_real) :: val_max_max, val_min_min, val_max_min, val_min_max
+      type(mp_real) :: val_max_max, val_min_min, val_max_min, val_min_max, prefactor
       integer :: i1, i2, j1, j2, j3, j4, alpha, beta, chi, delta
 
       zero = '0.0d0'
@@ -760,17 +759,18 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             val_min_max = zero
             val_max_min = zero
             do j1 = 1, size(b_i_xi, 2) ! Loop over the order of xi i
+               alpha = size(b_i_xi, 2) - j1
                do j2 = 1, size(b_i_eta, 2) ! Loop over the order of eta i
+                  beta = size(b_i_eta, 2) - j2
                   do j3 = 1, size(b_j_xi, 2) ! Loop over the order of xi j
+                     chi = size(b_j_xi, 2) - j3
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
-                        alpha = size(b_i_xi, 2) - j1
-                        beta = size(b_i_eta, 2) - j2
-                        chi = size(b_j_xi, 2) - j3
                         delta = size(b_j_eta, 2) - j4
-                        val_min_min = val_min_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c12three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_max = val_max_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c12three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_min_max = val_min_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c12three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_min = val_max_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c12three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        prefactor = b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)
+                        val_min_min = val_min_min + prefactor*fun_c12three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + prefactor*fun_c12three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + prefactor*fun_c12three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + prefactor*fun_c12three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -797,7 +797,6 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       integer :: alpha, beta, chi, delta
       type(mp_real) :: c21three
 
-      type(mp_real) :: zero, one
       zero = '0.0d0'
       one = '1.0d0'
 
@@ -824,7 +823,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       type(mp_real), dimension(:), intent(in) :: knotxi, knoteta
       type(mp_real), dimension(:, :), intent(in) :: b_i_xi, b_i_eta, b_j_xi, b_j_eta
 
-      type(mp_real) :: val_max_max, val_min_min, val_max_min, val_min_max
+      type(mp_real) :: val_max_max, val_min_min, val_max_min, val_min_max, prefactor
       integer :: i1, i2, j1, j2, j3, j4, alpha, beta, chi, delta
 
       zero = '0.0d0'
@@ -838,17 +837,18 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             val_min_max = zero
             val_max_min = zero
             do j1 = 1, size(b_i_xi, 2) ! Loop over the order of xi i
+               alpha = size(b_i_xi, 2) - j1
                do j2 = 1, size(b_i_eta, 2) ! Loop over the order of eta i
+                  beta = size(b_i_eta, 2) - j2
                   do j3 = 1, size(b_j_xi, 2) ! Loop over the order of xi j
+                     chi = size(b_j_xi, 2) - j3
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
-                        alpha = size(b_i_xi, 2) - j1
-                        beta = size(b_i_eta, 2) - j2
-                        chi = size(b_j_xi, 2) - j3
                         delta = size(b_j_eta, 2) - j4
-                        val_min_min = val_min_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c21three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_max = val_max_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c21three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_min_max = val_min_max + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c21three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_min = val_max_min + b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)*fun_c21three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        prefactor = b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)
+                        val_min_min = val_min_min + prefactor*fun_c21three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + prefactor*fun_c21three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + prefactor*fun_c21three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + prefactor*fun_c21three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -880,12 +880,12 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       logical, intent(in) :: save_step
 
       double precision :: tm0, tm1
-      
+
       type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps
       type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three, C22three,C12three, C21three, C_mat, S_mat, vect
       type(mp_real), dimension(:), allocatable :: w, fv1, fv2
       type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_eta
-      logical :: debug_bool = .true.
+      logical :: debug_bool = .false.
 
       integer :: ntot, i, j, ierr
       integer, dimension(2) :: i2, j2
@@ -955,6 +955,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             j2 = indexToPair(j, n)
 
             S11one(i, j) = zero
+            S11one(j, i) = zero
             call int_s11one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, S11one(i, j))
@@ -989,6 +990,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             j2 = indexToPair(j, n)
 
             S22one(i, j) = zero
+            S22one(j, i) = zero
             call int_s22one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, S22one(i, j))
@@ -1023,6 +1025,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             j2 = indexToPair(j, n)
 
             C11one(i, j) = zero
+            C11one(j, i) = zero
             call int_C11one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, C11one(i, j))
@@ -1057,6 +1060,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             j2 = indexToPair(j, n)
 
             C11two(i, j) = zero
+            C11two(j, i) = zero
             call int_C11two(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, C11two(i, j))
@@ -1091,6 +1095,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             j2 = indexToPair(j, n)
 
             C22one(i, j) = zero
+            C22one(j, i) = zero
             call int_C22one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22one(i, j))
@@ -1125,6 +1130,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             j2 = indexToPair(j, n)
 
             C22two(i, j) = zero
+            C22two(j, i) = zero
             call int_C22two(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22two(i, j))
@@ -1296,6 +1302,15 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
          end do
       end do
 
+      if (save_step) then
+         print *, "Saving C_mat matrix to file..."
+         open (unit=13, file='C_mat.csv', status='replace')
+         do i = 1, 4*n**2
+            call write_csv(C_mat(i, :), 13, 50, 30)
+         end do
+         close (13)
+      end if
+
       tm1 = second()
       print *, "Time taken to generate C matrix: ", tm1 - tm0, " seconds"
 
@@ -1314,6 +1329,15 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
             S_mat(i + 3*n**2, j + 3*n**2) = S22one(i, j)
          end do
       end do
+
+      if (save_step) then
+         print *, "Saving S_mat matrix to file..."
+         open (unit=14, file='S_mat.csv', status='replace')
+         do i = 1, 4*n**2
+            call write_csv(S_mat(i, :), 14, 50, 30)
+         end do
+         close (14)
+      end if
 
       tm1 = second()
       print *, "Time taken to generate S matrix: ", tm1 - tm0, " seconds"
@@ -1436,9 +1460,9 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       write (1, '(a)') "Eigenvalues: "
       do i = 1, 4*n**2
          write (1, '(i4, a, i4)', advance='no') i, " "
-         call mpwrite(1, 35, 15, w(4*n**2-i+1))
+         call mpwrite(1, 35, 15, w(4*n**2 - i + 1))
          write (1, '(i4, a, i4)', advance='no') i, " Translated by -mc^2 : "
-         call mpwrite(1, 35, 15, w(4*n**2-i+1) - m*c*c)
+         call mpwrite(1, 35, 15, w(4*n**2 - i + 1) - m*c*c)
          write (1, '(a)') " "
       end do
       close (1)
@@ -1458,28 +1482,27 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       write (12, '(a)') "Epsilon: "
       call mpwrite(12, 35, 15, epsilon)
       do i = 1, 4*n**2
-         if (w(4*n**2-i) > -m*c*c .and. w(4*n**2-i) < m*c*c) then
+         if (w(4*n**2 - i + 1) > -m*c*c .and. w(4*n**2 - i + 1) < m*c*c) then
             write (12, '(i4, a, i4)', advance='no') i, " "
-            call mpwrite(12, 35, 15, w(4*n**2-i+1))
+            call mpwrite(12, 35, 15, w(4*n**2 - i + 1))
             write (12, '(i4, a, i4)', advance='no') i, " Translated by -mc^2 : "
-            call mpwrite(12, 35, 15, w(4*n**2-i+1) - m*c*c)
+            call mpwrite(12, 35, 15, w(4*n**2 - i + 1) - m*c*c)
             write (12, '(a)') " "
          end if
       end do
 
-
    end subroutine init_h2plus
 
    function epsilonn(alpha)
-    !> @brief Calculate the machine epsilon
-    !> @param alpha The value to calculate the machine epsilon
-    USE mpmodule
-    implicit type(mp_real) (a - h, o - z)
- 
-    ten = '10.d0'
-    epsilonn = ten**(-mpipl)
- 
-    return
- end function epsilonn
+      !> @brief Calculate the machine epsilon
+      !> @param alpha The value to calculate the machine epsilon
+      USE mpmodule
+      implicit type(mp_real) (a - h, o - z)
+
+      ten = '10.d0'
+      epsilonn = ten**(-mpipl)
+
+      return
+   end function epsilonn
 
 end module h2plus
