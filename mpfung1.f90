@@ -1,6 +1,6 @@
 !*****************************************************************************
 
-!  MPFUN20-Fort: A thread-safe arbitrary precision computation package
+!  MPFUN20-Fort: A thread-safe arbitrary precision package with special functions
 !  Main high-precision language interface module (module MPFUNG)
 !  Variant 1: Precision level arguments are NOT required.
 
@@ -8,23 +8,23 @@
 !  the variant files of this module using the gencodes.f90 program. Do not
 !  change these comments.
 
-!  Revision date:  18 May 2022
+!  Updated: 28 Jun 2024
 
 !  AUTHOR:
 !    David H. Bailey
-!    Lawrence Berkeley National Lab (retired) and University of California, Davis
+!    Lawrence Berkeley National Lab (retired)
 !    Email: dhbailey@lbl.gov
 
 !  COPYRIGHT AND DISCLAIMER:
-!    All software in this package (c) 2022 David H. Bailey.
+!    All software in this package (c) 2024 David H. Bailey.
 !    By downloading or using this software you agree to the copyright, disclaimer
 !    and license agreement in the accompanying file DISCLAIMER.txt.
 
 !  PURPOSE OF PACKAGE:
 !    This package permits one to perform floating-point computations (real and
 !    complex) to arbitrarily high numeric precision, by making only relatively
-!    minor changes to existing Fortran-90 programs.  All basic arithmetic
-!    operations and transcendental functions are supported, together with several
+!    minor changes to existing Fortran-90 programs. All basic arithmetic
+!    operations and transcendental functions are supported, together with numerous
 !    special functions.
 
 !    In addition to fast execution times, one key feature of this package is a
@@ -46,11 +46,9 @@
 !    operations using the standard high-precision datatype.
 !    There are two variants of this module:
 !      mpfung1.f90	Mixed-mode operations ARE allowed; precision level
-!                     arguments are NOT required in certain functions;
-!                     quad precision (128-bit) is NOT supported.
+!                     arguments are NOT required in certain functions.
 !      mpfung2.f90	Mixed-mode operations are NOT allowed; precision level
 !                     arguments ARE required in certain functions.
-!                     quad precision (128-bit) is NOT supported.
 !    Compile and link whichever one of these is most appropriate for the
 !    given applications. See documentation for details.
 
@@ -135,6 +133,12 @@ private &
   mp_sign, mp_sin, mp_sinh, mp_sqrt, mp_struve_hn, mp_tan, mp_tanh, &
   mp_wprec, mp_wprecz, mp_writer, mp_writez, mp_zeta, mp_zeta_be, &
   mp_zeta_int, mp_ztodc, mp_ztor, mp_ztoz, mp_zmtoz
+
+!  Polynomial package subroutines.
+
+private &
+  mp_rpolysolve, mp_cpolysolve, mp_rpolygcd, mp_rpolydiv, mp_rpolyeval, &
+  mp_cpolyeval
 
 !  Operator extension interface blocks:
 
@@ -228,7 +232,7 @@ interface operator (**)
    module procedure mp_expzr
 end interface
 
-interface operator (.eq.)
+interface operator (==)
   module procedure mp_eqtrr
   module procedure mp_eqtdr
   module procedure mp_eqtrd
@@ -243,7 +247,7 @@ interface operator (.eq.)
   module procedure mp_eqtzr
 end interface
 
-interface operator (.ne.)
+interface operator (/=)
   module procedure mp_netrr
   module procedure mp_netdr
   module procedure mp_netrd
@@ -258,7 +262,7 @@ interface operator (.ne.)
   module procedure mp_netzr
 end interface
 
-interface operator (.le.)
+interface operator (<=)
   module procedure mp_letrr
   module procedure mp_letdr
   module procedure mp_letrd
@@ -266,7 +270,7 @@ interface operator (.le.)
   module procedure mp_letri
 end interface
 
-interface operator (.ge.)
+interface operator (>=)
   module procedure mp_getrr
   module procedure mp_getdr
   module procedure mp_getrd
@@ -274,7 +278,7 @@ interface operator (.ge.)
   module procedure mp_getri
 end interface
 
-interface operator (.lt.)
+interface operator (<)
   module procedure mp_lttrr
   module procedure mp_lttdr
   module procedure mp_lttrd
@@ -282,7 +286,7 @@ interface operator (.lt.)
   module procedure mp_lttri
 end interface
 
-interface operator (.gt.)
+interface operator (>)
   module procedure mp_gttrr
   module procedure mp_gttdr
   module procedure mp_gttrd
@@ -656,6 +660,32 @@ interface zeta_int
   module procedure mp_zeta_int
 end interface
 
+!   These are the polynomial package:
+
+interface mprpolysolve
+  module procedure mp_rpolysolve
+end interface
+
+interface mpcpolysolve
+  module procedure mp_cpolysolve
+end interface
+
+interface mprpolygcd
+  module procedure mp_rpolygcd
+end interface
+
+interface mprpolydiv
+  module procedure mp_rpolydiv
+end interface
+
+interface mprpolyeval
+  module procedure mp_rpolyeval
+end interface
+
+interface mpcpolyeval
+  module procedure mp_cpolyeval
+end interface
+
 contains
 
 !  This routine outputs an error message if iprec exceeds mpwds.
@@ -688,7 +718,7 @@ contains
 
   subroutine mp_eqdr (da, rb)
     implicit none
-    real (mprknd), intent (out):: da
+    real (mpdknd), intent (out):: da
     type (mp_real), intent (in):: rb
     integer ib, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
@@ -700,7 +730,7 @@ contains
   subroutine mp_eqrd (ra, db)
     implicit none
     type (mp_real), intent (out):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer i1, mpnw
     mpnw = mpwds
     ra%mpr(0) = mpwds6
@@ -713,7 +743,7 @@ contains
     implicit none
     integer, intent (out):: ia
     type (mp_real), intent (in):: rb
-    real (mprknd) da
+    real (mpdknd) da
     integer ib, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     call mpmdc (rb%mpr, da, ib, mpnw)
@@ -725,7 +755,7 @@ contains
     implicit none
     type (mp_real), intent (out):: ra
     integer, intent (in):: ib
-    real (mprknd) db
+    real (mpdknd) db
     integer i1, mpnw
     mpnw = mpwds
     ra%mpr(0) = mpwds6
@@ -768,10 +798,10 @@ contains
 
   subroutine mp_eqdz (da, zb)
     implicit none
-    real (mprknd), intent (out):: da
+    real (mpdknd), intent (out):: da
     type (mp_complex), intent (in):: zb
     integer l1, mpnw, n1
-    real (mprknd) d1
+    real (mpdknd) d1
     l1 = zb%mpc(0)
     mpnw = max (int (zb%mpc(1)), int (zb%mpc(l1+1)))
     mpnw = min (mpnw, mpwds)
@@ -783,8 +813,8 @@ contains
   subroutine mp_eqzd (za, db)
     implicit none
     type (mp_complex), intent (out):: za
-    real (mprknd), intent (in):: db
-    real (mprknd) d1
+    real (mpdknd), intent (in):: db
+    real (mpdknd) d1
     integer l1, mpnw
     mpnw = mpwds
     l1 = mpwds6
@@ -801,7 +831,7 @@ contains
     complex (kind (0.d0)), intent (out):: dca
     type (mp_complex), intent (in):: zb
     integer l1, mpnw, n1, n2
-    real (mprknd) d1, d2
+    real (mpdknd) d1, d2
     l1 = zb%mpc(0)
     mpnw = max (int (zb%mpc(1)), int (zb%mpc(l1+1)))
     mpnw = min (mpnw, mpwds)
@@ -809,7 +839,7 @@ contains
     d1 = d1 * 2.d0 ** n1
     call mpmdc (zb%mpc(l1:), d2, n2, mpnw)
     d2 = d2 * 2.d0 ** n2
-    dca = cmplx (d1, d2, mprknd)
+    dca = cmplx (d1, d2, mpdknd)
     return
   end subroutine
 
@@ -874,7 +904,7 @@ contains
   function mp_adddr (da, rb)
     implicit none
     type (mp_real):: mp_adddr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     type (mp_real) r1
     integer i1, mpnw
@@ -891,7 +921,7 @@ contains
     implicit none
     type (mp_real):: mp_addrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     type (mp_real) r1
     integer i1, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -909,7 +939,7 @@ contains
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
     type (mp_real) r1
-    real (mprknd) da
+    real (mpdknd) da
     integer i1, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -926,7 +956,7 @@ contains
     type (mp_real):: mp_addri
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
-    real (mprknd) db
+    real (mpdknd) db
     type (mp_real) r1
     integer i1, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -959,10 +989,10 @@ contains
   function mp_adddz (da, zb)
     implicit none
     type (mp_complex):: mp_adddz
-    real (mprknd) , intent (in):: da
+    real (mpdknd) , intent (in):: da
     type (mp_complex), intent (in):: zb
     integer l1, l2, mpnw
-    real (mprknd) d1
+    real (mpdknd) d1
     type (mp_complex) z1
     l1 = zb%mpc(0)
     mpnw = max (int (zb%mpc(1)), int (zb%mpc(l1+1)))
@@ -983,9 +1013,9 @@ contains
     implicit none
     type (mp_complex):: mp_addzd
     type (mp_complex), intent (in):: za
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer l1, l2, mpnw
-    real (mprknd) d1
+    real (mpdknd) d1
     type (mp_complex) z1
     l1 = za%mpc(0)
     mpnw = max (int (za%mpc(1)), int (za%mpc(l1+1)))
@@ -1095,7 +1125,7 @@ contains
   function mp_subdr (da, rb)
     implicit none
     type (mp_real):: mp_subdr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     type (mp_real) r1
     integer i1, mpnw
@@ -1112,7 +1142,7 @@ contains
     implicit none
     type (mp_real):: mp_subrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     type (mp_real) r1
     integer i1, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -1130,7 +1160,7 @@ contains
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
     type (mp_real) r1
-    real (mprknd) da
+    real (mpdknd) da
     integer i1, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -1148,7 +1178,7 @@ contains
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
     type (mp_real) r1
-    real (mprknd) db
+    real (mpdknd) db
     integer i1, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -1180,10 +1210,10 @@ contains
   function mp_subdz (da, zb)
     implicit none
     type (mp_complex):: mp_subdz
-    real (mprknd) , intent (in):: da
+    real (mpdknd) , intent (in):: da
     type (mp_complex), intent (in):: zb
     integer l1, l2, mpnw
-    real (mprknd) d1
+    real (mpdknd) d1
     type (mp_complex) z1
     l1 = zb%mpc(0)
     mpnw = max (int (zb%mpc(1)), int (zb%mpc(l1+1)))
@@ -1204,9 +1234,9 @@ contains
     implicit none
     type (mp_complex):: mp_subzd
     type (mp_complex), intent (in):: za
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer l1, l2, mpnw
-    real (mprknd) d1
+    real (mpdknd) d1
     type (mp_complex) z1
     l1 = za%mpc(0)
     mpnw = max (int (za%mpc(1)), int (za%mpc(l1+1)))
@@ -1347,7 +1377,7 @@ contains
   function mp_muldr (da, rb)
     implicit none
     type (mp_real):: mp_muldr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     integer mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
@@ -1360,7 +1390,7 @@ contains
     implicit none
     type (mp_real):: mp_mulrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     mp_mulrd%mpr(0) = mpwds6
@@ -1373,7 +1403,7 @@ contains
     type (mp_real):: mp_mulir
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
-    real (mprknd) da
+    real (mpdknd) da
     integer mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     mp_mulir%mpr(0) = mpwds6
@@ -1387,7 +1417,7 @@ contains
     type (mp_real):: mp_mulri
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
-    real (mprknd) db
+    real (mpdknd) db
     integer mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     mp_mulri%mpr(0) = mpwds6
@@ -1416,7 +1446,7 @@ contains
   function mp_muldz (da, zb)
     implicit none
     type (mp_complex):: mp_muldz
-    real (mprknd) , intent (in):: da
+    real (mpdknd) , intent (in):: da
     type (mp_complex), intent (in):: zb
     integer l1, l2, mpnw
     l1 = zb%mpc(0)
@@ -1434,7 +1464,7 @@ contains
     implicit none
     type (mp_complex):: mp_mulzd
     type (mp_complex), intent (in):: za
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer l1, l2, mpnw
     l1 = za%mpc(0)
     mpnw = max (int (za%mpc(1)), int (za%mpc(l1+1)))
@@ -1540,7 +1570,7 @@ contains
   function mp_divdr (da, rb)
     implicit none
     type (mp_real):: mp_divdr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     type (mp_real) r1
     integer i1, mpnw
@@ -1557,7 +1587,7 @@ contains
     implicit none
     type (mp_real):: mp_divrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     mp_divrd%mpr(0) = mpwds6
@@ -1571,7 +1601,7 @@ contains
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
     type (mp_real) r1
-    real (mprknd) da
+    real (mpdknd) da
     integer i1, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -1588,7 +1618,7 @@ contains
     type (mp_real):: mp_divri
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
-    real (mprknd) db
+    real (mpdknd) db
     integer mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     mp_divri%mpr(0) = mpwds6
@@ -1617,9 +1647,9 @@ contains
   function mp_divdz (da, zb)
     implicit none
     type (mp_complex):: mp_divdz
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_complex), intent (in):: zb
-    real (mprknd) d1
+    real (mpdknd) d1
     integer l1, l2, mpnw
     type (mp_complex) z1
     l1 = zb%mpc(0)
@@ -1641,8 +1671,8 @@ contains
     implicit none
     type (mp_complex):: mp_divzd
     type (mp_complex), intent (in):: za
-    real (mprknd), intent (in):: db
-    real (mprknd) d1
+    real (mpdknd), intent (in):: db
+    real (mpdknd) d1
     integer l1, l2, mpnw
     type (mp_complex) z1
     l1 = za%mpc(0)
@@ -1846,7 +1876,7 @@ contains
     mpnw = max (int (ra%mpr(1)), int (rb%mpr(1)))
     mpnw = min (mpnw, mpwds)
     call mpcpr (ra%mpr, rb%mpr, ic, mpnw)
-    if (ic .eq. 0) then
+    if (ic == 0) then
       mp_eqtrr = .true.
     else
       mp_eqtrr = .false.
@@ -1857,7 +1887,7 @@ contains
   function mp_eqtdr (da, rb)
     implicit none
     logical mp_eqtdr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     type (mp_real) r1
     integer i1, ic, mpnw
@@ -1866,7 +1896,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .eq. 0) then
+    if (ic == 0) then
       mp_eqtdr = .true.
     else
       mp_eqtdr = .false.
@@ -1878,7 +1908,7 @@ contains
     implicit none
     logical mp_eqtrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     type (mp_real) r1
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -1886,7 +1916,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .eq. 0) then
+    if (ic == 0) then
       mp_eqtrd = .true.
     else
       mp_eqtrd = .false.
@@ -1900,7 +1930,7 @@ contains
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
     type (mp_real) r1
-    real (mprknd) da
+    real (mpdknd) da
     integer i1, ic, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -1908,7 +1938,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .eq. 0) then
+    if (ic == 0) then
       mp_eqtir = .true.
     else
       mp_eqtir = .false.
@@ -1922,7 +1952,7 @@ contains
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
     type (mp_real) r1
-    real (mprknd) db
+    real (mpdknd) db
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -1930,7 +1960,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .eq. 0) then
+    if (ic == 0) then
       mp_eqtri = .true.
     else
       mp_eqtri = .false.
@@ -1950,7 +1980,7 @@ contains
     mpnw = min (mpnw, mpwds)
     call mpcpr (za%mpc, zb%mpc, ic1, mpnw)
     call mpcpr (za%mpc(l1:), zb%mpc(l2:), ic2, mpnw)
-    if (ic1 .eq. 0 .and. ic2 .eq. 0) then
+    if (ic1 == 0 .and. ic2 == 0) then
       mp_eqtzz = .true.
     else
       mp_eqtzz = .false.
@@ -1961,11 +1991,11 @@ contains
   function mp_eqtdz (da, zb)
     implicit none
     logical mp_eqtdz
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_complex), intent (in):: zb
     integer ic1, ic2, l1, l2, mpnw
     type (mp_complex) z1
-    real (mprknd) d1
+    real (mpdknd) d1
     l1 = zb%mpc(0)
     mpnw = max (int (zb%mpc(1)), int (zb%mpc(l1+1)))
     mpnw = min (mpnw, mpwds)
@@ -1977,7 +2007,7 @@ contains
     call mpdmc40 (d1, 0, z1%mpc(l2:), mpnw)
     call mpcpr (z1%mpc, zb%mpc, ic1, mpnw)
     call mpcpr (z1%mpc(l2:), zb%mpc(l1:), ic2, mpnw)
-    if (ic1 .eq. 0 .and. ic2 .eq. 0) then
+    if (ic1 == 0 .and. ic2 == 0) then
       mp_eqtdz = .true.
     else
       mp_eqtdz = .false.
@@ -1989,10 +2019,10 @@ contains
     implicit none
     logical mp_eqtzd
     type (mp_complex), intent (in):: za
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer ic1, ic2, l1, l2, mpnw
     type (mp_complex) z1
-    real (mprknd) d1
+    real (mpdknd) d1
     l1 = za%mpc(0)
     mpnw = max (int (za%mpc(1)), int (za%mpc(l1+1)))
     mpnw = min (mpnw, mpwds)
@@ -2004,7 +2034,7 @@ contains
     call mpdmc40 (d1, 0, z1%mpc(l2:), mpnw)
     call mpcpr (za%mpc, z1%mpc, ic1, mpnw)
     call mpcpr (za%mpc(l1:), z1%mpc(l2:), ic2, mpnw)
-    if (ic1 .eq. 0 .and. ic2 .eq. 0) then
+    if (ic1 == 0 .and. ic2 == 0) then
       mp_eqtzd = .true.
     else
       mp_eqtzd = .false.
@@ -2029,7 +2059,7 @@ contains
     call mpdmc40 (aimag (dca), 0, z1%mpc(l2:), mpnw)
     call mpcpr (z1%mpc, zb%mpc, ic1, mpnw)
     call mpcpr (z1%mpc(l2:), zb%mpc(l1:), ic2, mpnw)
-    if (ic1 .eq. 0 .and. ic2 .eq. 0) then
+    if (ic1 == 0 .and. ic2 == 0) then
       mp_eqtdcz = .true.
     else
       mp_eqtdcz = .false.
@@ -2054,7 +2084,7 @@ contains
     call mpdmc40 (aimag (dcb), 0, z1%mpc(l2:), mpnw)
     call mpcpr (za%mpc, z1%mpc, ic1, mpnw)
     call mpcpr (za%mpc(l1:), z1%mpc(l2:), ic2, mpnw)
-    if (ic1 .eq. 0 .and. ic2 .eq. 0) then
+    if (ic1 == 0 .and. ic2 == 0) then
       mp_eqtzdc = .true.
     else
       mp_eqtzdc = .false.
@@ -2073,7 +2103,7 @@ contains
     mpnw = min (mpnw, mpwds)
     call mpcpr (ra%mpr, zb%mpc, ic1, mpnw)
     ic2 = int (zb%mpc(l2+2))
-    if (ic1 .eq. 0 .and. ic2 .eq. 0) then
+    if (ic1 == 0 .and. ic2 == 0) then
       mp_eqtrz = .true.
     else
       mp_eqtrz = .false.
@@ -2092,7 +2122,7 @@ contains
     mpnw = min (mpnw, mpwds)
     call mpcpr (za%mpc, rb%mpr, ic1, mpnw)
     ic2 = int (za%mpc(l1+2))
-    if (ic1 .eq. 0 .and. ic2 .eq. 0) then
+    if (ic1 == 0 .and. ic2 == 0) then
       mp_eqtzr = .true.
     else
       mp_eqtzr = .false.
@@ -2110,7 +2140,7 @@ contains
     mpnw = max (int (ra%mpr(1)), int (rb%mpr(1)))
     mpnw = min (mpnw, mpwds)
     call mpcpr (ra%mpr, rb%mpr, ic, mpnw)
-    if (ic .ne. 0) then
+    if (ic /= 0) then
       mp_netrr = .true.
     else
       mp_netrr = .false.
@@ -2121,7 +2151,7 @@ contains
   function mp_netdr (da, rb)
     implicit none
     logical mp_netdr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     type (mp_real) r1
     integer i1, ic, mpnw
@@ -2130,7 +2160,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .ne. 0) then
+    if (ic /= 0) then
       mp_netdr = .true.
     else
       mp_netdr = .false.
@@ -2142,7 +2172,7 @@ contains
     implicit none
     logical mp_netrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     type (mp_real) r1
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -2150,7 +2180,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .ne. 0) then
+    if (ic /= 0) then
       mp_netrd = .true.
     else
       mp_netrd = .false.
@@ -2164,7 +2194,7 @@ contains
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
     type (mp_real) r1
-    real (mprknd) da
+    real (mpdknd) da
     integer i1, ic, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2172,7 +2202,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .ne. 0) then
+    if (ic /= 0) then
       mp_netir = .true.
     else
       mp_netir = .false.
@@ -2186,7 +2216,7 @@ contains
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
     type (mp_real) r1
-    real (mprknd) db
+    real (mpdknd) db
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2194,7 +2224,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .ne. 0) then
+    if (ic /= 0) then
       mp_netri = .true.
     else
       mp_netri = .false.
@@ -2214,7 +2244,7 @@ contains
     mpnw = min (mpnw, mpwds)
     call mpcpr (za%mpc, zb%mpc, ic1, mpnw)
     call mpcpr (za%mpc(l1:), zb%mpc(l2:), ic2, mpnw)
-    if (ic1 .ne. 0 .or. ic2 .ne. 0) then
+    if (ic1 /= 0 .or. ic2 /= 0) then
       mp_netzz = .true.
     else
       mp_netzz = .false.
@@ -2225,11 +2255,11 @@ contains
   function mp_netdz (da, zb)
     implicit none
     logical mp_netdz
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_complex), intent (in):: zb
     integer ic1, ic2, l1, l2, mpnw
     type (mp_complex) z1
-    real (mprknd) d1
+    real (mpdknd) d1
     l1 = zb%mpc(0)
     mpnw = max (int (zb%mpc(1)), int (zb%mpc(l1+1)))
     mpnw = min (mpnw, mpwds)
@@ -2241,7 +2271,7 @@ contains
     call mpdmc40 (d1, 0, z1%mpc(l2:), mpnw)
     call mpcpr (z1%mpc, zb%mpc, ic1, mpnw)
     call mpcpr (z1%mpc(l2:), zb%mpc(l1:), ic2, mpnw)
-    if (ic1 .ne. 0 .or. ic2 .ne. 0) then
+    if (ic1 /= 0 .or. ic2 /= 0) then
       mp_netdz = .true.
     else
       mp_netdz = .false.
@@ -2253,10 +2283,10 @@ contains
     implicit none
     logical mp_netzd
     type (mp_complex), intent (in):: za
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer ic1, ic2, l1, l2, mpnw
     type (mp_complex) z1
-    real (mprknd) d1
+    real (mpdknd) d1
     l1 = za%mpc(0)
     mpnw = max (int (za%mpc(1)), int (za%mpc(l1+1)))
     mpnw = min (mpnw, mpwds)
@@ -2268,7 +2298,7 @@ contains
     call mpdmc40 (d1, 0, z1%mpc(l2:), mpnw)
     call mpcpr (za%mpc, z1%mpc, ic1, mpnw)
     call mpcpr (za%mpc(l1:), z1%mpc(l2:), ic2, mpnw)
-    if (ic1 .ne. 0 .or. ic2 .ne. 0) then
+    if (ic1 /= 0 .or. ic2 /= 0) then
       mp_netzd = .true.
     else
       mp_netzd = .false.
@@ -2293,7 +2323,7 @@ contains
     call mpdmc40 (aimag (dca), 0, z1%mpc(l2:), mpnw)
     call mpcpr (z1%mpc, zb%mpc, ic1, mpnw)
     call mpcpr (z1%mpc(l2:), zb%mpc(l1:), ic2, mpnw)
-    if (ic1 .ne. 0 .or. ic2 .ne. 0) then
+    if (ic1 /= 0 .or. ic2 /= 0) then
       mp_netdcz = .true.
     else
       mp_netdcz = .false.
@@ -2318,7 +2348,7 @@ contains
     call mpdmc40 (aimag (dcb), 0, z1%mpc(l2:), mpnw)
     call mpcpr (za%mpc, z1%mpc, ic1, mpnw)
     call mpcpr (za%mpc(l1:), z1%mpc(l2:), ic2, mpnw)
-    if (ic1 .ne. 0 .or. ic2 .ne. 0) then
+    if (ic1 /= 0 .or. ic2 /= 0) then
       mp_netzdc = .true.
     else
       mp_netzdc = .false.
@@ -2337,7 +2367,7 @@ contains
     mpnw = min (mpnw, mpwds)
     call mpcpr (ra%mpr, zb%mpc, ic1, mpnw)
     ic2 = int (zb%mpc(l2+2))
-    if (ic1 .ne. 0 .or. ic2 .ne. 0) then
+    if (ic1 /= 0 .or. ic2 /= 0) then
       mp_netrz = .true.
     else
       mp_netrz = .false.
@@ -2356,7 +2386,7 @@ contains
     mpnw = min (mpnw, mpwds)
     call mpcpr (za%mpc, rb%mpr, ic1, mpnw)
     ic2 = int (za%mpc(l1+2))
-    if (ic1 .ne. 0 .or. ic2 .ne. 0) then
+    if (ic1 /= 0 .or. ic2 /= 0) then
       mp_netzr = .true.
     else
       mp_netzr = .false.
@@ -2374,7 +2404,7 @@ contains
     mpnw = max (int (ra%mpr(1)), int (rb%mpr(1)))
     mpnw = min (mpnw, mpwds)
     call mpcpr (ra%mpr, rb%mpr, ic, mpnw)
-    if (ic .le. 0) then
+    if (ic <= 0) then
       mp_letrr = .true.
     else
       mp_letrr = .false.
@@ -2385,7 +2415,7 @@ contains
   function mp_letdr (da, rb)
     implicit none
     logical mp_letdr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     type (mp_real) r1
     integer i1, ic, mpnw
@@ -2394,7 +2424,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .le. 0) then
+    if (ic <= 0) then
       mp_letdr = .true.
     else
       mp_letdr = .false.
@@ -2406,7 +2436,7 @@ contains
     implicit none
     logical mp_letrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     type (mp_real) r1
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -2414,7 +2444,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .le. 0) then
+    if (ic <= 0) then
       mp_letrd = .true.
     else
       mp_letrd = .false.
@@ -2428,7 +2458,7 @@ contains
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
     type (mp_real) r1
-    real (mprknd) da
+    real (mpdknd) da
     integer i1, ic, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2436,7 +2466,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .le. 0) then
+    if (ic <= 0) then
       mp_letir = .true.
     else
       mp_letir = .false.
@@ -2450,7 +2480,7 @@ contains
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
     type (mp_real) r1
-    real (mprknd) db
+    real (mpdknd) db
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2458,7 +2488,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .le. 0) then
+    if (ic <= 0) then
       mp_letri = .true.
     else
       mp_letri = .false.
@@ -2476,7 +2506,7 @@ contains
     mpnw = max (int (ra%mpr(1)), int (rb%mpr(1)))
     mpnw = min (mpnw, mpwds)
     call mpcpr (ra%mpr, rb%mpr, ic, mpnw)
-    if (ic .ge. 0) then
+    if (ic >= 0) then
       mp_getrr = .true.
     else
       mp_getrr = .false.
@@ -2487,7 +2517,7 @@ contains
   function mp_getdr (da, rb)
     implicit none
     logical mp_getdr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     type (mp_real) r1
     integer i1, ic, mpnw
@@ -2496,7 +2526,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .ge. 0) then
+    if (ic >= 0) then
       mp_getdr = .true.
     else
       mp_getdr = .false.
@@ -2508,7 +2538,7 @@ contains
     implicit none
     logical mp_getrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     type (mp_real) r1
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -2516,7 +2546,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .ge. 0) then
+    if (ic >= 0) then
       mp_getrd = .true.
     else
       mp_getrd = .false.
@@ -2530,7 +2560,7 @@ contains
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
     type (mp_real) r1
-    real (mprknd) da
+    real (mpdknd) da
     integer i1, ic, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2538,7 +2568,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .ge. 0) then
+    if (ic >= 0) then
       mp_getir = .true.
     else
       mp_getir = .false.
@@ -2552,7 +2582,7 @@ contains
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
     type (mp_real) r1
-    real (mprknd) db
+    real (mpdknd) db
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2560,7 +2590,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .ge. 0) then
+    if (ic >= 0) then
       mp_getri = .true.
     else
       mp_getri = .false.
@@ -2578,7 +2608,7 @@ contains
     mpnw = max (int (ra%mpr(1)), int (rb%mpr(1)))
     mpnw = min (mpnw, mpwds)
     call mpcpr (ra%mpr, rb%mpr, ic, mpnw)
-    if (ic .lt. 0) then
+    if (ic < 0) then
       mp_lttrr = .true.
     else
       mp_lttrr = .false.
@@ -2589,7 +2619,7 @@ contains
   function mp_lttdr (da, rb)
     implicit none
     logical mp_lttdr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     type (mp_real) r1
     integer i1, ic, mpnw
@@ -2598,7 +2628,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .lt. 0) then
+    if (ic < 0) then
       mp_lttdr = .true.
     else
       mp_lttdr = .false.
@@ -2610,7 +2640,7 @@ contains
     implicit none
     logical mp_lttrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     type (mp_real) r1
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -2618,7 +2648,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .lt. 0) then
+    if (ic < 0) then
       mp_lttrd = .true.
     else
       mp_lttrd = .false.
@@ -2632,7 +2662,7 @@ contains
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
     type (mp_real) r1
-    real (mprknd) da
+    real (mpdknd) da
     integer i1, ic, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2640,7 +2670,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .lt. 0) then
+    if (ic < 0) then
       mp_lttir = .true.
     else
       mp_lttir = .false.
@@ -2654,7 +2684,7 @@ contains
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
     type (mp_real) r1
-    real (mprknd) db
+    real (mpdknd) db
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2662,7 +2692,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .lt. 0) then
+    if (ic < 0) then
       mp_lttri = .true.
     else
       mp_lttri = .false.
@@ -2680,7 +2710,7 @@ contains
     mpnw = max (int (ra%mpr(1)), int (rb%mpr(1)))
     mpnw = min (mpnw, mpwds)
     call mpcpr (ra%mpr, rb%mpr, ic, mpnw)
-    if (ic .gt. 0) then
+    if (ic > 0) then
       mp_gttrr = .true.
     else
       mp_gttrr = .false.
@@ -2691,7 +2721,7 @@ contains
   function mp_gttdr (da, rb)
     implicit none
     logical mp_gttdr
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     type (mp_real), intent (in):: rb
     type (mp_real) r1
     integer i1, ic, mpnw
@@ -2700,7 +2730,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .gt. 0) then
+    if (ic > 0) then
       mp_gttdr = .true.
     else
       mp_gttdr = .false.
@@ -2712,7 +2742,7 @@ contains
     implicit none
     logical mp_gttrd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     type (mp_real) r1
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -2720,7 +2750,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .gt. 0) then
+    if (ic > 0) then
       mp_gttrd = .true.
     else
       mp_gttrd = .false.
@@ -2734,7 +2764,7 @@ contains
     integer, intent (in):: ia
     type (mp_real), intent (in):: rb
     type (mp_real) r1
-    real (mprknd) da
+    real (mpdknd) da
     integer i1, ic, mpnw
     mpnw = min (int (rb%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2742,7 +2772,7 @@ contains
     i1 = 0
     call mpdmc40 (da, i1, r1%mpr, mpnw)
     call mpcpr (r1%mpr, rb%mpr, ic, mpnw)
-    if (ic .gt. 0) then
+    if (ic > 0) then
       mp_gttir = .true.
     else
       mp_gttir = .false.
@@ -2756,7 +2786,7 @@ contains
     type (mp_real), intent (in):: ra
     integer, intent (in):: ib
     type (mp_real) r1
-    real (mprknd) db
+    real (mpdknd) db
     integer i1, ic, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     r1%mpr(0) = mpwds6
@@ -2764,7 +2794,7 @@ contains
     i1 = 0
     call mpdmc40 (db, i1, r1%mpr, mpnw)
     call mpcpr (ra%mpr, r1%mpr, ic, mpnw)
-    if (ic .gt. 0) then
+    if (ic > 0) then
       mp_gttri = .true.
     else
       mp_gttri = .false.
@@ -2811,7 +2841,7 @@ contains
     call mpmul (ra%mpr, ra%mpr, r1%mpr, mpnw)
     call mpdmc (1.d0, 0, r2%mpr, mpnw)
     call mpsub (r2%mpr, r1%mpr, r3%mpr, mpnw)
-    if (r3%mpr(2) < 0.d0) then
+    if (r3%mpr(2) < 0) then
       write (mpldb, 1)
 1     format ('*** MP_ACOS: argument is not in (-1, 1).')
       call mpabrt ( 702)
@@ -2836,7 +2866,7 @@ contains
     call mpmul (ra%mpr, ra%mpr, r1%mpr, mpnw)
     call mpdmc (1.d0, 0, r2%mpr, mpnw)
     call mpsub (r1%mpr, r2%mpr, r3%mpr, mpnw)
-    if (r3%mpr(2) < 0.d0) then
+    if (r3%mpr(2) < 0) then
       write (mpldb, 1)
 1     format ('*** MP_ACOSH: argument is not >= 1.')
       call mpabrt ( 703)
@@ -2909,7 +2939,7 @@ contains
     call mpmul (ra%mpr, ra%mpr, r1%mpr, mpnw)
     call mpdmc (1.d0, 0, r2%mpr, mpnw)
     call mpsub (r2%mpr, r1%mpr, r3%mpr, mpnw)
-    if (r3%mpr(2) < 0.d0) then
+    if (r3%mpr(2) < 0) then
       write (mpldb, 1)
 1     format ('*** MP_ASIN: argument is not in (-1, 1).')
       call mpabrt ( 704)
@@ -2981,7 +3011,7 @@ contains
     call mpadd (r1%mpr, ra%mpr, r2%mpr, mpnw)
     call mpsub (r1%mpr, ra%mpr, r3%mpr, mpnw)
     call mpdiv (r2%mpr, r3%mpr, r1%mpr, mpnw)
-    if (r1%mpr(2) < 0.d0) then
+    if (r1%mpr(2) < 0) then
       write (mpldb, 1)
 1     format ('*** MP_ATANH: argument is not in (-1, 1).')
       call mpabrt ( 705)
@@ -3210,7 +3240,7 @@ contains
   subroutine mp_binmd (ra, db, ic)
     implicit none
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (out):: db
+    real (mpdknd), intent (out):: db
     integer, intent (out):: ic
     integer mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -3446,10 +3476,10 @@ contains
   subroutine mp_decmd (ra, db, ib)
     implicit none
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (out):: db
+    real (mpdknd), intent (out):: db
     integer, intent (out):: ib
-    real (mprknd) alg102, dt1, dt2
-    parameter (alg102 = 0.301029995663981195d0)
+    real (mpdknd), parameter:: alg102 = 0.301029995663981195d0
+    real (mpdknd) dt1, dt2
     integer i1, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     call mpmdc (ra%mpr, dt1, i1, mpnw)
@@ -3481,7 +3511,7 @@ contains
   function mp_dtor (da, iprec)
     implicit none
     type (mp_real):: mp_dtor
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     integer i1, mpnw
 
 !>  In variant #1, uncomment these lines:
@@ -3504,7 +3534,7 @@ contains
   function mp_dtor2 (da, iprec)
     implicit none
     type (mp_real):: mp_dtor2
-    real (mprknd), intent (in):: da
+    real (mpdknd), intent (in):: da
     integer i1, mpnw
 
 !>  In variant #1, uncomment these lines:
@@ -3661,7 +3691,7 @@ contains
     integer mpnw
     mpnw = min (int (xx%mpr(1)), mpwds)
     mp_hypergeom_pfq%mpr(0) = mpwds6
-    call mphypergeompfq (np, nq, mpwds, aa(1)%mpr(0), bb(1)%mpr(0), &
+    call mphypergeompfq (mpwds, np, nq, aa(1)%mpr(0), bb(1)%mpr(0), &
       xx%mpr, mp_hypergeom_pfq%mpr, mpnw)
     return
   end function
@@ -3976,7 +4006,7 @@ contains
     implicit none
     type (mp_real):: mp_prodd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     mp_prodd%mpr(0) = mpwds6
@@ -3987,7 +4017,7 @@ contains
     implicit none
     type (mp_real):: mp_prodq
     type (mp_real), intent (in):: ra
-    real (max (mprknd2, kind (1.0))), intent (in):: qb
+    real (max (mpqknd, kind (1.0))), intent (in):: qb
     type (mp_real) r1
     integer mpnw
     r1%mpr(0) = mpwds6
@@ -4001,7 +4031,7 @@ contains
     implicit none
     type (mp_real):: mp_qtor
     integer mpnw
-    real (max (mprknd2, kind (1.0))), intent (in):: qa
+    real (max (mpqknd, kind (1.0))), intent (in):: qa
 
 !>  In variant #1, uncomment these lines:
     integer, optional, intent (in):: iprec
@@ -4023,7 +4053,7 @@ contains
     implicit none
     type (mp_real):: mp_qtor2
     integer mpnw
-    real (max (mprknd2, kind (1.0))), intent (in):: qa
+    real (max (mpqknd, kind (1.0))), intent (in):: qa
 
 !>  In variant #1, uncomment these lines:
     integer, optional, intent (in):: iprec
@@ -4045,7 +4075,7 @@ contains
     implicit none
     type (mp_real):: mp_quotd
     type (mp_real), intent (in):: ra
-    real (mprknd), intent (in):: db
+    real (mpdknd), intent (in):: db
     integer mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
     mp_quotd%mpr(0) = mpwds6
@@ -4056,7 +4086,7 @@ contains
     implicit none
     type (mp_real):: mp_quotq
     type (mp_real), intent (in):: ra
-    real (max (mprknd2, kind (1.0))), intent (in):: qb
+    real (max (mpqknd, kind (1.0))), intent (in):: qb
     type (mp_real) r1
     integer mpnw
     r1%mpr(0) = mpwds6
@@ -4385,7 +4415,7 @@ contains
 
   function mp_rtod (ra)
     implicit none
-    real (mprknd):: mp_rtod
+    real (mpdknd):: mp_rtod
     type (mp_real), intent (in):: ra
     integer n1, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -4396,7 +4426,7 @@ contains
 
   function mp_rtoq (ra)
     implicit none
-    real (max (mprknd2, kind (1.))):: mp_rtoq, t1
+    real (max (mpqknd, kind (1.))):: mp_rtoq, t1
     type (mp_real), intent (in):: ra
     integer n1, mpnw
     mpnw = min (int (ra%mpr(1)), mpwds)
@@ -4526,7 +4556,7 @@ contains
     r2%mpr(0) = mpwds6
     mp_tan%mpr(0) = mpwds6
     call mpcssnr (ra%mpr, r1%mpr, r2%mpr, mpnw)
-    if (r1%mpr(2) == 0.d0) then
+    if (r1%mpr(2) == 0) then
       write (mpldb, 1)
 1     format ('*** MP_TAN: Cos of argument is zero.')
       call mpabrt ( 709)
@@ -4713,7 +4743,7 @@ contains
     complex (kind(0.d0)):: mp_ztodc
     type (mp_complex), intent (in):: za
     integer l1, mpnw, n1, n2
-    real (mprknd) d1, d2
+    real (mpdknd) d1, d2
     l1 = za%mpc(0)
     mpnw = max (int (za%mpc(1)), int (za%mpc(l1+1)))
     mpnw = min (mpnw, mpwds)
@@ -4721,7 +4751,7 @@ contains
     d1 = d1 * 2.d0 ** n1
     call mpmdc (za%mpc(l1:), d2, n2, mpnw)
     d2 = d2 * 2.d0 ** n2
-    mp_ztodc = cmplx (d1, d2, mprknd)
+    mp_ztodc = cmplx (d1, d2, mpdknd)
     return
   end function
 
@@ -4773,6 +4803,105 @@ contains
     call mpceq (za%mpc, mp_ztoz%mpc, mpnw)
     return
   end function
+
+!   These are the polynomial package routines.
+
+  subroutine mp_rpolysolve (nq, polyq, rootapp, root)
+    implicit none
+    integer, intent(in):: nq
+    type (mp_real), intent(in):: polyq(0:nq), rootapp
+    type (mp_real), intent(out):: root
+    integer mpnw, nd1
+    mpnw = int (rootapp%mpr(1))
+    mpnw = min (mpnw, mpwds)
+    nd1 = mpwds
+    root%mpr(0) = mpwds6
+    call mprpolysolvex (nd1, nq, polyq(0)%mpr, rootapp%mpr, &
+      root%mpr, mpnw)
+    return
+  end subroutine
+
+  subroutine mp_cpolysolve (nq, polyq, rootapp, root)
+    implicit none
+    integer, intent(in):: nq
+    type (mp_real), intent(in):: polyq(0:nq)
+    type (mp_complex), intent(in):: rootapp
+    type (mp_complex), intent(out):: root
+    integer lc1, mpnw, nd1
+    lc1 = rootapp%mpc(0)
+    mpnw = max (int (rootapp%mpc(1)), int (rootapp%mpc(lc1+1)))
+    mpnw = min (mpnw, mpwds)
+    nd1 = mpwds
+    root%mpc(0) = mpwds6
+    root%mpc(lc1) = mpwds6
+    call mpcpolysolvex (nd1, nq, polyq(0)%mpr, rootapp%mpc, &
+      root%mpc, mpnw)
+    return
+  end subroutine
+
+  subroutine mp_rpolygcd (n1, poly1, n2, poly2, ng, polyg)
+    implicit none
+    integer, intent(in):: n1, n2
+    type (mp_real), intent(in):: poly1(0:n1), poly2(0:n2)
+    integer, intent(out):: ng
+    type (mp_real), intent(out):: polyg(0:n1)
+    integer i, mpnw, nd1
+    mpnw = int (poly1(0)%mpr(1))
+    mpnw = min (mpnw, mpwds)
+    nd1 = mpwds
+    do i = 0, n1; polyg(i)%mpr(0) = mpwds6; enddo
+    call mprpolygcdx (nd1, n1, poly1(0)%mpr, n2, poly2(0)%mpr, &
+      ng, polyg(0)%mpr, mpnw)
+    return
+  end subroutine
+
+  subroutine mp_rpolydiv (n1, poly1, n2, poly2, n3, poly3, n4, poly4)
+    implicit none
+    integer, intent(in):: n1, n2
+    type (mp_real), intent(in):: poly1(0:n1), poly2(0:n2)
+    integer, intent(out):: n3, n4
+    type (mp_real), intent(out):: poly3(0:n1), poly4(0:n1)
+    integer i, mpnw, nd1
+    mpnw = int (poly1(0)%mpr(1))
+    mpnw = min (mpnw, mpwds)
+    nd1 = mpwds
+    do i = 0, n1; poly3(i)%mpr(0) = mpwds6; enddo
+    do i = 0, n1; poly4(i)%mpr(0) = mpwds6; enddo
+    call mprpolydivx (nd1, n1, poly1(0)%mpr, n2, poly2(0)%mpr, &
+      n3, poly3(0)%mpr, n4, poly4(0)%mpr, mpnw)
+    return
+  end subroutine
+
+  subroutine mp_rpolyeval (np, poly, arg, result)
+    implicit none
+    integer, intent(in):: np
+    type (mp_real), intent(in):: poly(0:np), arg
+    type (mp_real), intent(out):: result
+    integer mpnw, nd1
+    result%mpr(0) = mpwds6
+    mpnw = int (arg%mpr(1))
+    mpnw = min (mpnw, mpwds)
+    nd1 = mpwds
+    call mprpolyevalx (nd1, np, poly(0)%mpr, arg%mpr, result%mpr, mpnw)
+    return
+  end subroutine
+
+  subroutine mp_cpolyeval (np, poly, arg, result)
+    implicit none
+    integer, intent(in):: np
+    type (mp_real), intent(in):: poly(0:np)
+    type (mp_complex), intent(in):: arg
+    type (mp_complex), intent(out):: result
+    integer lc1, mpnw, nd1
+    lc1 = arg%mpc(0)
+    mpnw = max (int (arg%mpc(1)), int (arg%mpc(lc1+1)))
+    mpnw = min (mpnw, mpwds)
+    nd1 = mpwds
+    result%mpc(0) = mpwds6
+    result%mpc(lc1) = mpwds6
+    call mpcpolyevalx (nd1, np, poly(0)%mpr, arg%mpc, result%mpc, mpnw)
+    return
+  end subroutine
 
 end module mpfung
 

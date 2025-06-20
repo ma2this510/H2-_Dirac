@@ -2,15 +2,15 @@
 
 function mpmask13 (b)
 
-!  Revision date:  9 Jan 2022
+!  Updated: 28 Jun 2024
 
 !  AUTHOR:
 !     David H. Bailey
-!     Lawrence Berkeley National Lab (retired) and University of California, Davis
+!     Lawrence Berkeley National Lab (retired)
 !     Email: dhbailey@lbl.gov
 
 !  COPYRIGHT AND DISCLAIMER:
-!    All software in this package (c) 2022 David H. Bailey.
+!    All software in this package (c) 2024 David H. Bailey.
 !    By downloading or using this software you agree to the copyright, disclaimer
 !    and license agreement in the accompanying file DISCLAIMER.txt.
 
@@ -24,7 +24,7 @@ function mpmask13 (b)
 use mpfuna
 implicit none
 
-real (mprknd) b, b13x, mpmask13, t1
+real (mpdknd) b, b13x, mpmask13, t1
 parameter (b13x = 2.d0**13)
 t1 = b13x * abs (b)
 mpmask13 = abs (abs (b) + t1) - abs (t1)
@@ -43,9 +43,9 @@ function mpmask23 (b)
 use mpfuna
 implicit none
 
-real (mprknd) b23x
+real (mpdknd) b23x
 parameter (b23x = 2.d0**23)
-real (max (mprknd2, kind (1.0))) b, mpmask23, t1
+real (max (mpqknd, kind (1.0))) b, mpmask23, t1
 t1 = b23x * abs (b)
 mpmask23 = abs (abs (b) + t1) - abs (t1)
 return

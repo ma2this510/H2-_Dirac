@@ -1,432 +1,462 @@
-!*****************************************************************************
 
-!  MPFUN20-Fort: A thread-safe arbitrary precision computation package
-!  Special functions module (module MPFUNE)
+!  module mpfune
 
-!  Revision date:  19 May 2022
+!  This is the special function module (MPFUNE) for the MPFUN2020 library.
+!  It is converted to low-level form (mpfune.f90) for MPFUN20-Fort using the author's
+!  convmp.f90, and the resulting mpfune.f90 file is converted for the MPFUN20-MPFR
+!  library using the author's convfmp.f90.
+
+!  Updated: 28 Jun 2024
 
 !  AUTHOR:
-!    David H. Bailey
-!    Lawrence Berkeley National Lab (retired) and University of California, Davis
-!    Email: dhbailey@lbl.gov
+!     David H. Bailey
+!     Lawrence Berkeley National Lab (retired)
+!     Email: dhbailey@lbl.gov
 
 !  COPYRIGHT AND DISCLAIMER:
-!    All software in this package (c) 2022 David H. Bailey.
+!    All software in this package (c) 2024 David H. Bailey.
 !    By downloading or using this software you agree to the copyright, disclaimer
 !    and license agreement in the accompanying file DISCLAIMER.txt.
 
-!  PURPOSE OF PACKAGE:
-!    This package permits one to perform floating-point computations (real and
-!    complex) to arbitrarily high numeric precision, by making only relatively
-!    minor changes to existing Fortran-90 programs.  All basic arithmetic
-!    operations and transcendental functions are supported, together with several
-!    special functions.
-
-!    In addition to fast execution times, one key feature of this package is a
-!    100% THREAD-SAFE design, which means that user-level applications can be
-!    easily converted for parallel execution, say using a threaded parallel
-!    environment such as OpenMP.
-
 !  DOCUMENTATION:
-!    A detailed description of this package, and instructions for compiling
-!    and testing this program on various specific systems are included in the
-!    README file accompanying this package, and, in more detail, in the
-!    following technical paper:
-
-!    David H. Bailey, "MPFUN2020: A new thread-safe arbitrary precision package,"
-!    available at http://www.davidhbailey.com/dhbpapers/mpfun2020.pdf.
+!    For MPFUN20-Fort, see README-mpfun20-fort.txt in the mpfun20-fort directory.
+!    For MPFUN20-MPFR, see README-mpfun20-mpfr.txt in the mpfun20-mpfr directory.
 
 !  DESCRIPTION OF THIS MODULE (MPFUNE):
-!    This module contains subroutines to perform special functions. Additional
-!    functions will be added as they are completed.
+!    This module contains all special functions.
 
-!  NOTE ON PROGRAMMING CONVENTION FOR THIS MODULE:
-!    This module is designed to facilitate easy translation (using the program
-!    convfmp.f90) to MPFR calls, for use in the MPFUN-MPFR package.
+!  NOTE:
+!    The special comments !mp placed in the file below are annotations to aid in
+!    conversion. See the programs convmp.f90 for details.
 
 module mpfune
-use mpfuna
-use mpfunb
-use mpfunc
 use mpfund
+integer, parameter:: mpdk = mpdknd
 
 contains
 
-!  These routines perform simple operations on the MP data structure. Those
-!  listed between !> and !>> are for MPFUN20-Fort; those between !>> and !>>>
-!  are for MPFUN20-MPFR. The translator selects the proper set.
-!>
-
-subroutine mpinitwds (ra, mpnw)
-implicit none
-integer (mpiknd) ra(0:)
-integer mpnw
-ra(0) = mpnw + 6
-ra(1) = mpnw
-ra(2) = 0
-ra(3) = 0
-ra(4) = 0
-return
-end subroutine mpinitwds
-
-function mpwprecr (ra)
-implicit none
-integer (mpiknd) ra(0:)
-integer mpwprecr
-mpwprecr = ra(1)
-return
-end function mpwprecr
-
-function mpspacer (ra)
-implicit none
-integer (mpiknd) ra(0:)
-integer mpspacer
-mpspacer = ra(0)
-return
-end function mpspacer
-
-!>>
-
-! subroutine mpabrt (ier)
-! implicit none
-! integer, intent(in):: ier
-! write (mpldb, 1) ier
-! 1 format ('*** MPABRT: Execution terminated, error code =',i4)
-! stop
-! end subroutine mpabrt
-
-! subroutine mpinitwds (ra, mpnw)
-! implicit none
-! integer (mpiknd) ra(0:)
-! integer mpnw
-! ra(0) = mpnw + 6
-! ra(1) = mpnw * mpnbt
-! ra(2) = 1
-! ra(3) = mpnan
-! ra(4) = loc (ra(4)) + 8
-! ra(mpnw+5) = 0
-! return
-! end subroutine mpinitwds
-
-! subroutine mpfixlocr (ia)
-! implicit none
-! integer (mpiknd) ia(0:)
-! ia(4) = loc (ia(4)) + 8
-! return
-! end subroutine
-
-! function mpwprecr (ra)
-! implicit none
-! integer (mpiknd) ra(0:)
-! integer mpwprecr
-! mpwprecr = ra(1) / mpnbt
-! return
-! end function mpwprecr
-
-! function mpspacer (ra)
-! implicit none
-! integer (mpiknd) ra(0:)
-! integer mpspacer
-! mpspacer = ra(0)
-! return
-! end function mpspacer
-
-!>>>
+!   Special functions start here.
 
 subroutine mpberner (nb1, nb2, berne, mpnw)
 
 !   This returns the array berne, containing Bernoulli numbers indexed 2*k for
-!   k = 1 to n, to mpnw words precision. This is done by first computing
-!   zeta(2*k), based on the following known formulas:
-
-!   coth (pi*x) = cosh (pi*x) / sinh (pi*x)
-
-!            1      1 + (pi*x)^2/2! + (pi*x)^4/4! + ...
-!        =  ---- * -------------------------------------
-!           pi*x    1 + (pi*x)^2/3! + (pi*x)^4/5! + ...
-
-!        = 1/(pi*x) * (1 + (pi*x)^2/3 - (pi*x)^4/45 + 2*(pi*x)^6/945 - ...)
-
-!        = 2/(pi*x) * Sum_{k >= 1} (-1)^(k+1) * zeta(2*k) * x^{2*k}
-
-!   The strategy is to calculate the coefficients of the series by polynomial
-!   operations. Polynomial division is performed by computing the reciprocal
-!   of the denominator polynomial, by a polynomial Newton iteration, as follows.
-!   Let N(x) be the polynomial approximation to the numerator series; let D(x) be
-!   a polynomial approximation to the numerator numerator series; and let Q_k(x)
-!   be polynomial approximations to R(x) = 1/D(x).  Then iterate:
-
-!   Q_{k+1} = Q_k(x) + [1 - D(x)*Q_k(x)]*Q_k(x)
-
-!   In these iterations, both the degree of the polynomial Q_k(x) and the
-!   precision level in words are initially set to 4. When convergence is
-!   achieved at this precision level, the degree is doubled, and iterations are
-!   continued, etc., until the final desired degree is achieved. Then the
-!   precision level is doubled and iterations are performed in a similar way,
-!   until the final desired precision level is achieved. The reciprocal polynomial
-!   R(x) produced by this process is then multiplied by the numerator polynomial
-!   N(x) to yield an approximation to the quotient series. The even zeta values
-!   are then the coefficients of this series, scaled according to the formula above.
-
-!   Once the even integer zeta values have been computed in this way, the even
-!   Bernoulli numbers are computed via the formula (for n > 0):
-
-!   B(2*n) = (-1)^(n-1) * 2 * (2*n)! * zeta(2*n) / (2*pi)^(2*n)
-
-!   Note: The notation in the description above is not the same as in the code below.
+!   k = 1 to n, using an advanced polynomial Newton iteration scheme as described
+!   in the main documentation paper.
 
 implicit none
-integer, intent(in):: nb1, nb2, mpnw
-integer i, idb, i1, ic1, j, kn, mpnw1, nwds, n, n1, nn1
-integer (mpiknd), intent(out):: berne(0:nb1+5,nb2)
-integer (mpiknd) c1(0:mpnw+6,0:nb2), cp2(0:mpnw+6), p1(0:mpnw+6,0:nb2), &
-  p2(0:mpnw+6,0:nb2), q(0:mpnw+6,0:nb2), q1(0:mpnw+6), &
-  r(0:mpnw+6,0:nb2), s(0:mpnw+6,0:nb2), t1(0:mpnw+6), t2(0:mpnw+6), &
-  t3(0:mpnw+6), t4(0:mpnw+6), eps(0:mpnw+6)
-real (mprknd) alog102, d1, dd1, dd2, dd3, pi
-parameter (idb = 0, alog102 = 0.30102999566398119d0, pi = 3.1415926535897932385d0)
-integer (mpiknd) ix8
+integer, intent(in):: nb1, mpnw
+integer, intent(in):: nb2
+!mp dim1="0:nb1+5"
+! type (mp_real), intent(out):: berne(1:nb2)
+integer (mpiknd), intent(out):: berne(0:nb1+5,1:nb2)
+integer, parameter:: itrmax = 10000
+integer, parameter:: ibz = 66
+integer i, i1, i2, ic1, ic2, j, kn, n, n1, nn1
+real (mpdknd) d1, dd1, dd2, dd3
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) c1(0:nb2), p1(0:nb2), p2(0:nb2), q(0:nb2)
+integer (mpiknd) c1(0:mpnw+6,0:nb2), p1(0:mpnw+6,0:nb2), p2(0:mpnw+6,0:nb2), q(0:mpnw+6,0:nb2)
+! type (mp_real) cp2, q1, r(0:nb2), s(0:nb2)
+integer (mpiknd) cp2(0:mpnw+6), q1(0:mpnw+6), r(0:mpnw+6,0:nb2), s(0:mpnw+6,0:nb2)
+! type (mp_real) t1, t2, t3, t4, t5
+integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-i1 = 1000000000
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+do mpi1 = 0,nb2
+  call mpinitwds (c1(0:mpnw+6,mpi1), mpnw+6-5)
+enddo
+do mpi1 = 0,nb2
+  call mpinitwds (p1(0:mpnw+6,mpi1), mpnw+6-5)
+enddo
+do mpi1 = 0,nb2
+  call mpinitwds (p2(0:mpnw+6,mpi1), mpnw+6-5)
+enddo
+do mpi1 = 0,nb2
+  call mpinitwds (q(0:mpnw+6,mpi1), mpnw+6-5)
+enddo
+call mpinitwds (cp2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (q1(0:mpnw+6), mpnw+6-5)
+do mpi1 = 0,nb2
+  call mpinitwds (r(0:mpnw+6,mpi1), mpnw+6-5)
+enddo
+do mpi1 = 0,nb2
+  call mpinitwds (s(0:mpnw+6,mpi1), mpnw+6-5)
+enddo
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t5(0:mpnw+6), mpnw+6-5)
 
-do i = 1, nb2
-  i1 = min (i1, mpspacer (berne(0:nb1+5,i)))
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = mpnw1
+
+do ic1 = 1, nb2
+!   ic2 = mpspacer (berne(ic1))
+  mpi1 = mpspacer (berne(0:nb1+5,ic1))
+  ic2 = mpi1
+  if (mpnw < mpnwm .or. ic2 < mpnw + 6) then
+    write (6, 1)
+1   format ('*** BERNER: Uninitialized or inadequately sized array')
+!     call mpabrt (501)
+    call mpabrt (501)
+  endif
 enddo
 
-if (mpnw < 4 .or. i1 < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPBERNER: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 501)
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw2) then
+  write (6, 2) mpnw2
+2 format ('*** BERNER: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (502)
+  call mpabrt (502)
 endif
 
+!mp prec="mpnw2"
+
+! cp2 = mppicon ** 2
+call mpnpwr (mppicon(0:), 2, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), cp2(0:mpnw+6), mpnw2)
+! c1(0) = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), c1(0:mpnw+6,0), mpnw2)
+! p1(0) = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), p1(0:mpnw+6,0), mpnw2)
+! p2(0) = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), p2(0:mpnw+6,0), mpnw2)
+! q(0) = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), q(0:mpnw+6,0), mpnw2)
 n = nb2
-mpnw1 = mpnw + 1
-nwds = mpnw1
-
-!   Check if Pi has been precomputed.
-
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 2) mpnw1
-2 format ('*** MPBERNER: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 502)
-endif
-
-if (idb > 0) write (mpldb, 3) n, mpnw
-3 format ('Even Bernoulli number calculation; n, mpnw =',2i6)
-
-call mpinitwds (cp2, nwds)
-call mpinitwds (q1, nwds)
-call mpinitwds (t1, nwds)
-call mpinitwds (t2, nwds)
-call mpinitwds (t3, nwds)
-call mpinitwds (t4, nwds)
-call mpinitwds (eps, nwds)
-
-do i = 0, nb2
-  call mpinitwds (c1(0:mpnw1+5,i), nwds)
-  call mpinitwds (p1(0:mpnw1+5,i), nwds)
-  call mpinitwds (p2(0:mpnw1+5,i), nwds)
-  call mpinitwds (q(0:mpnw1+5,i), nwds)
-  call mpinitwds (r(0:mpnw1+5,i), nwds)
-  call mpinitwds (s(0:mpnw1+5,i), nwds)
-enddo
-
-call mpmul (mppicon, mppicon, cp2, nwds)
-call mpdmc (1.d0, 0, c1(0:mpnw1+5,0), nwds)
-call mpdmc (1.d0, 0, p1(0:mpnw1+5,0), nwds)
-call mpdmc (1.d0, 0, p2(0:mpnw1+5,0), nwds)
-call mpdmc (1.d0, 0, q(0:mpnw1+5,0), nwds)
 
 !   Construct numerator and denominator polynomials.
 
 do i = 1, n
-  call mpdmc (0.d0, 0, c1(0:mpnw1+5,i), nwds)
-  dd1 = 2.d0 * (i + 1) - 3.d0
-  dd2 = dd1 + 1.d0
-  dd3 = dd2 + 1.d0
-  call mpmul (cp2, p1(0:mpnw1+5,i-1), t1, nwds)
-  call mpdivd (t1, dd1 * dd2, p1(0:mpnw1+5,i), nwds)
-  call mpmul (cp2, p2(0:mpnw1+5,i-1), t1, nwds)
-  call mpdivd (t1, dd2 * dd3, p2(0:mpnw1+5,i), nwds)
-  call mpdmc (0.d0, 0, q(0:mpnw1+5,i), nwds)
+!   c1(i) = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+  call mpeq (mpt1(0:mpnw+6), c1(0:mpnw+6,i), mpnw2)
+  dd1 = 2.e0_mpdk * real (i+1, mpdk) - 3.e0_mpdk
+  dd2 = dd1 + 1.e0_mpdk
+  dd3 = dd2 + 1.e0_mpdk
+!   t1 = cp2 * p1(i-1)
+  call mpmul (cp2(0:mpnw+6), p1(0:mpnw+6,i-1), mpt1(0:mpnw+6), mpnw2)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw2)
+!   p1(i) = t1 / dd1 / dd2
+  call mpdivd (t1(0:mpnw+6), dd1, mpt1(0:mpnw+6), mpnw2)
+  call mpdivd (mpt1(0:mpnw+6), dd2, mpt2(0:mpnw+6), mpnw2)
+  call mpeq (mpt2(0:mpnw+6), p1(0:mpnw+6,i), mpnw2)
+!   t1 = cp2 * p2(i-1)
+  call mpmul (cp2(0:mpnw+6), p2(0:mpnw+6,i-1), mpt1(0:mpnw+6), mpnw2)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw2)
+!   p2(i) = t1 / dd2 / dd3
+  call mpdivd (t1(0:mpnw+6), dd2, mpt1(0:mpnw+6), mpnw2)
+  call mpdivd (mpt1(0:mpnw+6), dd3, mpt2(0:mpnw+6), mpnw2)
+  call mpeq (mpt2(0:mpnw+6), p2(0:mpnw+6,i), mpnw2)
+!   q(i) = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+  call mpeq (mpt1(0:mpnw+6), q(0:mpnw+6,i), mpnw2)
 enddo
 
-kn = 4
-nwds = 4
+kn = min (mpnwm, nb2)
+mpnw2 = mpnwm
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnw2)
+ic2 = ibz - mpnw2*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnw2)
 
-call mpdmc (2.d0, 0, t1, nwds)
-call mpnpwr (t1, 70 - nwds * mpnbt, eps, nwds)
-if (idb > 0) then
-  call mpmdc (eps, dd1, nn1, nwds)
-  write (mpldb, 4) nwds, nint (alog102*nn1)
-4 format ('nwds, log10eps =',2i6)
-endif
-call mpdmc (0.d0, 0, q1, nwds)
+!mp prec="mpnw2"
+! q1 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), q1(0:mpnw+6), mpnw2)
 
 !   Perform Newton iterations with dynamic precision levels, using an
 !   iteration formula similar to that used to evaluate reciprocals.
 
-do j = 1, 10000
-  if (idb > 0) write (mpldb, 5) j, kn, nwds
-5 format ('j, kn, nwds =',3i6)
-
-  call mppolymul (mpnw1, kn, p2, q, r, nwds)
-  call mppolysub (mpnw1, kn, c1, r, s, nwds)
-  call mppolymul (mpnw1, kn, s, q, r, nwds)
-  call mppolyadd (mpnw1, kn, q, r, q, nwds)
-  call mpsub (q(0:mpnw1+5,kn), q1, t1, nwds)
-
-  if (idb > 0) then
-    call mpmdc (t1, dd1, nn1, nwds)
-    if (dd1 .eq. 0.d0) then
-      write (mpldb, 6)
-6     format ('Newton error = 0')
-    else
-      write (mpldb, 7) nint (alog102*nn1)
-7     format ('Newton error = 10^',i6)
-    endif
-  endif
-
-  call mpabs (t1, t2, nwds)
-  call mpcpr (t2, eps, ic1, nwds)
+do j = 1, itrmax
+!mp prec="mpnw2"
+!   call mppolymul (mpnw1, kn, p2, q, r, mpnw2)
+  call mppolymul (mpnw1, kn, p2, q, r, mpnw2)
+!   call mppolysub (mpnw1, kn, c1, r, s, mpnw2)
+  call mppolysub (mpnw1, kn, c1, r, s, mpnw2)
+!   call mppolymul (mpnw1, kn, s, q, r, mpnw2)
+  call mppolymul (mpnw1, kn, s, q, r, mpnw2)
+!   call mppolyadd (mpnw1, kn, q, r, q, mpnw2)
+  call mppolyadd (mpnw1, kn, q, r, q, mpnw2)
+!   t1 = q(kn) - q1
+  call mpsub (q(0:mpnw+6,kn), q1(0:mpnw+6), mpt1(0:mpnw+6), mpnw2)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw2)
+!mp prec="mpnwm"
+!   tc1 = abs (t1) - eps
+  call mpabs (t1, mpt1(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpt2(0:mpnw+6), mpnwm)
+  call mpeq (mpt2(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!   ic1 = mpsgn (tc1)
+  mpi1 = mpsgnr (tc1)
+  ic1 = mpi1
   if (ic1 < 0) then
-    if (kn == n .and. nwds == mpnw1) goto 100
-    if (kn < n) then
+    if (kn == n .and. mpnw2 == mpnw1) then
+      goto 100
+    elseif (kn < n) then
       kn = min (2 * kn, n)
-      call mpdmc (0.d0, 0, q1, nwds)
-    elseif (nwds < mpnw1) then
-      nwds = min (2 * nwds, mpnw1)
-      call mpdmc (2.d0, 0, t1, nwds)
-      call mpnpwr (t1, 70 - nwds * mpnbt, eps, nwds)
-      call mpdmc (0.d0, 0, q1, nwds)
-      if (idb > 0) then
-        call mpmdc (eps, dd1, nn1, nwds)
-        write (mpldb, 4) nwds, nint (alog102*nn1)
-      endif
+!       q1 = mprealdp (0.e0_mpdk)
+      call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+      call mpeq (mpt1(0:mpnw+6), q1(0:mpnw+6), mpnwm)
+    elseif (mpnw2 < mpnw1) then
+      mpnw2 = min (2 * mpnw2, mpnw1)
+!mp prec="mpnwm"
+!       tc2 = mprealdp (2.e0_mpdk)
+      call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+      call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+      ic2 = ibz - mpnw2*mpnbt
+!       eps = tc2 ** ic2
+      call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+      call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw2"
+!       q1 = mprealdp (0.e0_mpdk)
+      call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+      call mpeq (mpt1(0:mpnw+6), q1(0:mpnw+6), mpnw2)
     endif
   else
-    call mpeq (q(0:mpnw1+5,kn), q1, nwds)
+!     q1 = q(kn)
+    call mpeq (q(0:mpnw+6,kn), q1(0:mpnw+6), mpnw2)
   endif
 enddo
 
-write (mpldb, 8)
-8 format ('*** MPBERNER: Loop end error')
-call mpabrt ( 503)
+write (mpldb, 3)
+3 format ('*** BERNER: Loop end error')
+! call mpabrt (503)
+call mpabrt (503)
 
 100 continue
 
-if (idb > 0) write (mpldb, 9)
-9 format ('Even zeta computation complete')
-
 !   Multiply numerator polynomial by reciprocal of denominator polynomial.
 
-call mppolymul (mpnw1, n, p1, q, r, nwds)
+! call mppolymul (mpnw1, n, p1, q, r, mpnw2)
+call mppolymul (mpnw1, n, p1, q, r, mpnw2)
 
 !   Apply formula to produce Bernoulli numbers.
 
-call mpdmc (-2.d0, 0, t1, nwds)
-call mpdmc (1.d0, 0, t2, nwds)
+! t1 = mprealdp (-2.e0_mpdk)
+call mprealdp (-2.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw2)
+! t2 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw2)
 
 do i = 1, n
-  d1 = - dble (2*i-1) * dble (2*i)
-  call mpmuld (t1, d1, t3, nwds)
-  call mpeq (t3, t1, nwds)
-  call mpmuld (cp2, 4.d0, t3, nwds)
-  call mpmul (t3, t2, t4, nwds)
-  call mpeq (t4, t2, nwds)
-  call mpmuld (t1, 0.5d0, t3, nwds)
-  call mpdiv (t3, t2, t4, nwds)
-  call mpabs (r(0:mpnw1+5,i), t3, nwds)
-  call mpmul (t4, t3, berne(0:nb1+5,i), mpnw)
+!mp prec="mpnw2"
+  d1 = - real (2*i-1, mpdk) * real (2*i, mpdk)
+!   t1 = t1 * d1
+  call mpmuld (t1(0:mpnw+6), d1, mpt1(0:mpnw+6), mpnw2)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw2)
+!   t3 = 4.e0_mpdk * cp2
+  call mpmuld (cp2(0:mpnw+6), 4.e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw2)
+!   t2 = t3 * t2
+  call mpmul (t3(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw2)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw2)
+!   t4 = 0.5e0_mpdk * t1 / t2
+  call mpmuld (t1(0:mpnw+6), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw2)
+  call mpdiv (mpt1(0:mpnw+6), t2(0:mpnw+6), mpt2(0:mpnw+6), mpnw2)
+  call mpeq (mpt2(0:mpnw+6), t4(0:mpnw+6), mpnw2)
+!   t5 = t4 * abs (r(i))
+  call mpabs (r(0:mpnw+6,i), mpt1(0:mpnw+6), mpnw2)
+  call mpmul (t4(0:mpnw+6), mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw2)
+  call mpeq (mpt2(0:mpnw+6), t5(0:mpnw+6), mpnw2)
+!mp prec="mpnw"
+!   berne(i) = t5
+  call mpeq (t5(0:mpnw+6), berne(0:nb1+5,i), mpnw)
 enddo
 
-if (idb > 0) write (mpldb, 10)
-10 format ('Bernoulli number computation complete')
 return
 end subroutine mpberner
 
-subroutine mppolyadd (nd1, n, a, b, c, nwds)
+subroutine mppolyadd (mpnw1, n, a, b, c, mpnw2)
 
 !   This adds two polynomials, as is required by mpberne.
 !   The output array C may be the same as A or B.
 
 implicit none
-integer, intent(in):: n, nd1, nwds
+integer, intent(in):: mpnw1, mpnw2
+integer, intent(in):: n
+!mp dim1="0:mpnw1+5"
+! type (mp_real), intent(in):: a(0:n), b(0:n)
+integer (mpiknd), intent(in):: a(0:mpnw1+5,0:n), b(0:mpnw1+5,0:n)
+! type (mp_real), intent(out):: c(0:n)
+integer (mpiknd), intent(out):: c(0:mpnw1+5,0:n)
 integer k
-integer (mpiknd), intent(in):: a(0:nd1+5,0:n), b(0:nd1+5,0:n)
-integer (mpiknd), intent(out):: c(0:nd1+5,0:n)
-integer (mpiknd) t1(0:nwds+5), t2(0:nwds+5)
+!mp dim1="0:mpnw2+5"
+! type (mp_real) t1, t2
+integer (mpiknd) t1(0:mpnw2+5), t2(0:mpnw2+5)
 
-call mpinitwds (t1, nwds)
-call mpinitwds (t2, nwds)
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw2+5), mpt2(0:mpnw2+5), mpt3(0:mpnw2+5)
+integer (mpiknd) mpt4(0:mpnw2+5), mpt5(0:mpnw2+5), mpt6(0:mpnw2+5)
+
+call mpinitwds (mpt1, mpnw2+5-5)
+call mpinitwds (mpt2, mpnw2+5-5)
+call mpinitwds (mpt3, mpnw2+5-5)
+call mpinitwds (mpt4, mpnw2+5-5)
+call mpinitwds (mpt5, mpnw2+5-5)
+call mpinitwds (mpt6, mpnw2+5-5)
+call mpinitwds (t1(0:mpnw2+5), mpnw2+5-5)
+call mpinitwds (t2(0:mpnw2+5), mpnw2+5-5)
+
+!  End of initialization
+
+!mp prec="mpnw2"
 
 do k = 0, n
-  call mpeq (a(0:nd1+5,k), t1, nwds)
-  call mpeq (b(0:nd1+5,k), t2, nwds)
-  call mpadd (t1, t2, c(0:nd1+5,k), nwds)
+!   t1 = a(k)
+  call mpeq (a(0:mpnw1+5,k), t1(0:mpnw2+5), mpnw2)
+!   t2 = b(k)
+  call mpeq (b(0:mpnw1+5,k), t2(0:mpnw2+5), mpnw2)
+!   c(k) = t1 + t2
+  call mpadd (t1(0:mpnw2+5), t2(0:mpnw2+5), mpt1(0:mpnw2+5), mpnw2)
+  call mpeq (mpt1(0:mpnw2+5), c(0:mpnw1+5,k), mpnw2)
 enddo
 
 return
 end subroutine mppolyadd
 
-subroutine mppolysub (nd1, n, a, b, c, nwds)
+subroutine mppolysub (mpnw1, n, a, b, c, mpnw2)
 
 !   This adds two polynomials, as is required by mpberne.
 !   The output array C may be the same as A or B.
 
 implicit none
-integer, intent(in):: n, nd1, nwds
+integer, intent(in):: mpnw1, mpnw2
+integer, intent(in):: n
+!mp dim1="0:mpnw1+5"
+! type (mp_real), intent(in):: a(0:n), b(0:n)
+integer (mpiknd), intent(in):: a(0:mpnw1+5,0:n), b(0:mpnw1+5,0:n)
+! type (mp_real), intent(out):: c(0:n)
+integer (mpiknd), intent(out):: c(0:mpnw1+5,0:n)
 integer k
-integer (mpiknd), intent(in):: a(0:nd1+5,0:n), b(0:nd1+5,0:n)
-integer (mpiknd), intent(out):: c(0:nd1+5,0:n)
-integer (mpiknd) t1(0:nwds+5), t2(0:nwds+5)
+!mp dim1="0:mpnw2+5"
+! type (mp_real) t1, t2
+integer (mpiknd) t1(0:mpnw2+5), t2(0:mpnw2+5)
 
-call mpinitwds (t1, nwds)
-call mpinitwds (t2, nwds)
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw2+5), mpt2(0:mpnw2+5), mpt3(0:mpnw2+5)
+integer (mpiknd) mpt4(0:mpnw2+5), mpt5(0:mpnw2+5), mpt6(0:mpnw2+5)
+
+call mpinitwds (mpt1, mpnw2+5-5)
+call mpinitwds (mpt2, mpnw2+5-5)
+call mpinitwds (mpt3, mpnw2+5-5)
+call mpinitwds (mpt4, mpnw2+5-5)
+call mpinitwds (mpt5, mpnw2+5-5)
+call mpinitwds (mpt6, mpnw2+5-5)
+call mpinitwds (t1(0:mpnw2+5), mpnw2+5-5)
+call mpinitwds (t2(0:mpnw2+5), mpnw2+5-5)
+
+!  End of initialization
+
+!mp prec="mpnw2"
 
 do k = 0, n
-  call mpeq (a(0:nd1+5,k), t1, nwds)
-  call mpeq (b(0:nd1+5,k), t2, nwds)
-  call mpsub (t1, t2, c(0:nd1+5,k), nwds)
+!   t1 = a(k)
+  call mpeq (a(0:mpnw1+5,k), t1(0:mpnw2+5), mpnw2)
+!   t2 = b(k)
+  call mpeq (b(0:mpnw1+5,k), t2(0:mpnw2+5), mpnw2)
+!   c(k) = t1 - t2
+  call mpsub (t1(0:mpnw2+5), t2(0:mpnw2+5), mpt1(0:mpnw2+5), mpnw2)
+  call mpeq (mpt1(0:mpnw2+5), c(0:mpnw1+5,k), mpnw2)
 enddo
 
 return
 end subroutine mppolysub
 
-subroutine mppolymul (nd1, n, a, b, c, nwds)
+subroutine mppolymul (mpnw1, n, a, b, c, mpnw2)
 
 !   This adds two polynomials (ignoring high-order terms), as is required
-!   by mpberne. The output array C may not be the same as A or B.
+!   by mpberne. The output array C may NOT be the same as A or B.
 
 implicit none
-integer, intent(in):: n, nd1, nwds
+integer, intent(in):: mpnw1, mpnw2
+integer, intent(in):: n
+!mp dim1="0:mpnw1+5"
+! type (mp_real), intent(in):: a(0:n), b(0:n)
+integer (mpiknd), intent(in):: a(0:mpnw1+5,0:n), b(0:mpnw1+5,0:n)
+! type (mp_real), intent(out):: c(0:n)
+integer (mpiknd), intent(out):: c(0:mpnw1+5,0:n)
 integer j, k
-integer (mpiknd), intent(in):: a(0:nd1+5,0:n), b(0:nd1+5,0:n)
-integer (mpiknd), intent(out):: c(0:nd1+5,0:n)
-integer (mpiknd) t0(0:nwds+5), t1(0:nwds+5), t2(0:nwds+5), t3(0:nwds+5)
+!mp dim1="0:mpnw2+5"
+! type (mp_real) t0, t1, t2, t3
+integer (mpiknd) t0(0:mpnw2+5), t1(0:mpnw2+5), t2(0:mpnw2+5), t3(0:mpnw2+5)
 
-call mpinitwds (t0, nwds)
-call mpinitwds (t1, nwds)
-call mpinitwds (t2, nwds)
-call mpinitwds (t3, nwds)
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw2+5), mpt2(0:mpnw2+5), mpt3(0:mpnw2+5)
+integer (mpiknd) mpt4(0:mpnw2+5), mpt5(0:mpnw2+5), mpt6(0:mpnw2+5)
+
+call mpinitwds (mpt1, mpnw2+5-5)
+call mpinitwds (mpt2, mpnw2+5-5)
+call mpinitwds (mpt3, mpnw2+5-5)
+call mpinitwds (mpt4, mpnw2+5-5)
+call mpinitwds (mpt5, mpnw2+5-5)
+call mpinitwds (mpt6, mpnw2+5-5)
+call mpinitwds (t0(0:mpnw2+5), mpnw2+5-5)
+call mpinitwds (t1(0:mpnw2+5), mpnw2+5-5)
+call mpinitwds (t2(0:mpnw2+5), mpnw2+5-5)
+call mpinitwds (t3(0:mpnw2+5), mpnw2+5-5)
+
+!  End of initialization
+
+!mp prec="mpnw2"
 
 do k = 0, n
-  call mpdmc (0.d0, 0, t0, nwds)
+!   t0 = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw2+5), mpnw2)
+  call mpeq (mpt1(0:mpnw2+5), t0(0:mpnw2+5), mpnw2)
 
   do j = 0, k
-    call mpeq (a(0:nd1+5,j), t1, nwds)
-    call mpeq (b(0:nd1+5,k-j), t2, nwds)
-    call mpmul (t1, t2, t3, nwds)
-    call mpadd (t0, t3, t2, nwds)
-    call mpeq (t2, t0, nwds)
+!     t1 = a(j)
+    call mpeq (a(0:mpnw1+5,j), t1(0:mpnw2+5), mpnw2)
+!     t2 = b(k-j)
+    call mpeq (b(0:mpnw1+5,k-j), t2(0:mpnw2+5), mpnw2)
+!     t3 = t1 * t2
+    call mpmul (t1(0:mpnw2+5), t2(0:mpnw2+5), mpt1(0:mpnw2+5), mpnw2)
+    call mpeq (mpt1(0:mpnw2+5), t3(0:mpnw2+5), mpnw2)
+!     t0 = t0 + t3
+    call mpadd (t0(0:mpnw2+5), t3(0:mpnw2+5), mpt1(0:mpnw2+5), mpnw2)
+    call mpeq (mpt1(0:mpnw2+5), t0(0:mpnw2+5), mpnw2)
   enddo
 
-  call mpeq (t0, c(0:nd1+5,k), nwds)
+!   c(k) = t0
+  call mpeq (t0(0:mpnw2+5), c(0:mpnw1+5,k), mpnw2)
 enddo
 
 return
@@ -439,176 +469,276 @@ subroutine mpbesselinr (nu, rr, ss, mpnw)
 !   and DLMF 10.40.1 for large RR, relative to precision.
 
 implicit none
-integer, intent(in):: nu, mpnw
-integer ic1, itrmax, k, mpnw1, nua, n1
-real (mprknd) dfrac, d1, pi
-parameter (itrmax = 1000000, dfrac = 1.5d0, pi = 3.1415926535897932385d0)
+integer, intent(in):: mpnw
+integer, intent(in):: nu
+!mp dim1="0:"
+! type (mp_real), intent(in):: rr
 integer (mpiknd), intent(in):: rr(0:)
+! type (mp_real), intent(out):: ss
 integer (mpiknd), intent(out):: ss(0:)
-integer (mpiknd) f1(0:mpnw+6), f2(0:mpnw+6), sum(0:mpnw+6), td(0:mpnw+6), &
-  tn(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), &
-  rra(0:mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000
+real (mpdknd), parameter:: dfrac = 0.4e0_mpdk
+integer i1, i2, ic1, ic2, k, nua, n1
+real (mpdknd) d1, d2
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) f1, f2, sum, td, tn
+integer (mpiknd) f1(0:mpnw+6), f2(0:mpnw+6), sum(0:mpnw+6), td(0:mpnw+6), tn(0:mpnw+6)
+! type (mp_real) t1, t2, t3, t4, rra
+integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), rra(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (rr) < mpnw + 4 .or. mpspacer (ss) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPBESSELINR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 504)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (f2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (sum(0:mpnw+6), mpnw+6-5)
+call mpinitwds (td(0:mpnw+6), mpnw+6-5)
+call mpinitwds (tn(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (rra(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (ss)
+mpi1 = mpspacer (ss)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** BESSELINR: Uninitialized or inadequately sized array')
+!   call mpabrt (504)
+  call mpabrt (504)
 endif
+
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw1) then
+  write (6, 2) mpnw1
+2 format ('*** BESSELINR: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (505)
+  call mpabrt (505)
+endif
+
+!mp prec="mpnwm"
+
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
+
+!mp prec="mpnw1"
 
 !   Check for RR = 0.
 
-if (mpsgn (rr) == 0) then
-  write (mpldb, 2)
-2 format ('*** MPBESSELINR: Second argument is zero')
-  call mpabrt ( 505)
-endif
-
-!   Check if PI has been precomputed.
-
-mpnw1 = mpnw + 1
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 3) mpnw1
-3 format ('*** MPBESSELINR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 506)
+! ic1 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+ic1 = mpi1
+if (ic1 == 0) then
+  write (mpldb, 3)
+3 format ('*** BESSELINR: Second argument is zero')
+!   call mpabrt (506)
+  call mpabrt (506)
 endif
 
 nua = abs (nu)
-call mpinitwds (f1, mpnw1)
-call mpinitwds (f2, mpnw1)
-call mpinitwds (sum, mpnw1)
-call mpinitwds (td, mpnw1)
-call mpinitwds (tn, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (rra, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
-call mpabs (rr, rra, mpnw1)
-call mpmdc (rra, d1, n1, 4)
-d1 = d1 * 2.d0 ** n1
+! rra = abs (rr)
+call mpabs (rr, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), rra(0:mpnw+6), mpnw1)
+! d1 = dpreal (rra)
+call mpdpreal (rra, mpd1, mpnw1)
+d1 = mpd1
 
-if (d1 < dfrac * mpnw1 * mpdpw) then
-  call mpdmc (1.d0, 0, tn, mpnw1)
-  call mpdmc (1.d0, 0, f1, mpnw1)
-  call mpdmc (1.d0, 0, f2, mpnw1)
-  call mpmul (rra, rra, t2, mpnw1)
-  call mpmuld (t2, 0.25d0, t1, mpnw1)
+if (d1 < dfrac * mpnw1 * mpnbt) then
+!   tn = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), tn(0:mpnw+6), mpnw1)
+!   f1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), f1(0:mpnw+6), mpnw1)
+!   f2 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), f2(0:mpnw+6), mpnw1)
+!   t1 = 0.25e0_mpdk * rra ** 2
+  call mpnpwr (rra(0:mpnw+6), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpmuld (mpt1(0:mpnw+6), 0.25e0_mpdk, mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 
   do k = 1, nua
-    call mpmuld (f2, dble (k), t2, mpnw1)
-    call mpeq (t2, f2, mpnw1)
+!     f2 = real (k, mpdk) * f2
+    call mpmuld (f2(0:mpnw+6), real (k, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), f2(0:mpnw+6), mpnw1)
   enddo
 
-  call mpmul (f1, f2, td, mpnw1)
-  call mpdiv (tn, td, t2, mpnw1)
-  call mpeq (t2, sum, mpnw1)
+!   td = f1 * f2
+  call mpmul (f1(0:mpnw+6), f2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
+!   t2 = tn / td
+  call mpdiv (tn(0:mpnw+6), td(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   sum = t2
+  call mpeq (t2(0:mpnw+6), sum(0:mpnw+6), mpnw1)
 
   do k = 1, itrmax
-    call mpmuld (f1, dble (k), t2, mpnw1)
-    call mpeq (t2, f1, mpnw1)
-    call mpmuld (f2, dble (k + nua), t2, mpnw1)
-    call mpeq (t2, f2, mpnw1)
-    call mpmul (t1, tn, t2, mpnw1)
-    call mpeq (t2, tn, mpnw1)
-    call mpmul (f1, f2, td, mpnw1)
-    call mpdiv (tn, td, t2, mpnw1)
-    call mpadd (sum, t2, t3, mpnw1)
-    call mpeq (t3, sum, mpnw1)
-
-    call mpabs (t2, tc1, 4)
-    call mpmul (eps, sum, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 100
+!     f1 = f1 * real (k, mpdk)
+    call mpmuld (f1(0:mpnw+6), real (k, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), f1(0:mpnw+6), mpnw1)
+    i1 = k + nua
+!     f2 = f2 * real (i1, mpdk)
+    call mpmuld (f2(0:mpnw+6), real (i1, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), f2(0:mpnw+6), mpnw1)
+!     tn = t1 * tn
+    call mpmul (t1(0:mpnw+6), tn(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), tn(0:mpnw+6), mpnw1)
+!     td = f1 * f2
+    call mpmul (f1(0:mpnw+6), f2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
+!     t2 = tn / td
+    call mpdiv (tn(0:mpnw+6), td(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     sum = sum + t2
+    call mpadd (sum(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), sum(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t2) - eps * abs (sum)
+    call mpabs (t2, mpt1(0:mpnw+6), mpnwm)
+    call mpabs (sum, mpt2(0:mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+    call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+    call mpeq (mpt4(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 100
   enddo
 
   write (mpldb, 4)
-  4 format ('*** MPBESSELINR: Loop end error 1')
-  call mpabrt ( 507)
+4 format ('*** BESSELINR: Loop end error 1')
+!   call mpabrt (507)
+  call mpabrt (507)
 
 100 continue
 
-  call mpmuld (rra, 0.5d0, t1, mpnw1)
-  call mpnpwr (t1, nua, t2, mpnw1)
-  call mpmul (sum, t2, t3, mpnw1)
+!mp prec="mpnw1"
+!   t1 = 0.5e0_mpdk * rra
+  call mpmuld (rra(0:mpnw+6), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t3 = sum * t1 ** nua
+  call mpnpwr (t1(0:mpnw+6), nua, mpt1(0:mpnw+6), mpnw1)
+  call mpmul (sum(0:mpnw+6), mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t3(0:mpnw+6), mpnw1)
 else
-!  sum1 = mpreal (1.d0, mpnw)
-!  t1 = mpreal (4.d0 * dble (nua)**2, mpnw)
-!  t2 = mpreal (1.d0, mpnw)
-!  t3 = mpreal (1.d0, mpnw)
-
-  call mpdmc (1.d0, 0, sum, mpnw1)
-  d1 = 4.d0 * dble (nua)**2
-  call mpdmc (d1, 0, t1, mpnw1)
-  call mpdmc (1.d0, 0, tn, mpnw1)
-  call mpdmc (1.d0, 0, td, mpnw1)
+!   sum = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum(0:mpnw+6), mpnw1)
+  i1 = 2 * nua
+  d2 = real (i1, mpdk) ** 2
+!   t1 = mprealdp (d2)
+  call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   tn = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), tn(0:mpnw+6), mpnw1)
+!   td = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
 
   do k = 1, itrmax
-!  t2 = -t2 * (t1 - (2.d0*k - 1.d0)**2)
-!  t3 = t3 * dble (k) * 8.d0 * xa
-!  t4 = t2 / t3
-!  sum1 = sum1 + t4
-
-    d1 = 2.d0 * k - 1.d0
-    call mpdmc (d1, 0, t2, mpnw1)
-    call mpmul (t2, t2, t3, mpnw1)
-    call mpsub (t1, t3, t2, mpnw1)
-    call mpmul (tn, t2, t3, mpnw1)
-    call mpneg (t3, tn, mpnw1)
-    call mpmuld (rra, 8.d0 * k, t2, mpnw1)
-    call mpmul (td, t2, t3,  mpnw1)
-    call mpeq (t3, td, mpnw1)
-    call mpdiv (tn, td, t4, mpnw1)
-    call mpadd (sum, t4, t3, mpnw1)
-    call mpeq (t3, sum, mpnw1)
-
-!   if (abs (t4) / abs (sum1) < eps) goto 110
-
-    call mpabs (t4, tc1, 4)
-    call mpmul (eps, sum, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 110
+    i1 = 2 * k - 1
+!     t2 = t1 - real (i1, mpdk) ** 2
+    mpd1 = real (i1, mpdk) ** 2
+    call mpdmc (mpd1, 0, mpt2(0:mpnw+6), mpnw1)
+    call mpsub (t1(0:mpnw+6), mpt2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     tn = - tn * t2
+    call mpmul (tn(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpneg (mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+    call mpeq (mpt2(0:mpnw+6), tn(0:mpnw+6), mpnw1)
+    i2 = 8 * k
+!     td = td * real (i2, mpdk) * rra
+    call mpmuld (td(0:mpnw+6), real (i2, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpmul (mpt1(0:mpnw+6), rra(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+    call mpeq (mpt2(0:mpnw+6), td(0:mpnw+6), mpnw1)
+!     t4 = tn / td
+    call mpdiv (tn(0:mpnw+6), td(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!     sum = sum + t4
+    call mpadd (sum(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), sum(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc2 = abs (t4) - eps * abs (sum)
+    call mpabs (t4, mpt1(0:mpnw+6), mpnwm)
+    call mpabs (sum, mpt2(0:mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+    call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+    call mpeq (mpt4(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic2 < 0) goto 110
   enddo
 
 write (mpldb, 5)
-5 format ('*** MPBESSELINR: Loop end error 2')
-call mpabrt ( 508)
+5 format ('*** BESSELINR: Loop end error 2')
+! call mpabrt (508)
+call mpabrt (508)
 
 110 continue
 
-! t1 = exp (xa) / sqrt (2.d0 * mppi (mpnw) * xa)
-! besseli = t1 * sum1
-
-  call mpexp (rra, t1, mpnw1)
-  call mpmuld (mppicon, 2.d0, t2, mpnw1)
-  call mpmul (t2, rra, t3, mpnw1)
-  call mpsqrt (t3, t4, mpnw1)
-  call mpdiv (t1, t4, t2, mpnw1)
-  call mpmul (t2, sum, t3, mpnw1)
+!mp prec="mpnw1"
+!   t1 = exp (rra)
+  call mpexp (rra, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = 2.e0_mpdk * mppicon * rra
+  call mpmuld (mppicon(0:), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpmul (mpt1(0:mpnw+6), rra(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t4 = sqrt (t2)
+  call mpsqrt (t2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t2 = t1 / t4
+  call mpdiv (t1(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = t2 * sum
+  call mpmul (t2(0:mpnw+6), sum(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
 endif
 
-! if (x < 0.d0 .and. mod (nu, 2) /= 0) besseli = - besseli
-
-if (mpsgn (rr) < 0 .and. mod (nu, 2) /= 0) then
-  call mpneg (t3, t4, mpnw1)
-  call mpeq (t4, t3, mpnw1)
+!mp prec="mpnw"
+! ic1 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+ic1 = mpi1
+if (ic1 < 0 .and. mod (nu, 2) /= 0) then
+!   t3 = - t3
+  call mpneg (t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw)
 endif
-
-call mproun (t3, mpnw)
-call mpeq (t3, ss, mpnw)
+! ss = t3
+call mpeq (t3(0:mpnw+6), ss(0:), mpnw)
 
 return
 end subroutine mpbesselinr
@@ -616,183 +746,295 @@ end subroutine mpbesselinr
 subroutine mpbesselir (qq, rr, ss, mpnw)
 
 !   This evaluates the modified Bessel function BesselI (QQ,RR) for QQ and RR
-!   both MPR. The algorithm is DLMF formula 10.25.2 for modest RR, and
+!   both real. The algorithm is DLMF formula 10.25.2 for modest RR, and
 !   DLMF 10.40.1 for large RR, relative to precision.
 
 implicit none
 integer, intent(in):: mpnw
-integer ic1, i1, i2, itrmax, k, mpnw1, n1
-real (mprknd) dfrac, d1, pi
-parameter (itrmax = 1000000, dfrac = 1.5d0, pi = 3.1415926535897932385d0)
+!mp dim1="0:"
+! type (mp_real), intent(in):: qq, rr
 integer (mpiknd), intent(in):: qq(0:), rr(0:)
+! type (mp_real), intent(out):: ss
 integer (mpiknd), intent(out):: ss(0:)
-integer (mpiknd) f1(0:mpnw+6), f2(0:mpnw+6), sum(0:mpnw+6), td(0:mpnw+6), &
-  tn(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), &
-  rra(0:mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer ic1, ic2, i0, i1, i2, k, n1
+integer, parameter:: itrmax = 1000000
+real (mpdknd), parameter:: dfrac = 0.4e0_mpdk
+real (mpdknd) d1, d2
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) f1, f2, sum, td, tn
+integer (mpiknd) f1(0:mpnw+6), f2(0:mpnw+6), sum(0:mpnw+6), td(0:mpnw+6), tn(0:mpnw+6)
+! type (mp_real) t1, t2, t3, t4, rra
+integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), rra(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (rr) < mpnw + 4 .or. mpspacer (qq) < mpnw + 4 &
-  .or. mpspacer (ss) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPBESSELIR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 509)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (f2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (sum(0:mpnw+6), mpnw+6-5)
+call mpinitwds (td(0:mpnw+6), mpnw+6-5)
+call mpinitwds (tn(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (rra(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (ss)
+mpi1 = mpspacer (ss)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** BESSELIR: Uninitialized or inadequately sized array')
+!   call mpabrt (509)
+  call mpabrt (509)
 endif
 
-!   Check if PI has been precomputed.
-
-mpnw1 = mpnw + 1
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 2) mpnw1
-2 format ('*** MPBESSELIR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 510)
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw1) then
+  write (6, 2) mpnw1
+2 format ('*** BESSELIR: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (510)
+  call mpabrt (510)
 endif
 
-call mpinitwds (f1, mpnw1)
-call mpinitwds (f2, mpnw1)
-call mpinitwds (sum, mpnw1)
-call mpinitwds (td, mpnw1)
-call mpinitwds (tn, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (rra, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
+!mp prec="mpnwm"
+
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
+
+!mp prec="mpnw1"
 
 !   If QQ is integer, call mpbesselinr; if qq < 0 and rr <= 0, then error.
 
-call mpinfr (qq, t1, t2, mpnw)
-i1 = mpsgn (qq)
-i2 = mpsgn (rr)
-if (mpsgn (t2) == 0) then
-  call mpmdc (qq, d1, n1, mpnw)
-  d1 = d1 * 2.d0**n1
+! t1 = qq - anint (qq)
+call mpnint (qq, mpt1(0:mpnw+6), mpnw1)
+call mpsub (qq(0:), mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+call mpeq (mpt2(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! i0 = mpsgn (t1)
+mpi1 = mpsgnr (t1)
+i0 = mpi1
+! i1 = mpsgn (qq)
+mpi1 = mpsgnr (qq)
+i1 = mpi1
+! i2 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+i2 = mpi1
+if (i0 == 0) then
+!   d1 = dpreal (qq)
+  call mpdpreal (qq, mpd1, mpnw1)
+  d1 = mpd1
   n1 = nint (d1)
+!mp prec="mpnw"
+!   call mpbesselinr (n1, rr, t3, mpnw)
   call mpbesselinr (n1, rr, t3, mpnw)
   goto 120
 elseif (i1 < 0 .and. i2 <= 0) then
   write (mpldb, 3)
-3 format ('*** MPBESSELIR: First argument < 0 and second argument <= 0')
-  call mpabrt ( 511)
+3 format ('*** BESSELIR: First argument < 0 and second argument <= 0')
+!   call mpabrt (511)
+  call mpabrt (511)
 endif
 
-call mpabs (rr, rra, mpnw1)
-call mpmdc (rra, d1, n1, 4)
-d1 = d1 * 2.d0 ** n1
+!mp prec="mpnw1"
+! rra = abs (rr)
+call mpabs (rr, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), rra(0:mpnw+6), mpnw1)
+! d1 = dpreal (rra)
+call mpdpreal (rra, mpd1, mpnw1)
+d1 = mpd1
 
-if (d1 < dfrac * mpnw1 * mpdpw) then
-  call mpdmc (1.d0, 0, tn, mpnw1)
-  call mpdmc (1.d0, 0, f1, mpnw1)
-  call mpadd (qq, f1, t1, mpnw1)
+if (d1 < dfrac * mpnw1 * mpnbt) then
+!   tn = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), tn(0:mpnw+6), mpnw1)
+!   f1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), f1(0:mpnw+6), mpnw1)
+!   t1 = qq + f1
+  call mpadd (qq(0:), f1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   call mpgammar (t1, f2, mpnw1)
   call mpgammar (t1, f2, mpnw1)
-  call mpmul (rra, rra, t2, mpnw1)
-  call mpmuld (t2, 0.25d0, t1, mpnw1)
-
-  call mpmul (f1, f2, td, mpnw1)
-  call mpdiv (tn, td, t2, mpnw1)
-  call mpeq (t2, sum, mpnw1)
+!   t1 = 0.25e0_mpdk * rra ** 2
+  call mpnpwr (rra(0:mpnw+6), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpmuld (mpt1(0:mpnw+6), 0.25e0_mpdk, mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   td = f1 * f2
+  call mpmul (f1(0:mpnw+6), f2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
+!   sum = tn / td
+  call mpdiv (tn(0:mpnw+6), td(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum(0:mpnw+6), mpnw1)
 
   do k = 1, itrmax
-    call mpmuld (f1, dble (k), t2, mpnw1)
-    call mpeq (t2, f1, mpnw1)
-    call mpdmc (dble (k), 0, t3, mpnw1)
-    call mpadd (qq, t3, t4, mpnw1)
-    call mpmul (f2, t4, t3, mpnw1)
-    call mpeq (t3, f2, mpnw1)
-    call mpmul (t1, tn, t2, mpnw1)
-    call mpeq (t2, tn, mpnw1)
-    call mpmul (f1, f2, td, mpnw1)
-    call mpdiv (tn, td, t2, mpnw1)
-    call mpadd (sum, t2, t3, mpnw1)
-    call mpeq (t3, sum, mpnw1)
-
-    call mpabs (t2, tc1, 4)
-    call mpmul (eps, sum, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 100
+!     f1 = f1 * real (k, mpdk)
+    call mpmuld (f1(0:mpnw+6), real (k, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), f1(0:mpnw+6), mpnw1)
+    d2 = real (k, mpdk)
+!     t3 = mprealdp (d2)
+    call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!     t4 = qq + t3
+    call mpadd (qq(0:), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!     f2 = f2 * t4
+    call mpmul (f2(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), f2(0:mpnw+6), mpnw1)
+!     tn = t1 * tn
+    call mpmul (t1(0:mpnw+6), tn(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), tn(0:mpnw+6), mpnw1)
+!     td = f1 * f2
+    call mpmul (f1(0:mpnw+6), f2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
+!     t2 = tn / td
+    call mpdiv (tn(0:mpnw+6), td(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     sum = sum + t2
+    call mpadd (sum(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), sum(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t2) - eps * abs (sum)
+    call mpabs (t2, mpt1(0:mpnw+6), mpnwm)
+    call mpabs (sum, mpt2(0:mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+    call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+    call mpeq (mpt4(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 100
   enddo
 
   write (mpldb, 4)
-  4 format ('*** MPBESSELIR: Loop end error 1')
-  call mpabrt ( 512)
+4 format ('*** BESSELIR: Loop end error 1')
+!   call mpabrt (512)
+  call mpabrt (512)
 
 100 continue
 
-  call mpmuld (rra, 0.5d0, t1, mpnw1)
-  call mppower (t1, qq, t2, mpnw1)
-  call mpmul (sum, t2, t3, mpnw1)
+!mp prec="mpnw1"
+!   t1 = 0.5e0_mpdk * rr
+  call mpmuld (rr(0:), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = t1 ** qq
+  call mppower (t1(0:mpnw+6), qq(0:), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = sum * t2
+  call mpmul (sum(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
 else
-!  sum1 = mpreal (1.d0, mpnw)
-!  t1 = mpreal (4.d0 * dble (nua)**2, mpnw)
-!  t2 = mpreal (1.d0, mpnw)
-!  t3 = mpreal (1.d0, mpnw)
-
-  call mpdmc (1.d0, 0, sum, mpnw1)
-  call mpmul (qq, qq, t2, mpnw1)
-  call mpmuld (t2, 4.d0, t1, mpnw1)
-  call mpdmc (1.d0, 0, tn, mpnw1)
-  call mpdmc (1.d0, 0, td, mpnw1)
+!   sum = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum(0:mpnw+6), mpnw1)
+!   t1 = 4.e0_mpdk * qq ** 2
+  call mpnpwr (qq(0:), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpmuld (mpt1(0:mpnw+6), 4.e0_mpdk, mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   tn = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), tn(0:mpnw+6), mpnw1)
+!   td = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
 
   do k = 1, itrmax
-!  t2 = -t2 * (t1 - (2.d0*k - 1.d0)**2)
-!  t3 = t3 * dble (k) * 8.d0 * xa
-!  t4 = t2 / t3
-!  sum1 = sum1 + t4
-
-    d1 = 2.d0 * k - 1.d0
-    call mpdmc (d1, 0, t2, mpnw1)
-    call mpmul (t2, t2, t3, mpnw1)
-    call mpsub (t1, t3, t2, mpnw1)
-    call mpmul (tn, t2, t3, mpnw1)
-    call mpneg (t3, tn, mpnw1)
-    call mpmuld (rra, 8.d0 * k, t2, mpnw1)
-    call mpmul (td, t2, t3,  mpnw1)
-    call mpeq (t3, td, mpnw1)
-    call mpdiv (tn, td, t4, mpnw1)
-    call mpadd (sum, t4, t3, mpnw1)
-    call mpeq (t3, sum, mpnw1)
-
-!   if (abs (t4) / abs (sum1) < eps) goto 110
-
-    call mpabs (t4, tc1, 4)
-    call mpmul (eps, sum, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 110
-  enddo
+    i1 = 2 * k - 1
+    d2 = real (i1, mpdk)
+!     t2 = mprealdp (d2)
+    call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     t2 = t1 - t2 ** 2
+    call mpnpwr (t2(0:mpnw+6), 2, mpt1(0:mpnw+6), mpnw1)
+    call mpsub (t1(0:mpnw+6), mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+    call mpeq (mpt2(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     tn = - tn * t2
+    call mpmul (tn(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpneg (mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+    call mpeq (mpt2(0:mpnw+6), tn(0:mpnw+6), mpnw1)
+    i2 = 8 * k
+!     t2 = real (i2, mpdk) * rra
+    call mpmuld (rra(0:mpnw+6), real (i2, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     td = td * t2
+    call mpmul (td(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
+!     t4 = tn / td
+    call mpdiv (tn(0:mpnw+6), td(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!     sum = sum + t4
+    call mpadd (sum(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), sum(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc2 = abs (t4) - eps * abs (sum)
+    call mpabs (t4, mpt1(0:mpnw+6), mpnwm)
+    call mpabs (sum, mpt2(0:mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+    call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+    call mpeq (mpt4(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic2 < 0) goto 110
+ enddo
 
 write (mpldb, 5)
-5 format ('*** MPBESSELIR: Loop end error 2')
-call mpabrt ( 513)
+5 format ('*** BESSELIR: Loop end error 2')
+! call mpabrt (513)
+call mpabrt (513)
 
 110 continue
 
-! t1 = exp (xa) / sqrt (2.d0 * mppi (mpnw) * xa)
-! besseli = t1 * sum1
-
-  call mpexp (rra, t1, mpnw1)
-  call mpmuld (mppicon, 2.d0, t2, mpnw1)
-  call mpmul (t2, rra, t3, mpnw1)
-  call mpsqrt (t3, t4, mpnw1)
-  call mpdiv (t1, t4, t2, mpnw1)
-  call mpmul (t2, sum, t3, mpnw1)
+!mp prec="mpnw1"
+!   t1 = exp (rra)
+  call mpexp (rra, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = 2.e0_mpdk * mppicon * rra
+  call mpmuld (mppicon(0:), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpmul (mpt1(0:mpnw+6), rra(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t4 = sqrt (t2)
+  call mpsqrt (t2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t3 = sum * t1 / t4
+  call mpmul (sum(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpdiv (mpt1(0:mpnw+6), t4(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t3(0:mpnw+6), mpnw1)
 endif
 
 120 continue
 
-call mproun (t3, mpnw)
-call mpeq (t3, ss, mpnw)
+!mp prec="mpnw"
+! ss = t3
+call mpeq (t3(0:mpnw+6), ss(0:), mpnw)
 
 return
 end subroutine mpbesselir
@@ -804,242 +1046,401 @@ subroutine mpbesseljnr (nu, rr, ss, mpnw)
 !   and DLMF 10.17.3 for large RR, relative to precision.
 
 implicit none
-integer, intent(in):: nu, mpnw
-integer ic1, ic2, itrmax, k, mpnw1, nua, n1
-real (mprknd) dfrac, d1, d2, pi
-parameter (itrmax = 1000000, dfrac = 1.5d0, pi = 3.1415926535897932385d0)
+integer, intent(in):: mpnw
+integer, intent(in):: nu
+!mp dim1="0:"
+! type (mp_real), intent(in):: rr
 integer (mpiknd), intent(in):: rr(0:)
+! type (mp_real), intent(out):: ss
 integer (mpiknd), intent(out):: ss(0:)
-integer (mpiknd) f1(0:2*mpnw+6), f2(0:2*mpnw+6), sum1(0:2*mpnw+6), &
-  sum2(0:2*mpnw+6), td1(0:2*mpnw+6), td2(0:2*mpnw+6), tn1(0:2*mpnw+6), &
-  tn2(0:2*mpnw+6), t1(0:2*mpnw+6), t2(0:2*mpnw+6), t3(0:2*mpnw+6), &
-  t41(0:2*mpnw+6), t42(0:2*mpnw+6), t5(0:2*mpnw+6), rra(0:2*mpnw+6), &
-  rr2(0:2*mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000, ipx = 3
+real (mpdknd), parameter:: dfrac1 = 0.4e0_mpdk, dfrac2 = 1.4e0_mpdk
+integer i1, ic1, ic2, k, nua, n1
+real (mpdknd) d1, d2
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:ipx*mpnw+6"
+! type (mp_real) f1, f2, sum1, sum2
+integer (mpiknd) f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6)
+! type (mp_real) td1, td2, tn1, tn2
+integer (mpiknd) td1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), tn2(0:ipx*mpnw+6)
+! type (mp_real) t1, t2, t3, t41
+integer (mpiknd) t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), t41(0:ipx*mpnw+6)
+! type (mp_real) t42, t5, rra, rr2
+integer (mpiknd) t42(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), rra(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6)
+integer (mpiknd) mpt4(0:ipx*mpnw+6), mpt5(0:ipx*mpnw+6), mpt6(0:ipx*mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (rr) < mpnw + 4 .or. mpspacer (ss) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPBESSELJNR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 514)
+call mpinitwds (mpt1, ipx*mpnw+6-5)
+call mpinitwds (mpt2, ipx*mpnw+6-5)
+call mpinitwds (mpt3, ipx*mpnw+6-5)
+call mpinitwds (mpt4, ipx*mpnw+6-5)
+call mpinitwds (mpt5, ipx*mpnw+6-5)
+call mpinitwds (mpt6, ipx*mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tn1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tn2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t41(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t42(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t5(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (rra(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (rr2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = min (ipx * mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (ss)
+mpi1 = mpspacer (ss)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** BESSELJNR: Uninitialized or inadequately sized array')
+!   call mpabrt (514)
+  call mpabrt (514)
 endif
+
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw2) then
+  write (6, 2) mpnw2
+2 format ('*** BESSELJNR: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (515)
+  call mpabrt (515)
+endif
+
+!mp prec="mpnw1"
 
 !   Check for RR = 0.
 
-if (mpsgn (rr) == 0) then
-  write (mpldb, 2)
-2 format ('*** MPBESSELJNR: Second argument is zero')
-  call mpabrt ( 515)
-endif
-
-!   Check if PI has been precomputed.
-
-mpnw1 = 2 * mpnw + 1
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 3) mpnw1
-3 format ('*** MPBESSELJNR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 516)
+! ic1 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+ic1 = mpi1
+if (ic1 == 0) then
+  write (mpldb, 3)
+3 format ('*** BESSELJNR: Second argument is zero')
+!   call mpabrt (516)
+  call mpabrt (516)
 endif
 
 nua = abs (nu)
-call mpinitwds (f1, mpnw1)
-call mpinitwds (f2, mpnw1)
-call mpinitwds (sum1, mpnw1)
-call mpinitwds (sum2, mpnw1)
-call mpinitwds (td1, mpnw1)
-call mpinitwds (tn1, mpnw1)
-call mpinitwds (td2, mpnw1)
-call mpinitwds (tn2, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t41, mpnw1)
-call mpinitwds (t42, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (rra, mpnw1)
-call mpinitwds (rr2, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw*mpnbt, eps, 4)
-call mpmdc (rr, d1, n1, 4)
-d1 = abs (d1) * 2.d0 ** n1
+! d1 = dpreal (rr)
+call mpdpreal (rr, mpd1, mpnw1)
+d1 = mpd1
 
-if (d1 < dfrac * mpnw1 * mpdpw) then
-  mpnw1 = min (mpnw + nint (d1 / (dfrac * mpdpw)), 2 * mpnw + 1)
-  call mpabs (rr, rra, mpnw1)
-  call mpdmc (1.d0, 0, tn1, mpnw1)
-  call mpdmc (1.d0, 0, f1, mpnw1)
-  call mpdmc (1.d0, 0, f2, mpnw1)
-  call mpmul (rra, rra, t2, mpnw1)
-  call mpmuld (t2, 0.25d0, t1, mpnw1)
+if (d1 < dfrac1 * mpnw1 * mpnbt) then
+
+!   In this case, perform computations with higher precision.
+
+  mpnw2 = min (mpnw + nint (d1 * dfrac2 / mpnbt) + 1, mpnwx)
+  if (mpnw2 > ipx*mpnw+1) then
+    write (6, 4) mpnw2
+4   format ('*** BESSELJNR: Inadequate working precision:',i6)
+!     call mpabrt (517)
+    call mpabrt (517)
+  endif
+
+!mp prec="mpnwm"
+!   tc2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+  ic2 = -mpnw2*mpnbt
+!   eps = tc2 ** ic2
+  call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw2"
+!   rra = abs (rr)
+  call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), rra(0:ipx*mpnw+6), mpnw2)
+!   tn1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw2)
+!   f1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+!   f2 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!   t1 = 0.25e0_mpdk * rra ** 2
+  call mpnpwr (rra(0:ipx*mpnw+6), 2, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpmuld (mpt1(0:ipx*mpnw+6), 0.25e0_mpdk, mpt2(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, nua
-    call mpmuld (f2, dble (k), t2, mpnw1)
-    call mpeq (t2, f2, mpnw1)
+!     f2 = real (k, mpdk) * f2
+    call mpmuld (f2(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
   enddo
 
-  call mpmul (f1, f2, td1, mpnw1)
-  call mpdiv (tn1, td1, t2, mpnw1)
-  call mpeq (t2, sum1, mpnw1)
+!   td1 = f1 * f2
+  call mpmul (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw2)
+!   sum1 = tn1 / td1
+  call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, itrmax
-    call mpmuld (f1, dble (k), t2, mpnw1)
-    call mpeq (t2, f1, mpnw1)
-    call mpmuld (f2, dble (k + nua), t2, mpnw1)
-    call mpeq (t2, f2, mpnw1)
-    call mpmul (t1, tn1, t2, mpnw1)
-    call mpneg (t2, tn1, mpnw1)
-    call mpmul (f1, f2, td1, mpnw1)
-    call mpdiv (tn1, td1, t2, mpnw1)
-    call mpadd (sum1, t2, t3, mpnw1)
-    call mpeq (t3, sum1, mpnw1)
-
-    call mpabs (t2, tc1, 4)
-    call mpmul (eps, sum1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 100
-  enddo
-
-  write (mpldb, 4)
-4 format ('*** MPBESSELJNR: Loop end error 1')
-  call mpabrt ( 517)
-
-100 continue
-
-  call mpmuld (rra, 0.5d0, t1, mpnw1)
-  call mpnpwr (t1, nua, t2, mpnw1)
-  call mpmul (sum1, t2, t3, mpnw1)
-else
-! xa2 = xa**2
-! t1 = mpreal (4.d0 * dble (nua)**2, mpnw)
-! tn1 = mpreal (1.d0, mpnw)
-! tn2 = (t1 - 1.d0) / 8.d0
-! td1 = mpreal (1.d0, mpnw)
-! td2 = xa
-! sum1 = tn1 / td1
-! sum2 = tn2 / t32
-
-  mpnw1 = mpnw + 1
-  call mpabs (rr, rra, mpnw1)
-  call mpmul (rra, rra, rr2, mpnw1)
-  d1 = 4.d0 * dble (nua)**2
-  call mpdmc (d1, 0, t1, mpnw1)
-  call mpdmc (1.d0, 0, tn1, mpnw1)
-  call mpsub (t1, tn1, t2, mpnw1)
-  call mpdivd (t2, 8.d0, tn2, mpnw1)
-  call mpdmc (1.d0, 0, td1, mpnw1)
-  call mpeq (rra, td2, mpnw1)
-  call mpdiv (tn1, td1, sum1, mpnw1)
-  call mpdiv (tn2, td2, sum2, mpnw1)
-
-  do k = 1, itrmax
-!   tn1 = -tn1 * (t1 - (2.d0*(2.d0*k-1.d0) - 1.d0)**2) * (t1 - (2.d0*(2.d0*k) - 1.d0)**2)
-
-    d1 = (2.d0*(2.d0*k-1.d0) - 1.d0)**2
-    d2 = (2.d0*(2.d0*k) - 1.d0)**2
-    call mpdmc (d1, 0, t2, mpnw1)
-    call mpsub (t1, t2, t3, mpnw1)
-    call mpdmc (d2, 0, t2, mpnw1)
-    call mpsub (t1, t2, t5, mpnw1)
-    call mpmul (t3, t5, t2, mpnw1)
-    call mpmul (tn1, t2, t3, mpnw1)
-    call mpneg (t3, tn1, mpnw1)
-
-!   td1 = td1 * dble (2*k-1) * dble (2*k) * 64.d0 * xa2
-
-    d1 = dble (2*k-1) * dble (2*k) * 64.d0
-    call mpmuld (td1, d1, t2, mpnw1)
-    call mpmul (t2, rr2, td1, mpnw1)
-
-!   t41 = tn1 / td1
-!   sum1 = sum1 + t41
-
-    call mpdiv (tn1, td1, t41, mpnw1)
-    call mpadd (sum1, t41, t2, mpnw1)
-    call mpeq (t2, sum1, mpnw1)
-
-!   tn2 = -tn2 * (t1 - (2.d0*(2.d0*k) - 1.d0)**2) * (t1 - (2.d0*(2.d0*k+1.d0) - 1.d0)**2)
-
-    d1 = (2.d0*(2.d0*k) - 1.d0)**2
-    d2 = (2.d0*(2.d0*k+1.d0) - 1.d0)**2
-    call mpdmc (d1, 0, t2, mpnw1)
-    call mpsub (t1, t2, t3, mpnw1)
-    call mpdmc (d2, 0, t2, mpnw1)
-    call mpsub (t1, t2, t5, mpnw1)
-    call mpmul (t3, t5, t2, mpnw1)
-    call mpmul (tn2, t2, t3, mpnw1)
-    call mpneg (t3, tn2, mpnw1)
-
-!   td2 = td2 * dble (2*k) * dble (2*k+1) * 64.d0 * xa2
-
-    d1 = dble (2*k) * dble (2*k+1) * 64.d0
-    call mpmuld (td2, d1, t2, mpnw1)
-    call mpmul (t2, rr2, td2, mpnw1)
-
-!  t42 = tn2 / td2
-!  sum2 = sum2 + t42
-
-    call mpdiv (tn2, td2, t42, mpnw1)
-    call mpadd (sum2, t42, t2, mpnw1)
-    call mpeq (t2, sum2, mpnw1)
-
-!  if (abs (t41) / abs (sum1) < eps .and. abs (t42) / abs (sum2) < eps ) goto 110
-
-    call mpabs (t41, tc1, 4)
-    call mpmul (eps, sum1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    call mpabs (t42, tc1, 4)
-    call mpmul (eps, sum2, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic2, 4)
-    if (ic1 <= 0 .and. ic2 <= 0) goto 110
+!     f1 = f1 * real (k, mpdk)
+    call mpmuld (f1(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+    i1 = k + nua
+!     f2 = f2 * real (i1, mpdk)
+    call mpmuld (f2(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!     tn1 = - t1 * tn1
+    call mpmul (t1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt2(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw2)
+!     td1 = f1 * f2
+    call mpmul (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw2)
+!     t2 = tn1 / td1
+    call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     sum1 = sum1 + t2
+    call mpadd (sum1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
+!mp prec="mpnwm"
+!     tc1 = abs (t2) - eps * abs (sum1)
+    call mpabs (t2, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum1, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 100
   enddo
 
   write (mpldb, 5)
-5 format ('*** MPBESSELJNR: Loop end error 2')
-  call mpabrt ( 518)
+5 format ('*** BESSELJNR: Loop end error 1')
+!   call mpabrt (518)
+  call mpabrt (518)
+
+100 continue
+
+!mp prec="mpnw2"
+!   t1 = 0.5e0_mpdk * rra
+  call mpmuld (rra(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   t3 = sum1 * t1 ** nua
+  call mpnpwr (t1(0:ipx*mpnw+6), nua, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpmul (sum1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+else
+!mp prec="mpnwm"
+!   tc2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+  ic2 = -mpnw1*mpnbt
+!   eps = tc2 ** ic2
+  call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw1"
+!   rra = abs (rr)
+  call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), rra(0:ipx*mpnw+6), mpnw1)
+!   rr2 = rra ** 2
+  call mpnpwr (rra(0:ipx*mpnw+6), 2, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), mpnw1)
+  i1 = 2 * nua
+  d2 = real (i1, mpdk) ** 2
+!   t1 = mprealdp (d2)
+  call mprealdp (d2, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   tn1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw1)
+!   t2 = t1 - tn1
+  call mpsub (t1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   tn2 = t2 / 8.e0_mpdk
+  call mpdivd (t2(0:ipx*mpnw+6), 8.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn2(0:ipx*mpnw+6), mpnw1)
+!   td1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw1)
+!   td2 = rra
+  call mpeq (rra(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpnw1)
+!   sum1 = tn1 / td1
+  call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+!   sum2 = tn2 / td2
+  call mpdiv (tn2(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpnw1)
+
+  do k = 1, itrmax
+    d1 = real (4*k-3, mpdk) ** 2
+    d2 = real (4*k-1, mpdk) ** 2
+!     t3 = t1 - d1
+    call mpdmc (d1, 0, mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpsub (t1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!     t5 = t1 - d2
+    call mpdmc (d2, 0, mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpsub (t1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw1)
+!     t2 = t3 * t5
+    call mpmul (t3(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     tn1 = - tn1 * t2
+    call mpmul (tn1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt2(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw1)
+    d1 = real (2*k-1, mpdk) * real (2*k, mpdk) * 64.e0_mpdk
+!     t2 = td1 * d1
+    call mpmuld (td1(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     td1 = t2 * rr2
+    call mpmul (t2(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw1)
+!     t41 = tn1 / td1
+    call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), mpnw1)
+!     sum1 = sum1 + t41
+    call mpadd (sum1(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+
+    d1 = real (2*(2*k)-1, mpdk) ** 2
+    d2 = real (2*(2*k+1)-1, mpdk) ** 2
+!     t3 = t1 - d1
+    call mpdmc (d1, 0, mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpsub (t1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!     t5 = t1 - d2
+    call mpdmc (d2, 0, mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpsub (t1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw1)
+!     t2 = t3 * t5
+    call mpmul (t3(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     tn2 = - tn2 * t2
+    call mpmul (tn2(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt2(0:ipx*mpnw+6), tn2(0:ipx*mpnw+6), mpnw1)
+    d1 = real (2*k, mpdk) * real (2*k+1, mpdk) * 64.e0_mpdk
+!     t2 = td2 * d1
+    call mpmuld (td2(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     td2 = t2 * rr2
+    call mpmul (t2(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpnw1)
+!     t42 = tn2 / td2
+    call mpdiv (tn2(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), mpnw1)
+!     sum2 = sum2 + t42
+    call mpadd (sum2(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t41) - eps * abs (sum1)
+    call mpabs (t41, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum1, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     tc2 = abs (t42) - eps * abs (sum2)
+    call mpabs (t42, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum2, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic1 < 0 .and. ic2 < 0) goto 110
+  enddo
+
+  write (mpldb, 6)
+6 format ('*** BESSELJNR: Loop end error 2')
+!   call mpabrt (519)
+  call mpabrt (519)
 
 110 continue
 
-! t1 = xa - 0.5d0 * nua * pi - 0.25d0 * pi
-! besselj = sqrt (2.d0 / (pi * xa)) * (cos (t1) * sum1 - sin (t1) * sum2)
-
-  call mpmuld (mppicon, 0.5d0 * nua, t1, mpnw1)
-  call mpsub (rra, t1, t2, mpnw1)
-  call mpmuld (mppicon, 0.25d0, t1, mpnw1)
-  call mpsub (t2, t1, t3, mpnw1)
-  call mpcssnr (t3, t41, t42, mpnw1)
-  call mpmul (t41, sum1, t1, mpnw1)
-  call mpmul (t42, sum2, t2, mpnw1)
-  call mpsub (t1, t2, t5, mpnw1)
-  call mpmul (mppicon, rra, t1, mpnw1)
-  call mpdmc (2.d0, 0, t2, mpnw1)
-  call mpdiv (t2, t1, t3, mpnw1)
-  call mpsqrt (t3, t1, mpnw1)
-  call mpmul (t1, t5, t3, mpnw1)
+!mp prec="mpnw1"
+!   t1 = mppicon * 0.5e0_mpdk * real (nua, mpdk)
+  call mpmuld (mppicon(0:), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpmuld (mpt1(0:ipx*mpnw+6), real (nua, mpdk), mpt2(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = rra - t1
+  call mpsub (rra(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t1 = mppicon * 0.25e0_mpdk
+  call mpmuld (mppicon(0:), 0.25e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t3 = t2 - t1
+  call mpsub (t2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!   t41 = cos (t3)
+  call mpcssnr (t3, mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), mpnw1)
+!   t42 = sin (t3)
+  call mpcssnr (t3, mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), mpnw1)
+!   t1 = t41 * sum1
+  call mpmul (t41(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = t42 * sum2
+  call mpmul (t42(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t5 = t1 - t2
+  call mpsub (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw1)
+!   t1 = mppicon * rra
+  call mpmul (mppicon(0:), rra(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t3 = t2 / t1
+  call mpdiv (t2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!   t1 = sqrt (t3)
+  call mpsqrt (t3, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t3 = t1 * t5
+  call mpmul (t1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
 endif
 
 if (mod (nu, 2) /= 0) then
-!  if (nu < 0 .and. x > 0.d0 .or. nu > 0 .and. x < 0.d0) besselj = - besselj
-
-  ic1 = mpsgn (rr)
+!   ic1 = mpsgn (rr)
+  mpi1 = mpsgnr (rr)
+  ic1 = mpi1
   if (nu < 0 .and. ic1 > 0 .or. nu > 0 .and. ic1 < 0) then
-    call mpneg (t3, t2, mpnw1)
-    call mpeq (t2, t3, mpnw1)
+!     t3 = - t3
+    call mpneg (t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
   endif
 endif
 
-call mproun (t3, mpnw)
-call mpeq (t3, ss, mpnw)
+!mp prec="mpnw"
+! ss = t3
+call mpeq (t3(0:ipx*mpnw+6), ss(0:), mpnw)
 
 return
 end subroutine mpbesseljnr
@@ -1052,254 +1453,419 @@ subroutine mpbesseljr (qq, rr, ss, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer ic1, ic2, i1, i2, itrmax, k, mpnw1, n1
-real (mprknd) dfrac, d1, d2, pi
-parameter (itrmax = 1000000, dfrac = 1.5d0, pi = 3.1415926535897932385d0)
+!mp dim1="0:"
+! type (mp_real), intent(in):: qq, rr
 integer (mpiknd), intent(in):: qq(0:), rr(0:)
+! type (mp_real), intent(out):: ss
 integer (mpiknd), intent(out):: ss(0:)
-integer (mpiknd) f1(0:2*mpnw+6), f2(0:2*mpnw+6), sum1(0:2*mpnw+6), &
-  sum2(0:2*mpnw+6), td1(0:2*mpnw+6), td2(0:2*mpnw+6), tn1(0:2*mpnw+6), &
-  tn2(0:2*mpnw+6), t1(0:2*mpnw+6), t2(0:2*mpnw+6), t3(0:2*mpnw+6), &
-  t4(0:2*mpnw+6), t41(0:2*mpnw+6), t42(0:2*mpnw+6), t5(0:2*mpnw+6), &
-  rra(0:2*mpnw+6), rr2(0:2*mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer ic1, ic2, i1, i2, k, n1
+real (mpdknd) d1, d2
+integer, parameter:: itrmax = 1000000, ipx = 3
+real (mpdknd), parameter:: dfrac1 = 0.4e0_mpdk, dfrac2 = 1.4e0_mpdk
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:ipx*mpnw+6"
+! type (mp_real) f1, f2, sum1, sum2
+integer (mpiknd) f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6)
+! type (mp_real) td1, td2, tn1, tn2
+integer (mpiknd) td1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), tn2(0:ipx*mpnw+6)
+! type (mp_real) t1, t2, t3, t4
+integer (mpiknd) t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6)
+! type (mp_real) t41, t42, t5
+integer (mpiknd) t41(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), t5(0:ipx*mpnw+6)
+! type (mp_real) rra, rr2
+integer (mpiknd) rra(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6)
+integer (mpiknd) mpt4(0:ipx*mpnw+6), mpt5(0:ipx*mpnw+6), mpt6(0:ipx*mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (rr) < mpnw + 4 .or. mpspacer (ss) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPBESSELJR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 519)
+call mpinitwds (mpt1, ipx*mpnw+6-5)
+call mpinitwds (mpt2, ipx*mpnw+6-5)
+call mpinitwds (mpt3, ipx*mpnw+6-5)
+call mpinitwds (mpt4, ipx*mpnw+6-5)
+call mpinitwds (mpt5, ipx*mpnw+6-5)
+call mpinitwds (mpt6, ipx*mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tn1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tn2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t4(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t41(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t42(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t5(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (rra(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (rr2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = min (ipx*mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (ss)
+mpi1 = mpspacer (ss)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** BESSELJR: Uninitialized or inadequately sized array')
+!   call mpabrt (520)
+  call mpabrt (520)
 endif
 
-!   Check if PI has been precomputed.
-
-mpnw1 = 2 * mpnw + 1
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 2) mpnw1
-2 format ('*** MPBESSELJR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 520)
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw2) then
+  write (6, 2) mpnw2
+2 format ('*** BESSELJR: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (521)
+  call mpabrt (521)
 endif
 
-call mpinitwds (f1, mpnw1)
-call mpinitwds (f2, mpnw1)
-call mpinitwds (sum1, mpnw1)
-call mpinitwds (sum2, mpnw1)
-call mpinitwds (td1, mpnw1)
-call mpinitwds (tn1, mpnw1)
-call mpinitwds (td2, mpnw1)
-call mpinitwds (tn2, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t41, mpnw1)
-call mpinitwds (t42, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (rra, mpnw1)
-call mpinitwds (rr2, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw*mpnbt, eps, 4)
+!mp prec="mpnw1"
 
-!   If QQ is integer, call mpbesseljnr; if qq < 0 and rr <= 0, then error.
+!   If QQ is integer, call mpbesseljnr; if RR <= 0, then error.
 
-call mpinfr (qq, t1, t2, mpnw)
-i1 = mpsgn (qq)
-i2 = mpsgn (rr)
-if (mpsgn (t2) == 0) then
-  call mpmdc (qq, d1, n1, mpnw)
-  d1 = d1 * 2.d0**n1
+! t2 = qq - anint (qq)
+call mpnint (qq, mpt1(0:ipx*mpnw+6), mpnw1)
+call mpsub (qq(0:), mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+call mpeq (mpt2(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+! ic1 = mpsgn (t2)
+mpi1 = mpsgnr (t2)
+ic1 = mpi1
+! ic2 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+ic2 = mpi1
+if (ic1 == 0) then
+!   d1 = dpreal (qq)
+  call mpdpreal (qq, mpd1, mpnw1)
+  d1 = mpd1
   n1 = nint (d1)
+!mp prec="mpnw"
+!   call mpbesseljnr (n1, rr, t3, mpnw)
   call mpbesseljnr (n1, rr, t3, mpnw)
   goto 120
-elseif (i1 < 0 .and. i2 <= 0) then
+elseif (ic2 <= 0) then
   write (mpldb, 3)
-3 format ('*** MPBESSELJR: First argument < 0 and second argument <= 0')
-  call mpabrt ( 521)
+3 format ('*** BESSELJR: Second argument <= 0')
+!   call mpabrt (522)
+  call mpabrt (522)
 endif
 
-call mpmdc (rr, d1, n1, 4)
-d1 = abs (d1) * 2.d0 ** n1
+! d1 = dpreal (rr)
+call mpdpreal (rr, mpd1, mpnw)
+d1 = mpd1
 
-if (d1 < dfrac * mpnw1 * mpdpw) then
-  mpnw1 = min (mpnw + nint (d1 / (dfrac * mpdpw)), 2 * mpnw + 1)
-  call mpabs (rr, rra, mpnw1)
-  call mpdmc (1.d0, 0, tn1, mpnw1)
-  call mpdmc (1.d0, 0, f1, mpnw1)
-  call mpadd (qq, f1, t1, mpnw1)
-  call mpgammar (t1, f2, mpnw1)
-  call mpmul (rra, rra, t2, mpnw1)
-  call mpmuld (t2, 0.25d0, t1, mpnw1)
+if (d1 < dfrac1 * mpnw1 * mpnbt) then
 
-  call mpmul (f1, f2, td1, mpnw1)
-  call mpdiv (tn1, td1, t2, mpnw1)
-  call mpeq (t2, sum1, mpnw1)
+!   In this case, perform computations with higher precision.
 
-  do k = 1, itrmax
-    call mpmuld (f1, dble (k), t2, mpnw1)
-    call mpeq (t2, f1, mpnw1)
-    call mpdmc (dble (k), 0, t3, mpnw1)
-    call mpadd (qq, t3, t4, mpnw1)
-    call mpmul (f2, t4, t3, mpnw1)
-    call mpeq (t3, f2, mpnw1)
-    call mpmul (t1, tn1, t2, mpnw1)
-    call mpneg (t2, tn1, mpnw1)
-    call mpmul (f1, f2, td1, mpnw1)
-    call mpdiv (tn1, td1, t2, mpnw1)
-    call mpadd (sum1, t2, t3, mpnw1)
-    call mpeq (t3, sum1, mpnw1)
+  mpnw2 = min (mpnw + nint (d1 * dfrac2 / mpnbt) + 1, mpnwx)
+  if (mpnw2 > ipx*mpnw+1) then
+    write (6, 4) mpnw2
+4   format ('*** BESSELJR: Inadequate working precision:',i6)
+!     call mpabrt (523)
+    call mpabrt (523)
+  endif
 
-    call mpabs (t2, tc1, 4)
-    call mpmul (eps, sum1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 100
-  enddo
-
-  write (mpldb, 4)
-4 format ('*** MPBESSELJR: Loop end error 1')
-  call mpabrt ( 522)
-
-100 continue
-
-  call mpmuld (rra, 0.5d0, t1, mpnw1)
-  call mppower (t1, qq, t2, mpnw1)
-  call mpmul (sum1, t2, t3, mpnw1)
-else
-! xa2 = xa**2
-! t1 = mpreal (4.d0 * dble (nua)**2, mpnw)
-! tn1 = mpreal (1.d0, mpnw)
-! tn2 = (t1 - 1.d0) / 8.d0
-! td1 = mpreal (1.d0, mpnw)
-! td2 = xa
-! sum1 = tn1 / td1
-! sum2 = tn2 / t32
-
-  mpnw1 = mpnw + 1
-  call mpabs (rr, rra, mpnw1)
-  call mpmul (rra, rra, rr2, mpnw1)
-  call mpmul (qq, qq, t2, mpnw1)
-  call mpmuld (t2, 4.d0, t1, mpnw1)
-  call mpdmc (1.d0, 0, tn1, mpnw1)
-  call mpsub (t1, tn1, t2, mpnw1)
-  call mpdivd (t2, 8.d0, tn2, mpnw1)
-  call mpdmc (1.d0, 0, td1, mpnw1)
-  call mpeq (rra, td2, mpnw1)
-  call mpdiv (tn1, td1, sum1, mpnw1)
-  call mpdiv (tn2, td2, sum2, mpnw1)
+!mp prec="mpnwm"
+!   tc2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+  ic2 = -mpnw2*mpnbt
+!   eps = tc2 ** ic2
+  call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw2"
+!   rra = abs (rr)
+  call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), rra(0:ipx*mpnw+6), mpnw2)
+!   tn1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw2)
+!   f1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+!   t1 = qq + f1
+  call mpadd (qq(0:), f1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   call mpgammar (t1, f2, mpnw2)
+  call mpgammar (t1, f2, mpnw2)
+!   t2 = rra ** 2
+  call mpnpwr (rra(0:ipx*mpnw+6), 2, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t1 = t2 * 0.25e0_mpdk
+  call mpmuld (t2(0:ipx*mpnw+6), 0.25e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   td1 = f1 * f2
+  call mpmul (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw2)
+!   t2 = tn1 / td1
+  call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   sum1 = t2
+  call mpeq (t2(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, itrmax
-!   tn1 = -tn1 * (t1 - (2.d0*(2.d0*k-1.d0) - 1.d0)**2) * (t1 - (2.d0*(2.d0*k) - 1.d0)**2)
-
-    d1 = (2.d0*(2.d0*k-1.d0) - 1.d0)**2
-    d2 = (2.d0*(2.d0*k) - 1.d0)**2
-    call mpdmc (d1, 0, t2, mpnw1)
-    call mpsub (t1, t2, t3, mpnw1)
-    call mpdmc (d2, 0, t2, mpnw1)
-    call mpsub (t1, t2, t5, mpnw1)
-    call mpmul (t3, t5, t2, mpnw1)
-    call mpmul (tn1, t2, t3, mpnw1)
-    call mpneg (t3, tn1, mpnw1)
-
-!   td1 = td1 * dble (2*k-1) * dble (2*k) * 64.d0 * xa2
-
-    d1 = dble (2*k-1) * dble (2*k) * 64.d0
-    call mpmuld (td1, d1, t2, mpnw1)
-    call mpmul (t2, rr2, td1, mpnw1)
-
-!   t41 = tn1 / td1
-!   sum1 = sum1 + t41
-
-    call mpdiv (tn1, td1, t41, mpnw1)
-    call mpadd (sum1, t41, t2, mpnw1)
-    call mpeq (t2, sum1, mpnw1)
-
-!   tn2 = -tn2 * (t1 - (2.d0*(2.d0*k) - 1.d0)**2) * (t1 - (2.d0*(2.d0*k+1.d0) - 1.d0)**2)
-
-    d1 = (2.d0*(2.d0*k) - 1.d0)**2
-    d2 = (2.d0*(2.d0*k+1.d0) - 1.d0)**2
-    call mpdmc (d1, 0, t2, mpnw1)
-    call mpsub (t1, t2, t3, mpnw1)
-    call mpdmc (d2, 0, t2, mpnw1)
-    call mpsub (t1, t2, t5, mpnw1)
-    call mpmul (t3, t5, t2, mpnw1)
-    call mpmul (tn2, t2, t3, mpnw1)
-    call mpneg (t3, tn2, mpnw1)
-
-!   td2 = td2 * dble (2*k) * dble (2*k+1) * 64.d0 * xa2
-
-    d1 = dble (2*k) * dble (2*k+1) * 64.d0
-    call mpmuld (td2, d1, t2, mpnw1)
-    call mpmul (t2, rr2, td2, mpnw1)
-
-!  t42 = tn2 / td2
-!  sum2 = sum2 + t42
-
-    call mpdiv (tn2, td2, t42, mpnw1)
-    call mpadd (sum2, t42, t2, mpnw1)
-    call mpeq (t2, sum2, mpnw1)
-
-!  if (abs (t41) / abs (sum1) < eps .and. abs (t42) / abs (sum2) < eps ) goto 110
-
-    call mpabs (t41, tc1, 4)
-    call mpmul (eps, sum1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    call mpabs (t42, tc1, 4)
-    call mpmul (eps, sum2, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic2, 4)
-    if (ic1 <= 0 .and. ic2 <= 0) goto 110
+!     f1 = f1 * real (k, mpdk)
+    call mpmuld (f1(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+    d2 = real (k, mpdk)
+!     t3 = mprealdp (d2)
+    call mprealdp (d2, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     t4 = qq + t3
+    call mpadd (qq(0:), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!     f2 = f2 * t4
+    call mpmul (f2(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!     tn1 = - t1 * tn1
+    call mpmul (t1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt2(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw2)
+!     td1 = f1 * f2
+    call mpmul (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw2)
+!     t2 = tn1 / td1
+    call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     sum1 = sum1 + t2
+    call mpadd (sum1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
+!mp prec="mpnwm"
+!     tc1 = abs (t2) - eps * abs (sum1)
+    call mpabs (t2, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum1, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 100
   enddo
 
   write (mpldb, 5)
-5 format ('*** MPBESSELJR: Loop end error 2')
-  call mpabrt ( 523)
+5 format ('*** BESSELJR: Loop end error 1')
+!   call mpabrt (524)
+  call mpabrt (524)
+
+100 continue
+
+!mp prec="mpnw2"
+!   t1 = rr * 0.5e0_mpdk
+  call mpmuld (rr(0:), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   t2 = t1 ** qq
+  call mppower (t1(0:ipx*mpnw+6), qq(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = sum1 * t2
+  call mpmul (sum1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+else
+  mpnw1 = min (mpnw + 1, mpnwx)
+!mp prec="mpnwm"
+!   tc2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+  ic2 = -mpnw1*mpnbt
+!   eps = tc2 ** ic2
+  call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw1"
+!   rra = abs (rr)
+  call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), rra(0:ipx*mpnw+6), mpnw1)
+!   rr2 = rra ** 2
+  call mpnpwr (rra(0:ipx*mpnw+6), 2, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), mpnw1)
+!   t2 = qq ** 2
+  call mpnpwr (qq(0:), 2, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t1 = t2 * 4.e0_mpdk
+  call mpmuld (t2(0:ipx*mpnw+6), 4.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   tn1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw1)
+!   t2 = t1 - tn1
+  call mpsub (t1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   tn2 = t2 / 8.e0_mpdk
+  call mpdivd (t2(0:ipx*mpnw+6), 8.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn2(0:ipx*mpnw+6), mpnw1)
+!   td1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw1)
+!   td2 = rra
+  call mpeq (rra(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpnw1)
+!   sum1 = tn1 / td1
+  call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+!   sum2 = tn2 / td2
+  call mpdiv (tn2(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpnw1)
+
+  do k = 1, itrmax
+    d1 = real (4*k-3, mpdk) ** 2
+    d2 = real (4*k-1, mpdk) ** 2
+!     t3 = t1 - d1
+    call mpdmc (d1, 0, mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpsub (t1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!     t5 = t1 - d2
+    call mpdmc (d2, 0, mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpsub (t1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw1)
+!     t2 = t3 * t5
+    call mpmul (t3(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     tn1 = - tn1 * t2
+    call mpmul (tn1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt2(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw1)
+    d1 = real (2*k-1, mpdk) * real (2*k, mpdk) * 64.e0_mpdk
+!     t2 = td1 * d1
+    call mpmuld (td1(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     td1 = t2 * rr2
+    call mpmul (t2(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw1)
+!     t41 = tn1 / td1
+    call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), mpnw1)
+!     sum1 = sum1 + t41
+    call mpadd (sum1(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+
+    d1 = real (2*(2*k)-1, mpdk) ** 2
+    d2 = real (2*(2*k+1) - 1, mpdk) ** 2
+!     t3 = t1 - d1
+    call mpdmc (d1, 0, mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpsub (t1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!     t5 = t1 - d2
+    call mpdmc (d2, 0, mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpsub (t1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw1)
+!     t2 = t3 * t5
+    call mpmul (t3(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     tn2 = - tn2 * t2
+    call mpmul (tn2(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt2(0:ipx*mpnw+6), tn2(0:ipx*mpnw+6), mpnw1)
+    d1 = real (2*k, mpdk) * real (2*k+1, mpdk) * 64.e0_mpdk
+!     t2 = td2 * d1
+    call mpmuld (td2(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     td2 = t2 * rr2
+    call mpmul (t2(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpnw1)
+!     t42 = tn2 / td2
+    call mpdiv (tn2(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), mpnw1)
+!     sum2 = sum2 + t42
+    call mpadd (sum2(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t41) - eps * abs (sum1)
+    call mpabs (t41, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum1, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     tc2 = abs (t42) - eps * abs (sum2)
+    call mpabs (t42, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum2, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic1 < 0 .and. ic2 < 0) goto 110
+  enddo
+
+  write (mpldb, 6)
+6 format ('*** BESSELJR: Loop end error 2')
+!   call mpabrt (525)
+  call mpabrt (525)
 
 110 continue
 
-! t1 = xa - 0.5d0 * nua * pi - 0.25d0 * pi
-! besselj = sqrt (2.d0 / (pi * xa)) * (cos (t1) * sum1 - sin (t1) * sum2)
-
-!   call mpmuld (mppicon, 0.5d0 * nua, t1, mpnw1)
-
-  call mpmul (mppicon, qq, t2, mpnw1)
-  call mpmuld (t2, 0.5d0, t1, mpnw1)
-  call mpsub (rra, t1, t2, mpnw1)
-  call mpmuld (mppicon, 0.25d0, t1, mpnw1)
-  call mpsub (t2, t1, t3, mpnw1)
-  call mpcssnr (t3, t41, t42, mpnw1)
-  call mpmul (t41, sum1, t1, mpnw1)
-  call mpmul (t42, sum2, t2, mpnw1)
-  call mpsub (t1, t2, t5, mpnw1)
-  call mpmul (mppicon, rra, t1, mpnw1)
-  call mpdmc (2.d0, 0, t2, mpnw1)
-  call mpdiv (t2, t1, t3, mpnw1)
-  call mpsqrt (t3, t1, mpnw1)
-  call mpmul (t1, t5, t3, mpnw1)
+!mp prec="mpnw1"
+!   t2 = mppicon * qq
+  call mpmul (mppicon(0:), qq(0:), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t1 = t2 * 0.5e0_mpdk
+  call mpmuld (t2(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = rra - t1
+  call mpsub (rra(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t1 = mppicon * 0.25e0_mpdk
+  call mpmuld (mppicon(0:), 0.25e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t3 = t2 - t1
+  call mpsub (t2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!   t41 = cos (t3)
+  call mpcssnr (t3, mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), mpnw1)
+!   t42 = sin (t3)
+  call mpcssnr (t3, mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), mpnw1)
+!   t1 = t41 * sum1
+  call mpmul (t41(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = t42 * sum2
+  call mpmul (t42(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t5 = t1 - t2
+  call mpsub (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw1)
+!   t1 = mppicon * rra
+  call mpmul (mppicon(0:), rra(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t3 = t2 / t1
+  call mpdiv (t2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!   t1 = sqrt (t3)
+  call mpsqrt (t3, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t3 = t1 * t5
+  call mpmul (t1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
 endif
-
-! if (mod (nu, 2) /= 0) then
-!  if (nu < 0 .and. x > 0.d0 .or. nu > 0 .and. x < 0.d0) besselj = - besselj
-
-!   ic1 = mpsgn (rr)
-!   if (nu < 0 .and. ic1 > 0 .or. nu > 0 .and. ic1 < 0) then
-!     call mpneg (t3, t2, mpnw1)
-!     call mpeq (t2, t3, mpnw1)
-!   endif
-! endif
 
 120 continue
 
-call mproun (t3, mpnw)
-call mpeq (t3, ss, mpnw)
+!mp prec="mpnw"
+! ss = t3
+call mpeq (t3(0:ipx*mpnw+6), ss(0:), mpnw)
 
 return
 end subroutine mpbesseljr
@@ -1311,249 +1877,442 @@ subroutine mpbesselknr (nu, rr, ss, mpnw)
 !   and DLMF 10.40.2 for large RR, relative to precision.
 
 implicit none
-integer, intent(in):: nu, mpnw
-integer ic1, itrmax, k, mpnw1, nua, n1
-real (mprknd) dfrac, d1, egam, pi
-parameter (itrmax = 1000000, dfrac = 1.5d0, egam = 0.5772156649015328606d0, &
-  pi = 3.1415926535897932385d0)
+integer, intent(in):: mpnw
+integer, intent(in):: nu
+!mp dim1="0:"
+! type (mp_real), intent(in):: rr
 integer (mpiknd), intent(in):: rr(0:)
+! type (mp_real), intent(out):: ss
 integer (mpiknd), intent(out):: ss(0:)
-integer (mpiknd) f1(0:mpnw+6), f2(0:mpnw+6), f3(0:mpnw+6), f4(0:mpnw+6), &
-  f5(0:mpnw+6), sum1(0:mpnw+6), sum2(0:mpnw+6), sum3(0:mpnw+6), td(0:mpnw+6), &
-  tn(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), &
-  rra(0:mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000, ipx = 3
+integer i1, ic1, ic2, k, nua, n1
+real (mpdknd) d1
+real (mpdknd), parameter:: dfrac1 = 0.4e0_mpdk, dfrac2 = 2.8e0_mpdk
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:ipx*mpnw+6"
+! type (mp_real) f1, f2, f3, f4, f5
+integer (mpiknd) f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), f4(0:ipx*mpnw+6), f5(0:ipx*mpnw+6)
+! type (mp_real) sum1, sum2, sum3, td
+integer (mpiknd) sum1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), td(0:ipx*mpnw+6)
+! type (mp_real) tn, t1, t2, t3
+integer (mpiknd) tn(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6)
+! type (mp_real) t4, t5, rra
+integer (mpiknd) t4(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), rra(0:ipx*mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6)
+integer (mpiknd) mpt4(0:ipx*mpnw+6), mpt5(0:ipx*mpnw+6), mpt6(0:ipx*mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (rr) < mpnw + 4 .or. mpspacer (ss) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPBESSELKNR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 524)
+call mpinitwds (mpt1, ipx*mpnw+6-5)
+call mpinitwds (mpt2, ipx*mpnw+6-5)
+call mpinitwds (mpt3, ipx*mpnw+6-5)
+call mpinitwds (mpt4, ipx*mpnw+6-5)
+call mpinitwds (mpt5, ipx*mpnw+6-5)
+call mpinitwds (mpt6, ipx*mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f4(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f5(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tn(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t4(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t5(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (rra(0:ipx*mpnw+6), ipx*mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = min (ipx*mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (ss)
+mpi1 = mpspacer (ss)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** BESSELKNR: Uninitialized or inadequately sized array')
+!   call mpabrt (526)
+  call mpabrt (526)
 endif
+
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+! ic2 = mpwprecr (mpegammacon)
+mpi1 = mpwprecr (mpegammacon)
+ic2 = mpi1
+if (ic1 < mpnw2 .or. ic2 < mpnw2) then
+  write (6, 2) mpnw2
+2 format ('*** BESSELKNR: Pi and Gamma must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (527)
+  call mpabrt (527)
+endif
+
+!mp prec="mpnw1"
 
 !   Check for RR = 0.
 
-if (mpsgn (rr) == 0) then
-  write (mpldb, 2)
-2 format ('*** MPBESSELKNR: Second argument is zero')
-  call mpabrt ( 525)
-endif
-
-!   Check if EGAMMA and PI have been precomputed.
-
-mpnw1 = mpnw + 1
-call mpmdc (mpegammacon, d1, n1, mpnw1)
-if (n1 /= -1 .or. abs (d1 * 2.d0**n1 - egam) > mprdfz &
-  .or. mpwprecr (mpegammacon) < mpnw1) then
-  write (mpldb, 3) mpnw
-3 format ('*** MPBESSELKNR: EGAMMA must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 526)
-endif
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 4) mpnw1
-4 format ('*** MPBESSELKNR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 527)
+! ic1 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+ic1 = mpi1
+if (ic1 == 0) then
+  write (mpldb, 3)
+3 format ('*** BESSELKNR: Second argument is zero')
+!   call mpabrt (528)
+  call mpabrt (528)
 endif
 
 nua = abs (nu)
-mpnw1 = mpnw + 1
-call mpinitwds (f1, mpnw1)
-call mpinitwds (f2, mpnw1)
-call mpinitwds (f3, mpnw1)
-call mpinitwds (f4, mpnw1)
-call mpinitwds (f5, mpnw1)
-call mpinitwds (sum1, mpnw1)
-call mpinitwds (sum2, mpnw1)
-call mpinitwds (sum3, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (rra, mpnw1)
-call mpinitwds (td, mpnw1)
-call mpinitwds (tn, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
-call mpabs (rr, rra, mpnw1)
-call mpmdc (rra, d1, n1, 4)
-d1 = d1 * 2.d0 ** n1
+! rra = abs (rr)
+call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw1)
+call mpeq (mpt1(0:ipx*mpnw+6), rra(0:ipx*mpnw+6), mpnw1)
+! d1 = dpreal (rra)
+call mpdpreal (rra, mpd1, mpnw1)
+d1 = mpd1
 
-if (d1 < dfrac * mpnw1 * mpdpw) then
-  call mpmul (rra, rra, t2, mpnw1)
-  call mpmuld (t2, 0.25d0, t1, mpnw1)
-  call mpdmc (1.d0, 0, f1, mpnw1)
-  call mpdmc (1.d0, 0, f2, mpnw1)
-  call mpdmc (1.d0, 0, f3, mpnw1)
-  call mpdmc (0.d0, 0,  sum1, mpnw1)
+if (d1 < dfrac1 * mpnw1 * mpnbt) then
+
+!   This algorithm requires higher working precision.
+
+  mpnw2 = min (mpnw + nint (d1 * dfrac2 / mpnbt) + 1, mpnwx)
+  if (mpnw2  > ipx*mpnw+1) then
+    write (6, 4) mpnw2
+4   format ('*** BESSELKNR: Inadequate working precision:',i6)
+!     call mpabrt (529)
+    call mpabrt (529)
+  endif
+
+!mp prec="mpnwm"
+!   tc2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+  ic2 = -mpnw2*mpnbt
+!   eps = tc2 ** ic2
+  call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw2"
+!   t2 = rra ** 2
+  call mpnpwr (rra(0:ipx*mpnw+6), 2, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t1 = t2 * 0.25e0_mpdk
+  call mpmuld (t2(0:ipx*mpnw+6), 0.25e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   f1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+!   f2 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!   f3 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpnw2)
+!   sum1 = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, nua - 1
-    call mpmuld (f1, dble (k), t2, mpnw1)
-    call mpeq (t2, f1, mpnw1)
+!     f1 = f1 * real (k, mpdk)
+    call mpmuld (f1(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
   enddo
 
   do k = 0, nua - 1
     if (k > 0) then
-      call mpdivd (f1, dble (nua - k), t2, mpnw1)
-      call mpeq (t2, f1, mpnw1)
-      call mpmul (t1, f2, t2, mpnw1)
-      call mpneg (t2, f2, mpnw1)
-      call mpmuld (f3, dble (k), t2, mpnw1)
-      call mpeq (t2, f3, mpnw1)
+      i1 = nua - k
+!       f1 = f1 / real (i1, mpdk)
+      call mpdivd (f1(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+!       f2 = - t1 * f2
+      call mpmul (t1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt2(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!       f3 = f3 * real (k, mpdk)
+      call mpmuld (f3(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpnw2)
     endif
-    call mpmul (f1, f2, t3, mpnw1)
-    call mpdiv (t3, f3, t2, mpnw1)
-    call mpadd (sum1, t2, t3, mpnw1)
-    call mpeq (t3, sum1, mpnw1)
+!     t3 = f1 * f2
+    call mpmul (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     t2 = t3 / f3
+    call mpdiv (t3(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     sum1 = sum1 + t2
+    call mpadd (sum1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
   enddo
 
-  call mpmuld (sum1, 0.5d0, t2, mpnw1)
-  call mpmuld (rra, 0.5d0, t3, mpnw1)
-  call mpnpwr (t3, nua, t4, mpnw1)
-  call mpdiv (t2, t4, sum1, mpnw1)
-
-  call mpmuld (rra, 0.5d0, t2, mpnw1)
-  call mplog (t2, t3, mpnw1)
-  d1 = (-1.d0) ** (nua + 1)
-  call mpmuld (t3, d1, t2, mpnw1)
-  call mpbesselinr (nua, rra, t3, mpnw1)
-  call mpmul (t2, t3, sum2, mpnw1)
-
-  call mpneg (mpegammacon, f1, mpnw1)
-  call mpeq (f1, f2, mpnw1)
-  call mpdmc (1.d0, 0, f3, mpnw1)
-  call mpdmc (1.d0, 0, f4, mpnw1)
-  call mpdmc (1.d0, 0, f5, mpnw1)
+!   t2 = sum1 * 0.5e0_mpdk
+  call mpmuld (sum1(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = rra * 0.5e0_mpdk
+  call mpmuld (rra(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t4 = t3 ** nua
+  call mpnpwr (t3(0:ipx*mpnw+6), nua, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!   sum1 = t2 / t4
+  call mpdiv (t2(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
+!   t5 = rra * 0.5e0_mpdk
+  call mpmuld (rra(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw2)
+!   t3 = log (t5)
+  call mplog (t5, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+  ic1 = nua + 1
+  d1 = (-1.e0_mpdk) ** ic1
+!   t2 = t3 * d1
+  call mpmuld (t3(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   call mpbesselinr (nua, rra, t3, mpnw2)
+  call mpbesselinr (nua, rra, t3, mpnw2)
+!   sum2 = t2 * t3
+  call mpmul (t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpnw2)
+!   f1 = - mpegammacon
+  call mpneg (mpegammacon(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+!   f2 = f1
+  call mpeq (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!   f3 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpnw2)
+!   f4 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f4(0:ipx*mpnw+6), mpnw2)
+!   f5 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, nua
-    call mpdmc (1.d0, 0, t2, mpnw1)
-    call mpdivd (t2, dble (k), t3, mpnw1)
-    call mpadd (f2, t3, t4, mpnw1)
-    call mpeq (t4, f2, mpnw1)
-    call mpmuld (f5, dble (k), t2, mpnw1)
-    call mpeq (t2, f5, mpnw1)
+!     t2 = mprealdp (1.e0_mpdk)
+    call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     t3 = t2 / real (k, mpdk)
+    call mpdivd (t2(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     f2 = f2 + t3
+    call mpadd (f2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!     f5 = f5 * real (k, mpdk)
+    call mpmuld (f5(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpnw2)
   enddo
 
-  call mpadd (f1, f2, t2, mpnw1)
-  call mpmul (t2, f3, t3, mpnw1)
-  call mpmul (f4, f5, t4, mpnw1)
-  call mpdiv (t3, t4, sum3, mpnw1)
+!   t2 = f1 + f2
+  call mpadd (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = t2 * f3
+  call mpmul (t2(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t4 = f4 * f5
+  call mpmul (f4(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!   sum3 = t3 / t4
+  call mpdiv (t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, itrmax
-    call mpdmc (1.d0, 0, t2, mpnw1)
-    call mpdivd (t2, dble (k), t3, mpnw1)
-    call mpadd (f1, t3, t4, mpnw1)
-    call mpeq (t4, f1, mpnw1)
-    call mpdivd (t2, dble (nua + k), t3, mpnw1)
-    call mpadd (f2, t3, t4, mpnw1)
-    call mpeq (t4, f2, mpnw1)
-    call mpmul (t1, f3, t2, mpnw1)
-    call mpeq (t2, f3, mpnw1)
-    call mpmuld (f4, dble (k), t2, mpnw1)
-    call mpeq (t2, f4, mpnw1)
-    call mpmuld (f5, dble (nua + k), t2, mpnw1)
-    call mpeq (t2, f5, mpnw1)
-    call mpadd (f1, f2, t2, mpnw1)
-    call mpmul (t2, f3, t3, mpnw1)
-    call mpmul (f4, f5, t4, mpnw1)
-    call mpdiv (t3, t4, t2, mpnw1)
-    call mpadd (sum3, t2, t3, mpnw1)
-    call mpeq (t3, sum3, mpnw1)
-
-    call mpabs (t2, tc1, 4)
-    call mpmul (eps, sum3, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 100
+!     t2 = mprealdp (1.e0_mpdk)
+    call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     t3 = t2 / real (k, mpdk)
+    call mpdivd (t2(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     f1 = f1 + t3
+    call mpadd (f1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+    i1 = nua + k
+!     t3 = t2 / real (i1, mpdk)
+    call mpdivd (t2(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     f2 = f2 + t3
+    call mpadd (f2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!     f3 = t1 * f3
+    call mpmul (t1(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpnw2)
+!     f4 = f4 * real (k, mpdk)
+    call mpmuld (f4(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f4(0:ipx*mpnw+6), mpnw2)
+!     f5 = f5 * real (i1, mpdk)
+    call mpmuld (f5(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpnw2)
+!     t2 = f1 + f2
+    call mpadd (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     t3 = t2 * f3
+    call mpmul (t2(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     t4 = f4 * f5
+    call mpmul (f4(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!     t2 = t3 / t4
+    call mpdiv (t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     sum3 = sum3 + t2
+    call mpadd (sum3(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpnw2)
+!mp prec="mpnwm"
+!     tc1 = abs (t2) - eps * abs (sum3)
+    call mpabs (t2, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum3, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 100
   enddo
 
   write (mpldb, 5)
-5 format ('*** MPBESSELKNR: Loop end error 1')
-  call mpabrt ( 528)
+5 format ('*** BESSELKNR: Loop end error 1')
+!   call mpabrt (530)
+  call mpabrt (530)
 
 100 continue
 
-  call mpmuld (rra, 0.5d0, t2, mpnw1)
-  call mpnpwr (t2, nua, t3, mpnw1)
-  d1 = (-1.d0)**nua * 0.5d0
-  call mpmuld (t3, d1, t4, mpnw1)
-  call mpmul (t4, sum3, t2, mpnw1)
-  call mpeq (t2, sum3, mpnw1)
-  call mpadd (sum1, sum2, t2, mpnw1)
-  call mpadd (t2, sum3, t3, mpnw1)
+!mp prec="mpnw2"
+!   t2 = rra * 0.5e0_mpdk
+  call mpmuld (rra(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = t2 ** nua
+  call mpnpwr (t2(0:ipx*mpnw+6), nua, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+  d1 = (-1.e0_mpdk) ** nua * 0.5e0_mpdk
+!   t4 = t3 * d1
+  call mpmuld (t3(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!   sum3 = t4 * sum3
+  call mpmul (t4(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpnw2)
+!   t2 = sum1 + sum2
+  call mpadd (sum1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = t2 + sum3
+  call mpadd (t2(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
 else
-!  sum1 = mpreal (1.d0, mpnw)
-!  t1 = mpreal (4.d0 * dble (nua)**2, mpnw)
-!  t2 = mpreal (1.d0, mpnw)
-!  t3 = mpreal (1.d0, mpnw)
-
-  call mpdmc (1.d0, 0, sum1, mpnw1)
-  d1 = 4.d0 * dble (nua)**2
-  call mpdmc (d1, 0, t1, mpnw1)
-  call mpdmc (1.d0, 0, tn, mpnw1)
-  call mpdmc (1.d0, 0, td, mpnw1)
+  mpnw1 = mpnw + 1
+!mp prec="mpnwm"
+!   tc2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+  ic2 = -mpnw1*mpnbt
+!   eps = tc2 ** ic2
+  call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw1"
+!   sum1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+  d1 = 4.e0_mpdk * real (nua, mpdk) ** 2
+!   t1 = mprealdp (d1)
+  call mprealdp (d1, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   tn = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn(0:ipx*mpnw+6), mpnw1)
+!   td = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), td(0:ipx*mpnw+6), mpnw1)
 
   do k = 1, itrmax
-!  t2 = t2 * (t1 - (2.d0*k - 1.d0)**2)
-!  t3 = t3 * dble (k) * 8.d0 * xa
-!  t4 = t2 / t3
-!  sum1 = sum1 + t4
-
-    d1 = 2.d0 * k - 1.d0
-    call mpdmc (d1, 0, t2, mpnw1)
-    call mpmul (t2, t2, t3, mpnw1)
-    call mpsub (t1, t3, t2, mpnw1)
-    call mpmul (tn, t2, t3, mpnw1)
-    call mpeq (t3, tn, mpnw1)
-    call mpmuld (rra, 8.d0 * k, t2, mpnw1)
-    call mpmul (td, t2, t3,  mpnw1)
-    call mpeq (t3, td, mpnw1)
-    call mpdiv (tn, td, t4, mpnw1)
-    call mpadd (sum1, t4, t3, mpnw1)
-    call mpeq (t3, sum1, mpnw1)
-
-!   if (abs (t4) / abs (sum1) < eps) goto 110
-
-    call mpabs (t4, tc1, 4)
-    call mpmul (eps, sum1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 110
+    d1 = real (2*k-1, mpdk)
+!     t2 = mprealdp (d1)
+    call mprealdp (d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     t3 = t2 ** 2
+    call mpnpwr (t2(0:ipx*mpnw+6), 2, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!     t2 = t1 - t3
+    call mpsub (t1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     tn = tn * t2
+    call mpmul (tn(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), tn(0:ipx*mpnw+6), mpnw1)
+    i1 = 8 * k
+!     t2 = rra * real (i1, mpdk)
+    call mpmuld (rra(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     td = td * t2
+    call mpmul (td(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), td(0:ipx*mpnw+6), mpnw1)
+!     t4 = tn / td
+    call mpdiv (tn(0:ipx*mpnw+6), td(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw1)
+!     sum1 = sum1 + t4
+    call mpadd (sum1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc2 = abs (t4) - eps * abs (sum1)
+    call mpabs (t4, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum1, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic2 < 0) goto 110
   enddo
 
 write (mpldb, 6)
-6 format ('*** MPBESSELKNR: Loop end error 2')
-call mpabrt ( 529)
+6 format ('*** BESSELKNR: Loop end error 2')
+! call mpabrt (531)
+call mpabrt (531)
 
 110 continue
 
-! t1 = sqrt (mppi (mpnw) / (2.d0 * xa)) / exp (xa)
-! besseli = t1 * sum1
-
-  call mpexp (rra, t1, mpnw1)
-  call mpmuld (rra, 2.d0, t2, mpnw1)
-  call mpdiv (mppicon, t2, t3, mpnw1)
-  call mpsqrt (t3, t4, mpnw1)
-  call mpdiv (t4, t1, t2, mpnw1)
-  call mpmul (t2, sum1, t3, mpnw1)
+!mp prec="mpnw1"
+!   t1 = exp (rra)
+  call mpexp (rra, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = rra * 2.e0_mpdk
+  call mpmuld (rra(0:ipx*mpnw+6), 2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t3 = mppicon / t2
+  call mpdiv (mppicon(0:), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!   t4 = sqrt (t3)
+  call mpsqrt (t3, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw1)
+!   t2 = t4 / t1
+  call mpdiv (t4(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t3 = t2 * sum1
+  call mpmul (t2(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
 endif
 
-! if (x < 0.d0 .and. mod (nu, 2) /= 0) besselk = - besselk
-
-if (mpsgn (rr) < 0 .and. mod (nu, 2) /= 0) then
-  call mpneg (t3, t4, mpnw1)
-  call mpeq (t4, t3, mpnw1)
+!mp prec="mpnw"
+! ic1 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+ic1 = mpi1
+if (ic1 < 0 .and. mod (nu, 2) /= 0) then
+!   t3 = - t3
+  call mpneg (t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw)
 endif
-call mproun (t3, mpnw)
-call mpeq (t3, ss, mpnw)
+! ss = t3
+call mpeq (t3(0:ipx*mpnw+6), ss(0:), mpnw)
+
 return
 end subroutine mpbesselknr
 
@@ -1564,59 +2323,253 @@ subroutine mpbesselkr (qq, rr, ss, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i1, i2, mpnw1, n1
-real (mprknd) d1
+!mp dim1="0:"
+! type (mp_real), intent(in):: qq, rr
 integer (mpiknd), intent(in):: qq(0:), rr(0:)
+! type (mp_real), intent(out):: ss
 integer (mpiknd), intent(out):: ss(0:)
-integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000, ipx = 3
+real (mpdknd), parameter:: dfrac1 = 0.4e0_mpdk, dfrac2 = 2.8e0_mpdk
+integer ic1, ic2, i0, i1, i2, k, n1
+real (mpdknd) d1
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:ipx*mpnw+6"
+! type (mp_real) t1, t2, t3, t4
+integer (mpiknd) t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6)
+! type (mp_real) rra, sum1, tn, td
+integer (mpiknd) rra(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), tn(0:ipx*mpnw+6), td(0:ipx*mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6)
+integer (mpiknd) mpt4(0:ipx*mpnw+6), mpt5(0:ipx*mpnw+6), mpt6(0:ipx*mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (qq) < mpnw + 4 .or. mpspacer (rr) < mpnw + 4 &
-  .or. mpspacer (ss) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPBESSELKR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 530)
+call mpinitwds (mpt1, ipx*mpnw+6-5)
+call mpinitwds (mpt2, ipx*mpnw+6-5)
+call mpinitwds (mpt3, ipx*mpnw+6-5)
+call mpinitwds (mpt4, ipx*mpnw+6-5)
+call mpinitwds (mpt5, ipx*mpnw+6-5)
+call mpinitwds (mpt6, ipx*mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (t1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t4(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (rra(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tn(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td(0:ipx*mpnw+6), ipx*mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = ipx * mpnw + 1
+
+! ic1 = mpspacer (ss)
+mpi1 = mpspacer (ss)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** BESSELKR: Uninitialized or inadequately sized array')
+!   call mpabrt (532)
+  call mpabrt (532)
 endif
 
-mpnw1 = mpnw + 1
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw2) then
+  write (6, 2) mpnw2
+2 format ('*** BESSELKR: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (533)
+  call mpabrt (533)
+endif
+
+!mp prec="mpnw1"
 
 !   If QQ is integer, call mpbesselknr; if qq < 0 and rr <= 0, then error.
 
-call mpinfr (qq, t1, t2, mpnw)
-i1 = mpsgn (qq)
-i2 = mpsgn (rr)
-if (mpsgn (t2) == 0) then
-  call mpmdc (qq, d1, n1, mpnw)
-  d1 = d1 * 2.d0**n1
+! t1 = qq - anint (qq)
+call mpnint (qq, mpt1(0:ipx*mpnw+6), mpnw1)
+call mpsub (qq(0:), mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+call mpeq (mpt2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+! i0 = mpsgn (t1)
+mpi1 = mpsgnr (t1)
+i0 = mpi1
+! i1 = mpsgn (qq)
+mpi1 = mpsgnr (qq)
+i1 = mpi1
+! i2 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+i2 = mpi1
+if (i0 == 0) then
+!   d1 = dpreal (qq)
+  call mpdpreal (qq, mpd1, mpnw1)
+  d1 = mpd1
   n1 = nint (d1)
+!   call mpbesselknr (n1, rr, t1, mpnw)
   call mpbesselknr (n1, rr, t1, mpnw)
   goto 120
 elseif (i1 < 0 .and. i2 <= 0) then
-  write (mpldb, 2)
-2 format ('*** MPBESSELKR: First argument < 0 and second argument <= 0')
-  call mpabrt ( 531)
+  write (mpldb, 3)
+3 format ('*** BESSELKR: First argument < 0 and second argument <= 0')
+!   call mpabrt (534)
+  call mpabrt (534)
 endif
 
-call mpneg (qq, t1, mpnw1)
-call mpbesselir (t1, rr, t2, mpnw1)
-call mpbesselir (qq, rr, t3, mpnw1)
-call mpsub (t2, t3, t4, mpnw1)
-call mpmul (qq, mppicon, t1, mpnw1)
-call mpcssnr (t1, t2, t3, mpnw1)
-call mpdiv (t4, t3, t2, mpnw1)
-call mpmul (mppicon, t2, t3, mpnw1)
-call mpmuld (t3, 0.5d0, t1, mpnw1)
+! t1 = abs (rr)
+call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw1)
+call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+! d1 = dpreal (t1)
+call mpdpreal (t1, mpd1, mpnw1)
+d1 = mpd1
+
+if (d1 < dfrac1 * mpnw * mpnbt) then
+
+!   This algorithm requires higher working precision.
+
+  mpnw2 = min (mpnw + nint (d1 * dfrac2 / mpnbt) + 1, mpnwx)
+  if (mpnw2 > ipx*mpnw+1) then
+    write (6, 4) mpnw2
+4   format ('*** BESSELKR: Inadequate working precision:',i6)
+!     call mpabrt (535)
+    call mpabrt (535)
+  endif
+
+!mp prec="mpnw2"
+!   t1 = - qq
+  call mpneg (qq(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   call mpbesselir (t1, rr, t2, mpnw2)
+  call mpbesselir (t1, rr, t2, mpnw2)
+!   call mpbesselir (qq, rr, t3, mpnw2)
+  call mpbesselir (qq, rr, t3, mpnw2)
+!   t4 = t2 - t3
+  call mpsub (t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!   t1 = qq * mppicon
+  call mpmul (qq(0:), mppicon(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   t3 = sin (t1)
+  call mpcssnr (t1, mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t2 = t4 / t3
+  call mpdiv (t4(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = mppicon * t2
+  call mpmul (mppicon(0:), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t1 = t3 * 0.5e0_mpdk
+  call mpmuld (t3(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+else
+  mpnw1 = mpnw + 1
+!mp prec="mpnwm"
+!   tc2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+  ic2 = -mpnw1*mpnbt
+!   eps = tc2 ** ic2
+  call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw1"
+!   rra = abs (rr)
+  call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), rra(0:ipx*mpnw+6), mpnw1)
+!   sum1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+!   t1 = 4.e0_mpdk * qq ** 2
+  call mpnpwr (qq(0:), 2, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpmuld (mpt1(0:ipx*mpnw+6), 4.e0_mpdk, mpt2(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   tn = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn(0:ipx*mpnw+6), mpnw1)
+!   td = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), td(0:ipx*mpnw+6), mpnw1)
+
+  do k = 1, itrmax
+    d1 = real (2*k-1, mpdk)
+!     t2 = mprealdp (d1)
+    call mprealdp (d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     t3 = t2 ** 2
+    call mpnpwr (t2(0:ipx*mpnw+6), 2, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!     t2 = t1 - t3
+    call mpsub (t1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     tn = tn * t2
+    call mpmul (tn(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), tn(0:ipx*mpnw+6), mpnw1)
+    i1 = 8 * k
+!     t2 = rra * real (i1, mpdk)
+    call mpmuld (rra(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     td = td * t2
+    call mpmul (td(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), td(0:ipx*mpnw+6), mpnw1)
+!     t4 = tn / td
+    call mpdiv (tn(0:ipx*mpnw+6), td(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw1)
+!     sum1 = sum1 + t4
+    call mpadd (sum1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc2 = abs (t4) - eps * abs (sum1)
+    call mpabs (t4, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum1, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic2 < 0) goto 110
+  enddo
+
+write (mpldb, 5)
+5 format ('*** BESSELKNR: Loop end error')
+! call mpabrt (536)
+call mpabrt (536)
+
+110 continue
+
+!mp prec="mpnw1"
+!   t1 = exp (rra)
+  call mpexp (rra, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = rra * 2.e0_mpdk
+  call mpmuld (rra(0:ipx*mpnw+6), 2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t3 = mppicon / t2
+  call mpdiv (mppicon(0:), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!   t4 = sqrt (t3)
+  call mpsqrt (t3, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw1)
+!   t2 = t4 / t1
+  call mpdiv (t4(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t1 = t2 * sum1
+  call mpmul (t2(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+endif
 
 120 continue
 
-call mproun (t1, mpnw)
-call mpeq (t1, ss, mpnw)
+!mp prec="mpnw"
+! ss = t1
+call mpeq (t1(0:ipx*mpnw+6), ss(0:), mpnw)
 return
 end subroutine mpbesselkr
 
@@ -1627,315 +2580,545 @@ subroutine mpbesselynr (nu, rr, ss, mpnw)
 !   and DLMF 10.17.4 for large RR, relative to precision.
 
 implicit none
-integer, intent(in):: nu, mpnw
-integer ic1, ic2, itrmax, k, mpnw1, nua, n1
-real (mprknd) dfrac, d1, d2, egam, pi
-parameter (itrmax = 1000000, dfrac = 1.5d0, egam = 0.5772156649015328606d0, &
-  pi = 3.1415926535897932385d0)
+integer, intent(in):: mpnw
+integer, intent(in):: nu
+!mp dim1="0:"
+! type (mp_real), intent(in):: rr
 integer (mpiknd), intent(in):: rr(0:)
+! type (mp_real), intent(out):: ss
 integer (mpiknd), intent(out):: ss(0:)
-integer (mpiknd) f1(0:2*mpnw+6), f2(0:2*mpnw+6), f3(0:2*mpnw+6), f4(0:2*mpnw+6), &
-  f5(0:2*mpnw+6), rra(0:2*mpnw+6), rr2(0:2*mpnw+6), sum1(0:2*mpnw+6), &
-  sum2(0:2*mpnw+6), sum3(0:2*mpnw+6), td1(0:2*mpnw+6), td2(0:2*mpnw+6), &
-  tn1(0:2*mpnw+6), tn2(0:2*mpnw+6), t1(0:2*mpnw+6), t2(0:2*mpnw+6), &
-  t3(0:2*mpnw+6), t4(0:2*mpnw+6), t41(0:2*mpnw+6), t42(0:2*mpnw+6), &
-  t5(0:2*mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000, ipx = 3
+real (mpdknd), parameter:: dfrac1 = 0.4e0_mpdk, dfrac2 = 1.4e0_mpdk
+integer i1, ic1, ic2, k, nua, n1
+real (mpdknd) d1, d2
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:ipx*mpnw+6"
+! type (mp_real) f1, f2, f3, f4, f5
+integer (mpiknd) f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), f4(0:ipx*mpnw+6), f5(0:ipx*mpnw+6)
+! type (mp_real) rra, rr2, sum1, sum2
+integer (mpiknd) rra(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6)
+! type (mp_real) sum3, td1, td2
+integer (mpiknd) sum3(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6)
+! type (mp_real) tn1, tn2, t1, t2
+integer (mpiknd) tn1(0:ipx*mpnw+6), tn2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6)
+! type (mp_real) t3, t4, t41, t42, t5
+integer (mpiknd) t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), t5(0:ipx*mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6)
+integer (mpiknd) mpt4(0:ipx*mpnw+6), mpt5(0:ipx*mpnw+6), mpt6(0:ipx*mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (rr) < mpnw + 4 .or. mpspacer (ss) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPBESSELYNR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 532)
+call mpinitwds (mpt1, ipx*mpnw+6-5)
+call mpinitwds (mpt2, ipx*mpnw+6-5)
+call mpinitwds (mpt3, ipx*mpnw+6-5)
+call mpinitwds (mpt4, ipx*mpnw+6-5)
+call mpinitwds (mpt5, ipx*mpnw+6-5)
+call mpinitwds (mpt6, ipx*mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f4(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (f5(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (rra(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (rr2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (sum3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tn1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tn2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t4(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t41(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t42(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t5(0:ipx*mpnw+6), ipx*mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = ipx * mpnw + 1
+
+! ic1 = mpspacer (ss)
+mpi1 = mpspacer (ss)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** BESSELYNR: Uninitialized or inadequately sized array')
+!   call mpabrt (537)
+  call mpabrt (537)
 endif
+
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+! ic2 = mpwprecr (mpegammacon)
+mpi1 = mpwprecr (mpegammacon)
+ic2 = mpi1
+if (ic1 < mpnw2 .or. ic2 < mpnw2) then
+  write (6, 2) mpnw2
+2 format ('*** BESSELYNR: Pi and Gamma must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (538)
+  call mpabrt (538)
+endif
+
+!mp prec="mpnw1"
 
 !   Check for RR = 0.
 
-if (mpsgn (rr) == 0) then
-  write (mpldb, 2)
-2 format ('*** MPBESSELYNR: argument is negative or too large')
-  call mpabrt ( 533)
-endif
-
-!   Check if EGAMMA and PI have been precomputed.
-
-mpnw1 = 2 * mpnw + 1
-call mpmdc (mpegammacon, d1, n1, mpnw1)
-if (n1 /= -1 .or. abs (d1 * 2.d0**n1 - egam) > mprdfz &
-  .or. mpwprecr (mpegammacon) < mpnw1) then
-  write (mpldb, 3) mpnw
-3 format ('*** MPBESSELYNR: EGAMMA must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 534)
-endif
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 4) mpnw1
-4 format ('*** MPBESSELYNR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 535)
+! ic1 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+ic1 = mpi1
+if (ic1 == 0) then
+  write (mpldb, 3)
+3 format ('*** BESSELYNR: Argument is negative or too large')
+!   call mpabrt (539)
+  call mpabrt (539)
 endif
 
 nua = abs (nu)
-call mpinitwds (f1, mpnw1)
-call mpinitwds (f2, mpnw1)
-call mpinitwds (f3, mpnw1)
-call mpinitwds (f4, mpnw1)
-call mpinitwds (f5, mpnw1)
-call mpinitwds (rra, mpnw1)
-call mpinitwds (rr2, mpnw1)
-call mpinitwds (sum1, mpnw1)
-call mpinitwds (sum2, mpnw1)
-call mpinitwds (sum3, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t41, mpnw1)
-call mpinitwds (t42, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (td1, mpnw1)
-call mpinitwds (td2, mpnw1)
-call mpinitwds (tn1, mpnw1)
-call mpinitwds (tn2, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw*mpnbt, eps, 4)
-call mpmdc (rr, d1, n1, 4)
-d1 = abs (d1) * 2.d0 ** n1
+! t1 = abs (rr)
+call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw1)
+call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+! d1 = dpreal (t1)
+call mpdpreal (t1, mpd1, mpnw1)
+d1 = mpd1
 
-if (d1 < dfrac * mpnw1 * mpdpw) then
-  mpnw1 = min (mpnw + nint (d1 / (dfrac * mpdpw)), 2 * mpnw + 1)
-  call mpabs (rr, rra, mpnw1)
-  call mpmul (rra, rra, t2, mpnw1)
-  call mpmuld (t2, 0.25d0, t1, mpnw1)
-  call mpdmc (1.d0, 0, f1, mpnw1)
-  call mpdmc (1.d0, 0, f2, mpnw1)
-  call mpdmc (1.d0, 0, f3, mpnw1)
-  call mpdmc (0.d0, 0,  sum1, mpnw1)
+if (d1 < dfrac1 * mpnw1 * mpnbt) then
+  mpnw2 = min (mpnw + nint (d1 * dfrac2 / mpnbt) + 1, mpnwx)
+  if (mpnw2 > ipx*mpnw+1) then
+    write (6, 4) mpnw2
+4   format ('*** BESSELYNR: Inadequate working precision:',i6)
+!     call mpabrt (540)
+    call mpabrt (540)
+  endif
+
+!mp prec="mpnwm"
+!   tc2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+  ic2 = -mpnw2*mpnbt
+!   eps = tc2 ** ic2
+  call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw2"
+!   rra = abs (rr)
+  call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), rra(0:ipx*mpnw+6), mpnw2)
+!   t2 = rra ** 2
+  call mpnpwr (rra(0:ipx*mpnw+6), 2, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t1 = t2 * 0.25e0_mpdk
+  call mpmuld (t2(0:ipx*mpnw+6), 0.25e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   f1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+!   f2 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!   f3 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpnw2)
+!   sum1 = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, nua - 1
-    call mpmuld (f1, dble (k), t2, mpnw1)
-    call mpeq (t2, f1, mpnw1)
+!     f1 = f1 * real (k, mpdk)
+    call mpmuld (f1(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
   enddo
 
   do k = 0, nua - 1
     if (k > 0) then
-      call mpdivd (f1, dble (nua - k), t2, mpnw1)
-      call mpeq (t2, f1, mpnw1)
-      call mpmul (t1, f2, t2, mpnw1)
-      call mpeq (t2, f2, mpnw1)
-      call mpmuld (f3, dble (k), t2, mpnw1)
-      call mpeq (t2, f3, mpnw1)
+      i1 = nua - k
+!       f1 = f1 / real (i1, mpdk)
+      call mpdivd (f1(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+!       f2 = t1 * f2
+      call mpmul (t1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!       f3 = f3 * real (k, mpdk)
+      call mpmuld (f3(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpnw2)
     endif
-    call mpmul (f1, f2, t3, mpnw1)
-    call mpdiv (t3, f3, t2, mpnw1)
-    call mpadd (sum1, t2, t3, mpnw1)
-    call mpeq (t3, sum1, mpnw1)
+!     t3 = f1 * f2
+    call mpmul (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     t2 = t3 / f3
+    call mpdiv (t3(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     sum1 = sum1 + t2
+    call mpadd (sum1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
   enddo
 
-  call mpmuld (rra, 0.5d0, t3, mpnw1)
-  call mpnpwr (t3, nua, t4, mpnw1)
-  call mpdiv (sum1, t4, t3, mpnw1)
-  call mpneg (t3, sum1, mpnw1)
+!   t3 = rra * 0.5e0_mpdk
+  call mpmuld (rra(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t4 = t3 ** nua
+  call mpnpwr (t3(0:ipx*mpnw+6), nua, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!   sum1 = - sum1 / t4
+  call mpdiv (sum1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt2(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw2)
+!   t2 = rra * 0.5e0_mpdk
+  call mpmuld (rra(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = log (t2)
+  call mplog (t2, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t2 = t3 * 2.e0_mpdk
+  call mpmuld (t3(0:ipx*mpnw+6), 2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   call mpbesseljnr (nua, rra, t3, mpnw2)
+  call mpbesseljnr (nua, rra, t3, mpnw2)
+!   sum2 = t2 * t3
+  call mpmul (t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpnw2)
 
-  call mpmuld (rra, 0.5d0, t2, mpnw1)
-  call mplog (t2, t3, mpnw1)
-  call mpmuld (t3, 2.d0, t2, mpnw1)
-  call mpbesseljnr (nua, rra, t3, mpnw1)
-  call mpmul (t2, t3, sum2, mpnw1)
-
-  call mpneg (mpegammacon, f1, mpnw1)
-  call mpeq (f1, f2, mpnw1)
-  call mpdmc (1.d0, 0, f3, mpnw1)
-  call mpdmc (1.d0, 0, f4, mpnw1)
-  call mpdmc (1.d0, 0, f5, mpnw1)
+!   f1 = - mpegammacon
+  call mpneg (mpegammacon(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+!   f2 = f1
+  call mpeq (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!   f3 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpnw2)
+!   f4 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f4(0:ipx*mpnw+6), mpnw2)
+!   f5 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, nua
-    call mpdmc (1.d0, 0, t2, mpnw1)
-    call mpdivd (t2, dble (k), t3, mpnw1)
-    call mpadd (f2, t3, t4, mpnw1)
-    call mpeq (t4, f2, mpnw1)
-    call mpmuld (f5, dble (k), t2, mpnw1)
-    call mpeq (t2, f5, mpnw1)
+!     t2 = mprealdp (1.e0_mpdk)
+    call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     t3 = t2 / real (k, mpdk)
+    call mpdivd (t2(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     f2 = f2 + t3
+    call mpadd (f2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!     f5 = f5 * real (k, mpdk)
+    call mpmuld (f5(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpnw2)
   enddo
 
-  call mpadd (f1, f2, t2, mpnw1)
-  call mpmul (t2, f3, t3, mpnw1)
-  call mpmul (f4, f5, t4, mpnw1)
-  call mpdiv (t3, t4, sum3, mpnw1)
+!   t2 = f1 + f2
+  call mpadd (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = t2 * f3
+  call mpmul (t2(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t4 = f4 * f5
+  call mpmul (f4(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!   sum3 = t3 / t4
+  call mpdiv (t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, itrmax
-    call mpdmc (1.d0, 0, t2, mpnw1)
-    call mpdivd (t2, dble (k), t3, mpnw1)
-    call mpadd (f1, t3, t4, mpnw1)
-    call mpeq (t4, f1, mpnw1)
-    call mpdivd (t2, dble (nua + k), t3, mpnw1)
-    call mpadd (f2, t3, t4, mpnw1)
-    call mpeq (t4, f2, mpnw1)
-    call mpmul (t1, f3, t2, mpnw1)
-    call mpneg (t2, f3, mpnw1)
-    call mpmuld (f4, dble (k), t2, mpnw1)
-    call mpeq (t2, f4, mpnw1)
-    call mpmuld (f5, dble (nua + k), t2, mpnw1)
-    call mpeq (t2, f5, mpnw1)
-    call mpadd (f1, f2, t2, mpnw1)
-    call mpmul (t2, f3, t3, mpnw1)
-    call mpmul (f4, f5, t4, mpnw1)
-    call mpdiv (t3, t4, t2, mpnw1)
-    call mpadd (sum3, t2, t3, mpnw1)
-    call mpeq (t3, sum3, mpnw1)
-
-    call mpabs (t2, tc1, 4)
-    call mpmul (eps, sum3, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 100
-  enddo
-
-  write (mpldb, 6)
-6 format ('*** MPBESSELYNR: Loop end error 1')
-  call mpabrt ( 536)
-
-100 continue
-
-  call mpmuld (rra, 0.5d0, t2, mpnw1)
-  call mpnpwr (t2, nua, t3, mpnw1)
-  call mpmul (t3, sum3, t2, mpnw1)
-  call mpneg (t2, sum3, mpnw1)
-
-  call mpadd (sum1, sum2, t2, mpnw1)
-  call mpadd (t2, sum3, t4, mpnw1)
-  call mpeq (mppicon, t2, mpnw1)
-  call mpdiv (t4, t2, t3, mpnw1)
-else
-! xa2 = xa**2
-! t1 = mpreal (4.d0 * dble (nua)**2, mpnw)
-! tn1 = mpreal (1.d0, mpnw)
-! tn2 = (t1 - 1.d0) / 8.d0
-! td1 = mpreal (1.d0, mpnw)
-! td2 = xa
-! sum1 = tn1 / td1
-! sum2 = tn2 / t32
-
-  mpnw1 = mpnw + 1
-  call mpabs (rr, rra, mpnw1)
-  call mpmul (rra, rra, rr2, mpnw1)
-  d1 = 4.d0 * dble (nua)**2
-  call mpdmc (d1, 0, t1, mpnw1)
-  call mpdmc (1.d0, 0, tn1, mpnw1)
-  call mpsub (t1, tn1, t2, mpnw1)
-  call mpdivd (t2, 8.d0, tn2, mpnw1)
-  call mpdmc (1.d0, 0, td1, mpnw1)
-  call mpeq (rra, td2, mpnw1)
-  call mpdiv (tn1, td1, sum1, mpnw1)
-  call mpdiv (tn2, td2, sum2, mpnw1)
-
-  do k = 1, itrmax
-!   tn1 = -tn1 * (t1 - (2.d0*(2.d0*k-1.d0) - 1.d0)**2) * (t1 - (2.d0*(2.d0*k) - 1.d0)**2)
-
-    d1 = (2.d0*(2.d0*k-1.d0) - 1.d0)**2
-    d2 = (2.d0*(2.d0*k) - 1.d0)**2
-    call mpdmc (d1, 0, t2, mpnw1)
-    call mpsub (t1, t2, t3, mpnw1)
-    call mpdmc (d2, 0, t2, mpnw1)
-    call mpsub (t1, t2, t5, mpnw1)
-    call mpmul (t3, t5, t2, mpnw1)
-    call mpmul (tn1, t2, t3, mpnw1)
-    call mpneg (t3, tn1, mpnw1)
-
-!   td1 = td1 * dble (2*k-1) * dble (2*k) * 64.d0 * xa2
-
-    d1 = dble (2*k-1) * dble (2*k) * 64.d0
-    call mpmuld (td1, d1, t2, mpnw1)
-    call mpmul (t2, rr2, td1, mpnw1)
-
-!   t41 = tn1 / td1
-!   sum1 = sum1 + t41
-
-    call mpdiv (tn1, td1, t41, mpnw1)
-    call mpadd (sum1, t41, t2, mpnw1)
-    call mpeq (t2, sum1, mpnw1)
-
-!   tn2 = -tn2 * (t1 - (2.d0*(2.d0*k) - 1.d0)**2) * (t1 - (2.d0*(2.d0*k+1.d0) - 1.d0)**2)
-
-    d1 = (2.d0*(2.d0*k) - 1.d0)**2
-    d2 = (2.d0*(2.d0*k+1.d0) - 1.d0)**2
-    call mpdmc (d1, 0, t2, mpnw1)
-    call mpsub (t1, t2, t3, mpnw1)
-    call mpdmc (d2, 0, t2, mpnw1)
-    call mpsub (t1, t2, t5, mpnw1)
-    call mpmul (t3, t5, t2, mpnw1)
-    call mpmul (tn2, t2, t3, mpnw1)
-    call mpneg (t3, tn2, mpnw1)
-
-!   td2 = td2 * dble (2*k) * dble (2*k+1) * 64.d0 * xa2
-
-    d1 = dble (2*k) * dble (2*k+1) * 64.d0
-    call mpmuld (td2, d1, t2, mpnw1)
-    call mpmul (t2, rr2, td2, mpnw1)
-
-!  t42 = tn2 / td2
-!  sum2 = sum2 + t42
-
-    call mpdiv (tn2, td2, t42, mpnw1)
-    call mpadd (sum2, t42, t2, mpnw1)
-    call mpeq (t2, sum2, mpnw1)
-
-!  if (abs (t41) / abs (sum1) < eps .and. abs (t42) / abs (sum2) < eps ) goto 110
-
-    call mpabs (t41, tc1, 4)
-    call mpmul (eps, sum1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    call mpabs (t42, tc1, 4)
-    call mpmul (eps, sum2, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic2, 4)
-    if (ic1 <= 0 .and. ic2 <= 0) goto 110
+!     t2 = mprealdp (1.e0_mpdk)
+    call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     t3 = t2 / real (k, mpdk)
+    call mpdivd (t2(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     f1 = f1 + t3
+    call mpadd (f1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f1(0:ipx*mpnw+6), mpnw2)
+    i1 = nua + k
+!     t3 = t2 / real (i1, mpdk)
+    call mpdivd (t2(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     f2 = f2 + t3
+    call mpadd (f2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpnw2)
+!     f3 = - t1 * f3
+    call mpmul (t1(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt2(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpnw2)
+!     f4 = f4 * real (k, mpdk)
+    call mpmuld (f4(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f4(0:ipx*mpnw+6), mpnw2)
+!     f5 = f5 * real (i1, mpdk)
+    call mpmuld (f5(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpnw2)
+!     t2 = f1 + f2
+    call mpadd (f1(0:ipx*mpnw+6), f2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     t3 = t2 * f3
+    call mpmul (t2(0:ipx*mpnw+6), f3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     t4 = f4 * f5
+    call mpmul (f4(0:ipx*mpnw+6), f5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!     t2 = t3 / t4
+    call mpdiv (t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     sum3 = sum3 + t2
+    call mpadd (sum3(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpnw2)
+!mp prec="mpnwm"
+!     tc1 = abs (t2) - eps * abs (sum3)
+    call mpabs (t2, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum3, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 100
   enddo
 
   write (mpldb, 5)
-5 format ('*** MPBESSELYNR: Loop end error 2')
-  call mpabrt ( 537)
+5 format ('*** BESSELYNR: Loop end error 1')
+!   call mpabrt (541)
+  call mpabrt (541)
+
+100 continue
+
+!mp prec="mpnw2"
+!   t2 = rra * 0.5e0_mpdk
+  call mpmuld (rra(0:ipx*mpnw+6), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = t2 ** nua
+  call mpnpwr (t2(0:ipx*mpnw+6), nua, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   sum3 = - t3 * sum3
+  call mpmul (t3(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt2(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpnw2)
+!   t2 = sum1 + sum2
+  call mpadd (sum1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t4 = t2 + sum3
+  call mpadd (t2(0:ipx*mpnw+6), sum3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!   t2 = mppicon
+  call mpeq (mppicon(0:), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = t4 / t2
+  call mpdiv (t4(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+else
+  mpnw1 = min (mpnw + 1, mpnwx)
+!mp prec="mpnwm"
+!   tc2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+  ic2 = -mpnw1*mpnbt
+!   eps = tc2 ** ic2
+  call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw1"
+!   rra = abs (rr)
+  call mpabs (rr, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), rra(0:ipx*mpnw+6), mpnw1)
+!   rr2 = rra ** 2
+  call mpnpwr (rra(0:ipx*mpnw+6), 2, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), mpnw1)
+  d2 = 4.e0_mpdk * real (nua, mpdk) ** 2
+!   t1 = mprealdp (d2)
+  call mprealdp (d2, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   tn1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw1)
+!   t2 = t1 - tn1
+  call mpsub (t1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   tn2 = t2 / 8.e0_mpdk
+  call mpdivd (t2(0:ipx*mpnw+6), 8.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn2(0:ipx*mpnw+6), mpnw1)
+!   td1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw1)
+!   td2 = rra
+  call mpeq (rra(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpnw1)
+!   sum1 = tn1 / td1
+  call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+!   sum2 = tn2 / td2
+  call mpdiv (tn2(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpnw1)
+
+  do k = 1, itrmax
+    d1 = real (4*k-3, mpdk) ** 2
+    d2 = real (4*k-1, mpdk) ** 2
+!     t2 = mprealdp (d1)
+    call mprealdp (d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     t3 = t1 - t2
+    call mpsub (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!     t2 = mprealdp (d2)
+    call mprealdp (d2, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     t5 = t1 - t2
+    call mpsub (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw1)
+!     t2 = t3 * t5
+    call mpmul (t3(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     tn1 = - tn1 * t2
+    call mpmul (tn1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt2(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw1)
+    d1 = real (2*k-1, mpdk) * real (2*k, mpdk) * 64.e0_mpdk
+!     t2 = td1 * d1
+    call mpmuld (td1(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     td1 = t2 * rr2
+    call mpmul (t2(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw1)
+!     t41 = tn1 / td1
+    call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), mpnw1)
+!     sum1 = sum1 + t41
+    call mpadd (sum1(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpnw1)
+
+    d1 = real (2*(2*k)-1, mpdk) ** 2
+    d2 = real (2*(2*k+1)-1, mpdk) ** 2
+!     t2 = mprealdp (d1)
+    call mprealdp (d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     t3 = t1 - t2
+    call mpsub (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!     t2 = mprealdp (d2)
+    call mprealdp (d2, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     t5 = t1 - t2
+    call mpsub (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw1)
+!     t2 = t3 * t5
+    call mpmul (t3(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     tn2 = - tn2 * t2
+    call mpmul (tn2(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt2(0:ipx*mpnw+6), tn2(0:ipx*mpnw+6), mpnw1)
+    d1 = real (2*k, mpdk) * real (2*k+1, mpdk) * 64.e0_mpdk
+!     t2 = td2 * d1
+    call mpmuld (td2(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     td2 = t2 * rr2
+    call mpmul (t2(0:ipx*mpnw+6), rr2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpnw1)
+!     t42 = tn2 / td2
+    call mpdiv (tn2(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), mpnw1)
+!     sum2 = sum2 + t42
+    call mpadd (sum2(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t41) - eps * abs (sum1)
+    call mpabs (t41, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum1, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     tc2 = abs (t42) - eps * abs (sum2)
+    call mpabs (t42, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (sum2, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic1 < 0 .and. ic2 < 0) goto 110
+  enddo
+
+  write (mpldb, 6)
+6 format ('*** BESSELYNR: Loop end error 2')
+!   call mpabrt (542)
+  call mpabrt (542)
 
 110 continue
 
-! t1 = xa - 0.5d0 * nua * pi - 0.25d0 * pi
-! besselj = sqrt (2.d0 / (pi * xa)) * (cos (t1) * sum1 - sin (t1) * sum2)
-
-  call mpmuld (mppicon, 0.5d0 * nua, t1, mpnw1)
-  call mpsub (rra, t1, t2, mpnw1)
-  call mpmuld (mppicon, 0.25d0, t1, mpnw1)
-  call mpsub (t2, t1, t3, mpnw1)
-  call mpcssnr (t3, t41, t42, mpnw1)
-  call mpmul (t42, sum1, t1, mpnw1)
-  call mpmul (t41, sum2, t2, mpnw1)
-  call mpadd (t1, t2, t5, mpnw1)
-  call mpmul (mppicon, rra, t1, mpnw1)
-  call mpdmc (2.d0, 0, t2, mpnw1)
-  call mpdiv (t2, t1, t3, mpnw1)
-  call mpsqrt (t3, t1, mpnw1)
-  call mpmul (t1, t5, t3, mpnw1)
+!mp prec="mpnw1"
+!   t1 = mppicon * 0.5e0_mpdk * real (nua, mpdk)
+  call mpmuld (mppicon(0:), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpmuld (mpt1(0:ipx*mpnw+6), real (nua, mpdk), mpt2(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = rra - t1
+  call mpsub (rra(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t1 = mppicon * 0.25e0_mpdk
+  call mpmuld (mppicon(0:), 0.25e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t3 = t2 - t1
+  call mpsub (t2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!   t41 = cos (t3)
+  call mpcssnr (t3, mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t41(0:ipx*mpnw+6), mpnw1)
+!   t42 = sin (t3)
+  call mpcssnr (t3, mpt2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t42(0:ipx*mpnw+6), mpnw1)
+!   t1 = t42 * sum1
+  call mpmul (t42(0:ipx*mpnw+6), sum1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = t41 * sum2
+  call mpmul (t41(0:ipx*mpnw+6), sum2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t5 = t1 + t2
+  call mpadd (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw1)
+!   t1 = mppicon * rra
+  call mpmul (mppicon(0:), rra(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t3 = t2 / t1
+  call mpdiv (t2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!   t1 = sqrt (t3)
+  call mpsqrt (t3, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t3 = t1 * t5
+  call mpmul (t1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
 endif
 
+!mp prec="mpnw"
 if (mod (nu, 2) /= 0) then
-!   if (nu < 0 .and. x > 0.d0 .or. nu > 0 .and. x < 0.d0) bessely = - bessely
-
-  ic1 = mpsgn (rr)
+!   ic1 = mpsgn (rr)
+  mpi1 = mpsgnr (rr)
+  ic1 = mpi1
   if (nu < 0 .and. ic1 > 0 .or. nu > 0 .and. ic1 < 0) then
-    call mpneg (t3, t4, mpnw1)
-    call mpeq (t4, t3, mpnw1)
+!     t3 = - t3
+    call mpneg (t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw)
   endif
 endif
 
-call mproun (t3, mpnw)
-call mpeq (t3, ss, mpnw)
+! ss = t3
+call mpeq (t3(0:ipx*mpnw+6), ss(0:), mpnw)
+
 return
 end subroutine mpbesselynr
 
@@ -1946,58 +3129,115 @@ subroutine mpbesselyr (qq, rr, ss, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i1, i2, mpnw1, n1
-real (mprknd) d1
+!mp dim1="0:"
+! type (mp_real), intent(in):: qq, rr
 integer (mpiknd), intent(in):: qq(0:), rr(0:)
+! type (mp_real), intent(out):: ss
 integer (mpiknd), intent(out):: ss(0:)
+integer ic1, i0, i1, i2, n1
+real (mpdknd) d1
+!mp dim1="0:mpnw+6"
+! type (mp_real) t1, t2, t3, t4
 integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6)
-integer (mpiknd) ix8
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (qq) < mpnw + 4 .or. mpspacer (rr) < mpnw + 4 &
-  .or. mpspacer (ss) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPBESSELYR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 538)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (ss)
+mpi1 = mpspacer (ss)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** BESSELYNR: Uninitialized or inadequately sized array')
+!   call mpabrt (543)
+  call mpabrt (543)
 endif
 
-mpnw1 = mpnw + 1
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
+!mp prec="mpnw1"
 
 !   If QQ is integer, call mpbesselynr; if qq < 0 and rr <= 0, then error.
 
-call mpinfr (qq, t1, t2, mpnw)
-i1 = mpsgn (qq)
-i2 = mpsgn (rr)
-if (mpsgn (t2) == 0) then
-  call mpmdc (qq, d1, n1, mpnw)
-  d1 = d1 * 2.d0**n1
+! t1 = qq - anint (qq)
+call mpnint (qq, mpt1(0:mpnw+6), mpnw1)
+call mpsub (qq(0:), mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+call mpeq (mpt2(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! i0 = mpsgn (t1)
+mpi1 = mpsgnr (t1)
+i0 = mpi1
+! i1 = mpsgn (qq)
+mpi1 = mpsgnr (qq)
+i1 = mpi1
+! i2 = mpsgn (rr)
+mpi1 = mpsgnr (rr)
+i2 = mpi1
+if (i0 == 0) then
+!   d1 = dpreal (qq)
+  call mpdpreal (qq, mpd1, mpnw1)
+  d1 = mpd1
   n1 = nint (d1)
+!   call mpbesselynr (n1, rr, t1, mpnw)
   call mpbesselynr (n1, rr, t1, mpnw)
   goto 120
 elseif (i1 < 0 .and. i2 <= 0) then
   write (mpldb, 2)
-2 format ('*** MPBESSELYR: First argument < 0 and second argument <= 0')
-  call mpabrt ( 539)
+2 format ('*** BESSELYR: First argument < 0 and second argument <= 0')
+!   call mpabrt (544)
+  call mpabrt (544)
 endif
 
-call mpmul (qq, mppicon, t1, mpnw1)
-call mpcssnr (t1, t2, t3, mpnw1)
+!mp prec="mpnw1"
+! t1 = qq * mppicon
+call mpmul (qq(0:), mppicon(0:), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = cos (t1)
+call mpcssnr (t1, mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = sin (t1)
+call mpcssnr (t1, mpt2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! call mpbesseljr (qq, rr, t4, mpnw1)
 call mpbesseljr (qq, rr, t4, mpnw1)
-call mpmul (t4, t2, t1, mpnw1)
-call mpneg (qq, t2, mpnw1)
+! t1 = t4 * t2
+call mpmul (t4(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = - qq
+call mpneg (qq(0:), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! call mpbesseljr (t2, rr, t4, mpnw1)
 call mpbesseljr (t2, rr, t4, mpnw1)
-call mpsub (t1, t4, t2, mpnw1)
-call mpdiv (t2, t3, t1, mpnw1)
+! t2 = t1 - t4
+call mpsub (t1(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t1 = t2 / t3
+call mpdiv (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 
 120 continue
 
-call mproun (t1, mpnw)
-call mpeq (t1, ss, mpnw)
+!mp prec="mpnw"
+! ss = t1
+call mpeq (t1(0:mpnw+6), ss(0:), mpnw)
+
 return
 end subroutine mpbesselyr
 
@@ -2006,143 +3246,213 @@ subroutine mpdigammabe (nb1, nb2, berne, x, y, mpnw)
 !  This evaluates the digamma function, using asymptotic formula DLMF 5.11.2:
 !  dig(x) ~ log(x) - 1/(2*x) - Sum_{k=1}^inf B[2k] / (2*k*x^(2*k)).
 !  Before using this formula, the recursion dig(x+1) = dig(x) + 1/x is used
-!  to shift the argument up by IQQ, where IQQ is set based on MPNW below.
+!  to shift the argument up by IQQ, where IQQ is set based on mpnw below.
 !  The array berne contains precomputed even Bernoulli numbers (see MPBERNER
 !  above). Its dimensions must be as shown below. NB2 must be greater than
 !  1.4 x precision in decimal digits.
 
 implicit none
-integer, intent (in):: nb1, nb2, mpnw
-integer (mpiknd), intent(in):: berne(0:nb1+5,nb2), x(0:)
+integer, intent(in):: nb1, mpnw
+integer, intent (in):: nb2
+!mp dim1="0:nb1+5"
+! type (mp_real), intent(in):: berne(1:nb2)
+integer (mpiknd), intent(in):: berne(0:nb1+5,1:nb2)
+!mp dim1="0:"
+! type (mp_real), intent(in):: x
+integer (mpiknd), intent(in):: x(0:)
+! type (mp_real), intent(out):: y
 integer (mpiknd), intent(out):: y(0:)
-integer k, i1, i2, ic1, iqq, mpnw1, n1
-real (mprknd) dber, dfrac, d1
-parameter (dber = 1.4d0, dfrac = 0.4d0)
-integer (mpiknd) f1(0:mpnw+6), sum1(0:mpnw+6), sum2(0:mpnw+6), &
-  t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), &
-  t5(0:mpnw+6), xq(0:mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+real (mpdknd), parameter:: dber = 0.45e0_mpdk, dfrac = 0.12e0_mpdk
+integer k, i1, i2, ic1, ic2, iqq, n1
+real (mpdknd) d1, d2
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) f1, sum1, sum2, t1
+integer (mpiknd) f1(0:mpnw+6), sum1(0:mpnw+6), sum2(0:mpnw+6), t1(0:mpnw+6)
+! type (mp_real) t2, t3, t4, t5, xq
+integer (mpiknd) t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6), xq(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (x) < mpnw + 4 .or. mpspacer (y) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPDIGAMMABE: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 540)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (sum1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (sum2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t5(0:mpnw+6), mpnw+6-5)
+call mpinitwds (xq(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (y)
+mpi1 = mpspacer (y)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** DIGAMMABE: Uninitialized or inadequately sized array')
+!   call mpabrt (545)
+  call mpabrt (545)
 endif
 
-mpnw1 = mpnw + 1
-iqq = dfrac * mpnw1 * mpdpw
-call mpinitwds (f1, mpnw1)
-call mpinitwds (sum1, mpnw1)
-call mpinitwds (sum2, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (xq, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw*mpnbt, eps, 4)
-call mpdmc (1.d0, 0, f1, mpnw1)
+
+iqq = dfrac * mpnw1 * mpnbt
+
+!mp prec="mpnwm"
+
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
+
+!mp prec="mpnw1"
+
+! f1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), f1(0:mpnw+6), mpnw1)
 
 !   Check if argument is less than or equal to 0 -- undefined.
 
-if (mpsgn (x) <= 0) then
+! ic1 = mpsgn (x)
+mpi1 = mpsgnr (x)
+ic1 = mpi1
+if (ic1 <= 0) then
   write (mpldb, 2)
-2 format ('*** MPDIGAMMABE: Argument is less than or equal to 0')
-  call mpabrt ( 541)
+2 format ('*** DIGAMMABE: Argument <= 0')
+!   call mpabrt (546)
+  call mpabrt (546)
 endif
 
 !   Check if berne array has been initialized.
 
-i1 = 1000000000
-i2 = 1000000000
-
-do k = 1, nb2
-  i1 = min (i1, mpspacer (berne(0:nb1+5,k)))
-  i2 = min (i2, mpwprecr (berne(0:nb1+5,k)))
-enddo
-
-call mpmdc (berne(0:nb1+5,1), d1, n1, mpnw)
-d1 = d1 * 2.d0 ** n1
-
-if (i1 < mpnw + 6 .or. i2 < mpnw .or. abs (d1 - 1.d0 / 6.d0) > mprdfz .or. &
-  nb2 < int (dber * mpdpw * (mpnw - 2))) then
-  write (mpldb, 3) int (dber * mpdpw * (mpnw - 2))
-3 format ('*** MPDIGAMMABE: Array of even Bernoulli coefficients must be initialized'/ &
-   'with at least',i8,' entries using MPBERNE or MPBERNER.')
-  call mpabrt ( 542)
+! d1 = dpreal (berne(1))
+call mpdpreal (berne(0:nb1+5,1), mpd1, mpnw1)
+d1 = mpd1
+if (abs (d1 - 1.e0_mpdk / 6.e0_mpdk) > mprdfz .or. nb2 < int (dber * mpnbt * mpnw)) then
+  write (mpldb, 3) int (dber * mpnbt * mpnw)
+3 format ('*** DIGAMMABE: Array of even Bernoulli coefficients must be initialized'/ &
+   'with at least',i8,' entries using BERNE or BERNER.')
+!   call mpabrt (547)
+  call mpabrt (547)
 endif
 
-! sum1 = mpreal (0.d0, nwds)
-! sum2 = mpreal (0.d0, nwds)
-! xq = x + dble (iqq)
-
-call mpdmc (0.d0, 0, sum1, mpnw1)
-call mpdmc (0.d0, 0, sum2, mpnw1)
-call mpdmc (dble (iqq), 0, t1, mpnw1)
-call mpadd (x, t1, t2, mpnw1)
-call mpeq (t2, xq, mpnw1)
+! sum1 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), sum1(0:mpnw+6), mpnw1)
+! sum2 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), sum2(0:mpnw+6), mpnw1)
+! xq = x + real (iqq, mpdk)
+call mpdmc (real (iqq, mpdk), 0, mpt2(0:mpnw+6), mpnw1)
+call mpadd (x(0:), mpt2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), xq(0:mpnw+6), mpnw1)
 
 do k = 0, iqq - 1
-!   sum1 = sum1 + f1 / (x + dble (k))
-
-  call mpdmc (dble (k), 0, t1, mpnw1)
-  call mpadd (x, t1, t2, mpnw1)
-  call mpdiv (f1, t2, t3, mpnw1)
-  call mpadd (sum1, t3, t1, mpnw1)
-  call mpeq (t1, sum1, mpnw1)
+  d2 = real (k, mpdk)
+!   t1 = mprealdp (d2)
+  call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = x + t1
+  call mpadd (x(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = f1 / t2
+  call mpdiv (f1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   sum1 = sum1 + t3
+  call mpadd (sum1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum1(0:mpnw+6), mpnw1)
 enddo
 
-! t1 = mpreal (1.d0, nwds)
+! t1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 ! t2 = xq ** 2
-
-call mpdmc (1.d0, 0, t1, mpnw1)
-call mpmul (xq, xq, t2, mpnw1)
+call mpnpwr (xq(0:mpnw+6), 2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
 
 do k = 1, nb2
-!  t1 = t1 * t2
-!  t3 = bb(k) / (2.d0 * dble (k) * t1)
-!  sum2 = sum2 + t3
-
-  call mpmul (t1, t2, t3, mpnw1)
-  call mpeq (t3, t1, mpnw1)
-  call mpmuld (t1, 2.d0 * dble (k), t4, mpnw1)
-  call mpdiv (berne(0:nb1+5,k), t4, t3, mpnw1)
-  call mpadd (sum2, t3, t4, mpnw1)
-  call mpeq (t4, sum2, mpnw1)
-
-!  if (abs (t3 / sum2) < eps) goto 100
-
-  call mpabs (t3, tc1, 4)
-  call mpmul (eps, sum2, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic1, 4)
-  if (ic1 <= 0) goto 110
+!   t1 = t1 * t2
+  call mpmul (t1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t4 = t1 * 2.e0_mpdk * real (k, mpdk)
+  call mpmuld (t1(0:mpnw+6), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpmuld (mpt1(0:mpnw+6), real (k, mpdk), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t3 = berne(k) / t4
+  call mpdiv (berne(0:nb1+5,k), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   sum2 = sum2 + t3
+  call mpadd (sum2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum2(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!   tc1 = abs (t3) - eps * abs (sum2)
+  call mpabs (t3, mpt1(0:mpnw+6), mpnwm)
+  call mpabs (sum2, mpt2(0:mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+  call mpeq (mpt4(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!   ic1 = mpsgn (tc1)
+  mpi1 = mpsgnr (tc1)
+  ic1 = mpi1
+  if (ic1 < 0) goto 110
 enddo
 
 write (mpldb, 4)
-4 format ('*** MPDIGAMMABE: Loop end error: Increase NB2')
-call mpabrt ( 543)
+4 format ('*** DIGAMMABE: Loop end error: Increase NB2')
+! call mpabrt (548)
+call mpabrt (548)
 
 110 continue
 
-! digammax = -sum1 + log (xq) - 1.d0 / (2.d0 * xq) - sum2
+!mp prec="mpnw1"
+! t1 = - sum1
+call mpneg (sum1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = log (xq)
+call mplog (xq, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = t1 + t2
+call mpadd (t1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = xq * 2.e0_mpdk
+call mpmuld (xq(0:mpnw+6), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t5 = f1 / t4
+call mpdiv (f1(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+! t2 = t3 - t5
+call mpsub (t3(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t1 = t2 - sum2
+call mpsub (t2(0:mpnw+6), sum2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!mp prec="mpnw"
+! y = t1
+call mpeq (t1(0:mpnw+6), y(0:), mpnw)
 
-call mpneg (sum1, t1, mpnw1)
-call mplog (xq, t2, mpnw1)
-call mpadd (t1, t2, t3, mpnw1)
-call mpmuld (xq, 2.d0, t4, mpnw1)
-call mpdiv (f1, t4, t5, mpnw1)
-call mpsub (t3, t5, t2, mpnw1)
-call mpsub (t2, sum2, t1, mpnw1)
-call mproun (t1, mpnw)
-call mpeq (t1, y, mpnw)
 return
 end subroutine mpdigammabe
 
@@ -2152,7 +3462,7 @@ subroutine mperfr (z, terf, mpnw)
 !   In particular, the algorithm is (where B = (mpnw + 1) * mpnbt, and
 !   dcon is a constant defined below):
 
-!   if (t == 0) then
+!   if (z == 0) then
 !     erf = 0
 !   elseif (z > sqrt(B*log(2))) then
 !     erf = 1
@@ -2168,152 +3478,297 @@ subroutine mperfr (z, terf, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer ic1, ic2, ic3, itrmx, k, mpnw1, nbt, n1
-real (mprknd) dcon, d1, d2, pi
-parameter (dcon = 100.d0, itrmx = 100000, pi = 3.1415926535897932385d0)
+!mp dim1="0:"
+! type (mp_real), intent(in):: z
 integer (mpiknd), intent(in):: z(0:)
+! type (mp_real), intent(out):: terf
 integer (mpiknd), intent(out):: terf(0:)
-integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), &
-  t5(0:mpnw+6), t6(0:mpnw+6), t7(0:mpnw+6), z2(0:mpnw+6), tc1(0:9), &
-  tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmx = 100000
+real (mpdknd), parameter:: al2 = 0.69314718055994530941723212145817657e0_mpdk
+real (mpdknd), parameter:: dcon = 100.e0_mpdk
+integer ic1, ic2, ic3, ic4, k, nbt, n1
+real (mpdknd) d1, d2
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) t1, t2, t3, t4, t5
+integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6)
+! type (mp_real) t6, t7, z2
+integer (mpiknd) t6(0:mpnw+6), t7(0:mpnw+6), z2(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (z) < mpnw + 4 .or. mpspacer (terf) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPERFR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 544)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t5(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t6(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t7(0:mpnw+6), mpnw+6-5)
+call mpinitwds (z2(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (terf)
+mpi1 = mpspacer (terf)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** ERFR: Uninitialized or inadequately sized array')
+!   call mpabrt (549)
+  call mpabrt (549)
 endif
 
-mpnw1 = mpnw + 1
+!mp prec="mpnwm"
 
-!   Check if Pi has been precomputed.
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
 
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 4) mpnw1
-4 format ('*** MPERFR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 545)
-endif
+!mp prec="mpnw1"
 
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (t6, mpnw1)
-call mpinitwds (t7, mpnw1)
-call mpinitwds (z2, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
+nbt = mpnbt
+d1 = aint (1.e0_mpdk + sqrt (nbt * al2))
+d2 = aint (nbt / dcon + 8.e0_mpdk)
+! t1 = mprealdp (d1)
+call mprealdp (d1, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = mprealdp (d2)
+call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = z - t1
+call mpsub (z(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = z + t1
+call mpadd (z(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t5 = z - t2
+call mpsub (z(0:), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+! ic1 = mpsgn (z)
+mpi1 = mpsgnr (z)
+ic1 = mpi1
+! ic2 = mpsgn (t3)
+mpi1 = mpsgnr (t3)
+ic2 = mpi1
+! ic3 = mpsgn (t4)
+mpi1 = mpsgnr (t4)
+ic3 = mpi1
+! ic4 = mpsgn (t5)
+mpi1 = mpsgnr (t5)
+ic4 = mpi1
 
-nbt = mpnw * mpnbt
-d1 = aint (1.d0 + sqrt (nbt * log (2.d0)))
-d2 = aint (nbt / dcon + 8.d0)
-call mpdmc (d1, 0, t1, mpnw1)
-call mpdmc (d2, 0, t2, mpnw1)
-call mpcpr (z, t1, ic1, mpnw1)
-! t1(2) = - t1(2)
-call mpneg (t1, t3, mpnw1)
-call mpeq (t3, t1, mpnw1)
-call mpcpr (z, t1, ic2, mpnw1)
-call mpcpr (z, t2, ic3, mpnw1)
-
-if (mpsgn (z) == 0) then
-  call mpdmc (0.d0, 0, terf, mpnw)
-elseif (ic1 > 0) then
-  call mpdmc (1.d0, 0, terf, mpnw)
-elseif (ic2 < 0) then
-  call mpdmc (-1.d0, 0, terf, mpnw)
+if (ic1 == 0) then
+!   terf = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), terf(0:), mpnw1)
+elseif (ic2 > 0) then
+!   terf = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), terf(0:), mpnw1)
 elseif (ic3 < 0) then
-  call mpmul (z, z, z2, mpnw1)
-  call mpdmc (0.d0, 0, t1, mpnw1)
-  call mpeq (z, t2, mpnw1)
-  call mpdmc (1.d0, 0, t3, mpnw1)
-  call mpdmc (1.d10, 0, t5, 4)
+!   terf = mprealdp (-1.e0_mpdk)
+  call mprealdp (-1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), terf(0:), mpnw1)
+elseif (ic4 < 0) then
+!   z2 = z ** 2
+  call mpnpwr (z(0:), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), z2(0:mpnw+6), mpnw1)
+!   t1 = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = z
+  call mpeq (z(0:), t2(0:mpnw+6), mpnw1)
+!   t3 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t5 = mprealdp (1.e2_mpdk)
+  call mprealdp (1.e2_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
 
   do k = 0, itrmx
     if (k > 0) then
-      call mpmuld (z2, 2.d0, t6, mpnw1)
-      call mpmul (t6, t2, t7, mpnw1)
-      call mpeq (t7, t2, mpnw1)
-      d1 = 2.d0 * k + 1.d0
-      call mpmuld (t3, d1, t6, mpnw1)
-      call mpeq (t6, t3, mpnw1)
+!       t6 = z2 * 2.e0_mpdk
+      call mpmuld (z2(0:mpnw+6), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!       t2 = t6 * t2
+      call mpmul (t6(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+      d1 = real (2*k+1, mpdk)
+!       t3 = t3 * d1
+      call mpmuld (t3(0:mpnw+6), d1, mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
     endif
 
-    call mpdiv (t2, t3, t4, mpnw1)
-    call mpadd (t1, t4, t6, mpnw1)
-    call mpeq (t6, t1, mpnw1)
-    call mpdiv (t4, t1, t6, 4)
-    call mpcpr (t6, eps, ic1, 4)
-    call mpcpr (t6, t5, ic2, 4)
-    if (ic1 <= 0 .or. ic2 >= 0) goto 120
-    call mpeq (t6, t5, 4)
+!     t4 = t2 / t3
+    call mpdiv (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!     t1 = t1 + t4
+    call mpadd (t1(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!     t6 = t4 / t1
+    call mpdiv (t4(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = t6 - eps
+    call mpsub (t6(0:mpnw+6), eps(0:mpnwm+5), mpt1(0:mpnw+6), mpnwm)
+    call mpeq (mpt1(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     tc2 = t5 - t6
+    call mpsub (t5(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnwm)
+    call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic1 < 0 .or. ic2 < 0) goto 120
+!mp prec="mpnw1"
+!     t5 = t6
+    call mpeq (t6(0:mpnw+6), t5(0:mpnw+6), mpnw1)
   enddo
 
-write (mpldb, 3) 1, itrmx
-3 format ('*** MPERFR: iteration limit exceeded',2i10)
-call mpabrt ( 546)
+write (mpldb, 2)
+2 format ('*** ERFR: End loop error 1')
+! call mpabrt (550)
+call mpabrt (550)
 
 120 continue
 
-  call mpmuld (t1, 2.d0, t3, mpnw1)
-  call mpsqrt (mppicon, t4, mpnw1)
-  call mpexp (z2, t5, mpnw1)
-  call mpmul (t4, t5, t6, mpnw1)
-  call mpdiv (t3, t6, t7, mpnw1)
-  call mproun (t7, mpnw)
-  call mpeq (t7, terf, mpnw)
+!mp prec="mpnw1"
+!   t3 = t1 * 2.e0_mpdk
+  call mpmuld (t1(0:mpnw+6), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t4 = sqrt (mppicon)
+  call mpsqrt (mppicon, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t5 = exp (z2)
+  call mpexp (z2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = t4 * t5
+  call mpmul (t4(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t3 / t6
+  call mpdiv (t3(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!mp prec="mpnw"
+!   terf = t7
+  call mpeq (t7(0:mpnw+6), terf(0:), mpnw)
 else
-  call mpmul (z, z, z2, mpnw1)
-  call mpdmc (0.d0, 0, t1, mpnw1)
-  call mpdmc (1.d0, 0, t2, mpnw1)
-  call mpabs (z, t3, mpnw1)
-  call mpdmc (1.d10, 0, t5, 4)
+!mp prec="mpnw1"
+!   z2 = z ** 2
+  call mpnpwr (z(0:), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), z2(0:mpnw+6), mpnw1)
+!   t1 = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = z
+  call mpeq (z(0:), t3(0:mpnw+6), mpnw1)
+!   t5 = mprealdp (1.e2_mpdk)
+  call mprealdp (1.e2_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
 
   do k = 0, itrmx
     if (k > 0) then
-      d1 = -(2.d0 * k - 1.d0)
-      call mpmuld (t2, d1, t6, mpnw1)
-      call mpeq (t6, t2, mpnw1)
-      call mpmul (t2, t3, t6, mpnw1)
-      call mpeq (t6, t3, mpnw1)
+      d1 = 1.e0_mpdk - 2.e0_mpdk * k
+!       t2 = t2 * d1
+      call mpmuld (t2(0:mpnw+6), d1, mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!       t3 = t2 * t3
+      call mpmul (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
     endif
 
-    call mpdiv (t2, t3, t4, mpnw1)
-    call mpadd (t1, t4, t6, mpnw1)
-    call mpeq (t6, t1, mpnw1)
-    call mpdiv (t4, t1, t6, 4)
-    call mpcpr (t6, eps, ic1, 4)
-    call mpcpr (t6, t5, ic2, 4)
-    if (ic1 <= 0 .or. ic2 >= 0) goto 130
-    call mpeq (t6, t5, 4)
+!     t4 = t2 / t3
+    call mpdiv (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!     t1 = t1 + t4
+    call mpadd (t1(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!     t6 = t4 / t1
+    call mpdiv (t4(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = t6 - eps
+    call mpsub (t6(0:mpnw+6), eps(0:mpnwm+5), mpt1(0:mpnw+6), mpnwm)
+    call mpeq (mpt1(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     tc2 = t5 - t6
+    call mpsub (t5(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnwm)
+    call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic1 < 0 .or. ic2 < 0) goto 130
+!mp prec="mpnw1"
+!     t5 = t6
+    call mpeq (t6(0:mpnw+6), t5(0:mpnw+6), mpnw1)
   enddo
 
-write (mpldb, 3) 2, itrmx
-call mpabrt ( 547)
+write (mpldb, 3)
+3 format ('*** ERFR: End loop error 2')
+! call mpabrt (551)
+call mpabrt (551)
 
 130 continue
 
-  call mpdmc (1.d0, 0, t2, mpnw1)
-  call mpsqrt (mppicon, t3, mpnw1)
-  call mpexp (z2, t4, mpnw1)
-  call mpmul (t3, t4, t5, mpnw1)
-  call mpdiv (t1, t5, t6, mpnw1)
-  call mpsub (t2, t6, t7, mpnw1)
-  call mproun (t7, mpnw)
-  call mpeq (t7, terf, mpnw)
-  if (mpsgn (z) < 0) then
-    call mpneg (terf, t6, mpnw)
-    call mpeq (t6, terf, mpnw)
+!mp prec="mpnw1"
+!   t2 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = sqrt (mppicon)
+  call mpsqrt (mppicon, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t4 = exp (z2)
+  call mpexp (z2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t5 = t3 * t4
+  call mpmul (t3(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = t1 / t5
+  call mpdiv (t1(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t2 - t6
+  call mpsub (t2(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!mp prec="mpnw"
+!   terf = t2 - t6
+  call mpsub (t2(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), terf(0:), mpnw)
+!   ic1 = mpsgn (z)
+  mpi1 = mpsgnr (z)
+  ic1 = mpi1
+  if (ic1 < 0) then
+!     terf = - terf
+    call mpneg (terf(0:), mpt1(0:mpnw+6), mpnw)
+    call mpeq (mpt1(0:mpnw+6), terf(0:), mpnw)
   endif
 endif
 
@@ -2326,7 +3781,7 @@ subroutine mperfcr (z, terfc, mpnw)
 !   In particular, the algorithm is (where B = (mpnw + 1) * mpnbt, and
 !   dcon is a constant defined below):
 
-!   if (t == 0) then
+!   if (z == 0) then
 !     erfc = 1
 !   elseif (z > sqrt(B*log(2))) then
 !     erfc = 0
@@ -2342,154 +3797,296 @@ subroutine mperfcr (z, terfc, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer ic1, ic2, ic3, itrmx, k, mpnw1, nbt, n1
-real (mprknd) dcon, d1, d2, pi
-parameter (dcon = 100.d0, itrmx = 100000, pi = 3.1415926535897932385d0)
+!mp dim1="0:"
+! type (mp_real), intent(in):: z
 integer (mpiknd), intent(in):: z(0:)
+! type (mp_real), intent(out):: terfc
 integer (mpiknd), intent(out):: terfc(0:)
-integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), &
-  t5(0:mpnw+6), t6(0:mpnw+6), t7(0:mpnw+6), z2(0:mpnw+6), tc1(0:9), &
-  tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmx = 100000
+real (mpdknd), parameter:: dcon = 100.e0_mpdk
+real (mpdknd), parameter:: al2 = 0.69314718055994530941723212145817657e0_mpdk
+integer ic1, ic2, ic3, ic4, k, nbt, n1
+real (mpdknd) d1, d2
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) t1, t2, t3, t4, t5
+integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6)
+! type (mp_real) t6, t7, z2
+integer (mpiknd) t6(0:mpnw+6), t7(0:mpnw+6), z2(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (z) < mpnw + 4 .or. mpspacer (terfc) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPERFCR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 548)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t5(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t6(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t7(0:mpnw+6), mpnw+6-5)
+call mpinitwds (z2(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (terfc)
+mpi1 = mpspacer (terfc)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** ERFCR: Uninitialized or inadequately sized array')
+!   call mpabrt (552)
+  call mpabrt (552)
 endif
 
-mpnw1 = mpnw + 1
+!mp prec="mpnwm"
 
-!   Check if Pi has been precomputed.
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
 
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 4) mpnw1
-4 format ('*** MPERFCR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 549)
-endif
+!mp prec="mpnw1"
 
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (t6, mpnw1)
-call mpinitwds (t7, mpnw1)
-call mpinitwds (z2, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
+nbt = mpnbt
+d1 = aint (1.e0_mpdk + sqrt (nbt * al2))
+d2 = aint (nbt / dcon + 8.e0_mpdk)
+! t1 = mprealdp (d1)
+call mprealdp (d1, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = mprealdp (d2)
+call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = z - t1
+call mpsub (z(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = z + t1
+call mpadd (z(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t5 = z - t2
+call mpsub (z(0:), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+! ic1 = mpsgn (z)
+mpi1 = mpsgnr (z)
+ic1 = mpi1
+! ic2 = mpsgn (t3)
+mpi1 = mpsgnr (t3)
+ic2 = mpi1
+! ic3 = mpsgn (t4)
+mpi1 = mpsgnr (t4)
+ic3 = mpi1
+! ic4 = mpsgn (t5)
+mpi1 = mpsgnr (t5)
+ic4 = mpi1
 
-nbt = mpnw * mpnbt
-d1 = aint (1.d0 + sqrt (nbt * log (2.d0)))
-d2 = aint (nbt / dcon + 8.d0)
-call mpdmc (d1, 0, t1, mpnw1)
-call mpdmc (d2, 0, t2, mpnw1)
-call mpcpr (z, t1, ic1, mpnw1)
-call mpneg (t1, t3, mpnw1)
-call mpeq (t3, t1,  mpnw1)
-call mpcpr (z, t1, ic2, mpnw1)
-call mpcpr (z, t2, ic3, mpnw1)
-
-if (mpsgn (z) == 0) then
-  call mpdmc (1.d0, 0, terfc, mpnw)
-elseif (ic1 > 0) then
-  call mpdmc (0.d0, 0, terfc, mpnw)
-elseif (ic2 < 0) then
-  call mpdmc (2.d0, 0, terfc, mpnw)
+if (ic1 == 0) then
+!   terfc = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), terfc(0:), mpnw1)
+elseif (ic2 > 0) then
+!   terfc = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), terfc(0:), mpnw1)
 elseif (ic3 < 0) then
-  call mpmul (z, z, z2, mpnw1)
-  call mpdmc (0.d0, 0, t1, mpnw1)
-  call mpeq (z, t2, mpnw1)
-  call mpdmc (1.d0, 0, t3, mpnw1)
-  call mpdmc (1.d10, 0, t5, 4)
+!   terfc = mprealdp (2.e0_mpdk)
+  call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), terfc(0:), mpnw1)
+elseif (ic4 < 0) then
+!   z2 = z ** 2
+  call mpnpwr (z(0:), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), z2(0:mpnw+6), mpnw1)
+!   t1 = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = z
+  call mpeq (z(0:), t2(0:mpnw+6), mpnw1)
+!   t3 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t5 = mprealdp (1.e2_mpdk)
+  call mprealdp (1.e2_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
 
   do k = 0, itrmx
     if (k > 0) then
-      call mpmuld (z2, 2.d0, t6, mpnw1)
-      call mpmul (t6, t2, t7, mpnw1)
-      call mpeq (t7, t2, mpnw1)
-      d1 = 2.d0 * k + 1.d0
-      call mpmuld (t3, d1, t6, mpnw1)
-      call mpeq (t6, t3, mpnw1)
+!       t6 = z2 * 2.e0_mpdk
+      call mpmuld (z2(0:mpnw+6), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!       t2 = t6 * t2
+      call mpmul (t6(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+      d1 = real (2*k+1, mpdk)
+!       t3 = t3 * d1
+      call mpmuld (t3(0:mpnw+6), d1, mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
     endif
 
-    call mpdiv (t2, t3, t4, mpnw1)
-    call mpadd (t1, t4, t6, mpnw1)
-    call mpeq (t6, t1, mpnw1)
-    call mpdiv (t4, t1, t6, 4)
-    call mpcpr (t6, eps, ic1, 4)
-    call mpcpr (t6, t5, ic2, 4)
-    if (ic1 <= 0 .or. ic2 >= 0) goto 120
-    call mpeq (t6, t5, 4)
+!     t4 = t2 / t3
+    call mpdiv (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!     t1 = t1 + t4
+    call mpadd (t1(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!     t6 = t4 / t1
+    call mpdiv (t4(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = t6 - eps
+    call mpsub (t6(0:mpnw+6), eps(0:mpnwm+5), mpt1(0:mpnw+6), mpnwm)
+    call mpeq (mpt1(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     tc2 = t5 - t6
+    call mpsub (t5(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnwm)
+    call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic1 < 0 .or. ic2 < 0) goto 120
+!mp prec="mpnw1"
+!     t5 = t6
+    call mpeq (t6(0:mpnw+6), t5(0:mpnw+6), mpnw1)
   enddo
 
-write (mpldb, 3) 1, itrmx
-3 format ('*** MPERFCR: iteration limit exceeded',2i10)
-call mpabrt ( 550)
+write (mpldb, 2)
+2 format ('*** ERFRC: End loop error 1')
+! call mpabrt (553)
+call mpabrt (553)
 
 120 continue
 
-  call mpdmc (1.d0, 0, t2, mpnw1)
-  call mpmuld (t1, 2.d0, t3, mpnw1)
-  call mpsqrt (mppicon, t4, mpnw1)
-  call mpexp (z2, t5, mpnw1)
-  call mpmul (t4, t5, t6, mpnw1)
-  call mpdiv (t3, t6, t7, mpnw1)
-  call mpsub (t2, t7, t6, mpnw1)
-  call mproun (t6, mpnw)
-  call mpeq (t6, terfc, mpnw)
+!mp prec="mpnw1"
+!   t2 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = t1 * 2.e0_mpdk
+  call mpmuld (t1(0:mpnw+6), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t4 = sqrt (mppicon)
+  call mpsqrt (mppicon, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t5 = exp (z2)
+  call mpexp (z2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = t4 * t5
+  call mpmul (t4(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t2 - t3 / t6
+  call mpdiv (t3(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpsub (t2(0:mpnw+6), mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!mp prec="mpnw"
+!   terfc = t7
+  call mpeq (t7(0:mpnw+6), terfc(0:), mpnw)
 else
-  call mpmul (z, z, z2, mpnw1)
-  call mpdmc (0.d0, 0, t1, mpnw1)
-  call mpdmc (1.d0, 0, t2, mpnw1)
-  call mpabs (z, t3, mpnw1)
-  call mpdmc (1.d10, 0, t5, 4)
+!mp prec="mpnw1"
+!   z2 = z ** 2
+  call mpnpwr (z(0:), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), z2(0:mpnw+6), mpnw1)
+!   t1 = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = z
+  call mpeq (z(0:), t3(0:mpnw+6), mpnw1)
+!   t5 = mprealdp (1.e2_mpdk)
+  call mprealdp (1.e2_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
 
   do k = 0, itrmx
     if (k > 0) then
-      d1 = -(2.d0 * k - 1.d0)
-      call mpmuld (t2, d1, t6, mpnw1)
-      call mpeq (t6, t2, mpnw1)
-      call mpmul (t2, t3, t6, mpnw1)
-      call mpeq (t6, t3, mpnw1)
+      d1 = 1.e0_mpdk - 2.e0_mpdk * k
+!       t2 = t2 * d1
+      call mpmuld (t2(0:mpnw+6), d1, mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!       t3 = t2 * t3
+      call mpmul (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+      call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
     endif
 
-    call mpdiv (t2, t3, t4, mpnw1)
-    call mpadd (t1, t4, t6, mpnw1)
-    call mpeq (t6, t1, mpnw1)
-    call mpdiv (t4, t1, t6, 4)
-    call mpcpr (t6, eps, ic1, 4)
-    call mpcpr (t6, t5, ic2, 4)
-    if (ic1 <= 0 .or. ic2 >= 0) goto 130
-    call mpeq (t6, t5, 4)
+!     t4 = t2 / t3
+    call mpdiv (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!     t1 = t1 + t4
+    call mpadd (t1(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!     t6 = t4 / t1
+    call mpdiv (t4(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = t6 - eps
+    call mpsub (t6(0:mpnw+6), eps(0:mpnwm+5), mpt1(0:mpnw+6), mpnwm)
+    call mpeq (mpt1(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     tc2 = t5 - t6
+    call mpsub (t5(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnwm)
+    call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic1 < 0 .or. ic2 < 0) goto 130
+!mp prec="mpnw1"
+!     t5 = t6
+    call mpeq (t6(0:mpnw+6), t5(0:mpnw+6), mpnw1)
   enddo
 
-write (mpldb, 3) 2, itrmx
-call mpabrt ( 551)
+write (mpldb, 3)
+3 format ('*** ERFRC: End loop error 1')
+! call mpabrt (554)
+call mpabrt (554)
 
 130 continue
 
-  call mpsqrt (mppicon, t3, mpnw1)
-  call mpexp (z2, t4, mpnw1)
-  call mpmul (t3, t4, t5, mpnw1)
-  call mpdiv (t1, t5, t6, mpnw1)
-  if (mpsgn (z) < 0) then
-    call mpdmc (2.d0, 0, t2, mpnw1)
-    call mpsub (t2, t6, t7, mpnw1)
-    call mpeq (t7, t6, mpnw1)
+!mp prec="mpnw1"
+!   t3 = sqrt (mppicon)
+  call mpsqrt (mppicon, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t4 = exp (z2)
+  call mpexp (z2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t5 = t3 * t4
+  call mpmul (t3(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = t1 / t5
+  call mpdiv (t1(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   ic1 = mpsgn (z)
+  mpi1 = mpsgnr (z)
+  ic1 = mpi1
+  if (ic1 < 0) then
+!     t6 = 2.e0_mpdk - t6
+    call mpdmc (2.e0_mpdk, 0, mpt2(0:mpnw+6), mpnw1)
+    call mpsub (mpt2(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
   endif
-
-  call mproun (t6, mpnw)
-  call mpeq (t6, terfc, mpnw)
+!mp prec="mpnw"
+!   terfc = t6
+  call mpeq (t6(0:mpnw+6), terfc(0:), mpnw)
 endif
 
 return
@@ -2502,34 +4099,74 @@ subroutine mpexpint (x, y, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
+!mp dim1="0:"
+! type (mp_real), intent(in):: x
 integer (mpiknd), intent(in):: x(0:)
+! type (mp_real), intent(out):: y
 integer (mpiknd), intent(out):: y(0:)
-integer (mpiknd) t1(0:mpnw+5), t2(0:mpnw+5), t3(0:mpnw+5)
-integer (mpiknd) ix8
+integer ic1
+!mp dim1="0:mpnw+6"
+! type (mp_real) t1, t2, t3
+integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (x) < mpnw + 4 .or. mpspacer (y) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPEXPINT: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 552)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (y)
+mpi1 = mpspacer (y)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** EXPINT: Uninitialized or inadequately sized array')
+!   call mpabrt (555)
+  call mpabrt (555)
 endif
 
-if (mpsgn (x) == 0) then
+!mp prec="mpnw1"
+
+! ic1 = mpsgn (x)
+mpi1 = mpsgnr (x)
+ic1 = mpi1
+if (ic1 == 0) then
   write (mpldb, 2)
-2 format ('*** MPEXPINT: argument is zero')
-  call mpabrt ( 553)
+2 format ('*** EXPINT: Argument is zero')
+!   call mpabrt (556)
+  call mpabrt (556)
 endif
 
-call mpinitwds (t1, mpnw)
-call mpinitwds (t2, mpnw)
-call mpinitwds (t3, mpnw)
-call mpdmc (0.d0, 0, t1, mpnw)
-call mpneg (x, t2, mpnw)
-call mpincgammar (t1, t2, t3, mpnw)
-call mpneg (t3, y, mpnw)
+! t1 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = - x
+call mpneg (x(0:), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! call mpincgammar (t1, t2, t3, mpnw1)
+call mpincgammar (t1, t2, t3, mpnw1)
+!mp prec="mpnw"
+! y = - t3
+call mpneg (t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+call mpeq (mpt1(0:mpnw+6), y(0:), mpnw)
 return
-end
+end subroutine mpexpint
 
 subroutine mpgammar (t, z, mpnw)
 
@@ -2544,212 +4181,367 @@ subroutine mpgammar (t, z, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i, i1, ic1, itrmx, j, mpnw1, nt, n1, n2, n3
-real (mprknd) alpha, al2, dmax, d1, d2, d3, pi
-parameter (al2 = 0.69314718055994530942d0, dmax = 1d8, itrmx = 100000, &
-  pi = 3.1415926535897932385d0)
+!mp dim1="0:"
+! type (mp_real), intent(in):: t
 integer (mpiknd), intent(in):: t(0:)
+! type (mp_real), intent(out):: z
 integer (mpiknd), intent(out):: z(0:)
-integer (mpiknd) f1(0:mpnw+6), sum1(0:mpnw+6), sum2(0:mpnw+6), tn(0:mpnw+6), &
-  t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6), &
-  t6(0:mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmx = 100000
+real (mpdknd), parameter:: al2 = 0.69314718055994530941723212145817657e0_mpdk
+real (mpdknd), parameter:: dmax = 1e8_mpdk
+integer i, ic1, ic2, i1, i2, j, nt, n1, n2, n3
+real (mpdknd) alpha, d1, d2, d3
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) f1, sum1, sum2, tn
+integer (mpiknd) f1(0:mpnw+6), sum1(0:mpnw+6), sum2(0:mpnw+6), tn(0:mpnw+6)
+! type (mp_real) t1, t2, t3, t4
+integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6)
+! type (mp_real) t5, t6
+integer (mpiknd) t5(0:mpnw+6), t6(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (t) < mpnw + 4 .or. mpspacer (z) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPGAMMAR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 554)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (sum1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (sum2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (tn(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t5(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t6(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (z)
+mpi1 = mpspacer (z)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** GAMMAR: Uninitialized or inadequately sized array')
+!   call mpabrt (557)
+  call mpabrt (557)
 endif
 
-mpnw1 = mpnw + 1
+!mp prec="mpnwm"
 
-!   Check if Pi has been precomputed.
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
 
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 4) mpnw1
-4 format ('*** MPGAMMAR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 555)
-endif
+!mp prec="mpnw1"
 
-call mpinitwds (f1, mpnw1)
-call mpinitwds (sum1, mpnw1)
-call mpinitwds (sum2, mpnw1)
-call mpinitwds (tn, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (t6, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
-
-call mpmdc (t, d1, n1, mpnw)
-d1 = d1 * 2.d0**n1
-call mpnint (t, t1, mpnw)
-call mpcpr (t, t1, ic1, mpnw)
-i1 = mpsgn (t)
-if (i1 == 0 .or. d1 > dmax .or. (i1 < 0 .and. ic1 == 0)) then
+! t1 = t - anint (t)
+call mpnint (t, mpt1(0:mpnw+6), mpnw1)
+call mpsub (t(0:), mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+call mpeq (mpt2(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! i1 = mpsgn (t)
+mpi1 = mpsgnr (t)
+i1 = mpi1
+! i2 = mpsgn (t1)
+mpi1 = mpsgnr (t1)
+i2 = mpi1
+if (i1 == 0 .or. d1 > dmax .or. (i1 < 0 .and. i2 == 0)) then
   write (mpldb, 2) dmax
-2 format ('*** MPGAMMAR: input argument must have absolute value <=',f10.0,','/ &
+2 format ('*** GAMMAR: Input argument must have absolute value <=',f10.0,','/ &
   'must not be zero, and if negative must not be an integer.')
-  call mpabrt ( 556)
+!   call mpabrt (558)
+  call mpabrt (558)
 endif
 
-call mpdmc (1.d0, 0, f1, mpnw1)
+! f1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), f1(0:mpnw+6), mpnw1)
 
 !   Find the integer and fractional parts of t.
 
-call mpinfr (t, t2, t3, mpnw1)
+! t2 = aint (t)
+call mpinfr (t, mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = t - t2
+call mpsub (t(0:), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
 
-if (mpsgn (t3) == 0) then
+! ic1 = mpsgn (t3)
+mpi1 = mpsgnr (t3)
+ic1 = mpi1
+! ic2 = mpsgn (t)
+mpi1 = mpsgnr (t)
+ic2 = mpi1
+
+if (ic1 == 0) then
 
 !   If t is a positive integer, then apply the usual factorial recursion.
 
-  call mpmdc (t2, d2, n2, mpnw1)
-  nt = d2 * 2.d0 ** n2
-  call mpeq (f1, t1, mpnw1)
+!   d1 = dpreal (t2)
+  call mpdpreal (t2, mpd1, mpnw1)
+  d1 = mpd1
+  nt = int (d1)
+!   t1 = f1
+  call mpeq (f1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 
   do i = 2, nt - 1
-    call mpmuld (t1, dble (i), t2, mpnw1)
-    call mpeq (t2, t1, mpnw1)
+!     t1 = t1 * real (i, mpdk)
+    call mpmuld (t1(0:mpnw+6), real (i, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
   enddo
 
-  call mproun (t1, mpnw)
-  call mpeq (t1, z, mpnw)
+!mp prec="mpnw"
+!   z = t1
+  call mpeq (t1(0:mpnw+6), z(0:), mpnw)
   goto 120
-elseif (mpsgn (t) > 0) then
+elseif (ic2 > 0) then
 
 !   Apply the identity Gamma[t+1] = t * Gamma[t] to reduce the input argument
 !   to the unit interval.
 
-  call mpmdc (t2, d2, n2, mpnw1)
-  nt = d2 * 2.d0 ** n2
-  call mpeq (f1, t1, mpnw1)
-  call mpeq (t3, tn, mpnw1)
+!   d1 = dpreal (t2)
+  call mpdpreal (t2, mpd1, mpnw)
+  d1 = mpd1
+  nt = nint (d1)
+!   t1 = f1
+  call mpeq (f1(0:mpnw+6), t1(0:mpnw+6), mpnw)
+!   tn = t3
+  call mpeq (t3(0:mpnw+6), tn(0:mpnw+6), mpnw)
 
   do i = 1, nt
-    call mpdmc (dble (i), 0, t4, mpnw1)
-    call mpsub (t, t4, t5, mpnw1)
-    call mpmul (t1, t5, t6, mpnw1)
-    call mpeq (t6, t1, mpnw1)
+    d2 = real (i, mpdk)
+!     t4 = mprealdp (d2)
+    call mprealdp (d2, mpt1(0:mpnw+6), mpnw)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw)
+!     t5 = t - t4
+    call mpsub (t(0:), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+    call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw)
+!     t1 = t1 * t5
+    call mpmul (t1(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw)
   enddo
 else
 
 !   Apply the gamma identity to reduce a negative argument to the unit interval.
 
-  call mpsub (f1, t, t4, mpnw1)
-  call mpinfr (t4, t3, t5, mpnw1)
-  call mpmdc (t3, d3, n3, mpnw1)
-  nt = d3 * 2.d0 ** n3
-
-  call mpeq (f1, t1, mpnw1)
-  call mpsub (f1, t5, t2, mpnw1)
-  call mpeq (t2, tn, mpnw1)
+!   t4 = f1 - t
+  call mpsub (f1(0:mpnw+6), t(0:), mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw)
+!   t3 = aint (t4)
+  call mpinfr (t4, mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw)
+!   t5 = t4 - t3
+  call mpsub (t4(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw)
+!   d1 = dpreal (t3)
+  call mpdpreal (t3, mpd1, mpnw)
+  d1 = mpd1
+  nt = nint (d1)
+!   t1 = f1
+  call mpeq (f1(0:mpnw+6), t1(0:mpnw+6), mpnw)
+!   t2 = f1 - t5
+  call mpsub (f1(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw)
+!   tn = t2
+  call mpeq (t2(0:mpnw+6), tn(0:mpnw+6), mpnw)
 
   do i = 0, nt - 1
-    call mpdmc (dble (i), 0, t4, mpnw1)
-    call mpadd (t, t4, t5, mpnw1)
-    call mpdiv (t1, t5, t6, mpnw1)
-    call mpeq (t6, t1, mpnw1)
+    d2 = real (i, mpdk)
+!     t4 = mprealdp (d2)
+    call mprealdp (d2, mpt1(0:mpnw+6), mpnw)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw)
+!     t5 = t + t4
+    call mpadd (t(0:), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+    call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw)
+!     t1 = t1 / t5
+    call mpdiv (t1(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw)
   enddo
 endif
 
-!   Calculate alpha = bits of precision * log(2) / 2, then take the next integer
-!   value mod 4, so that d2 = 0.25 * alpha^2 can be calculated exactly in DP.
+!   Calculate alpha = bits of precision * log(2) / 2, then take the next even
+!   integer value, so that alpha/2 and alpha^2/4 can be calculated exactly in DP.
 
-alpha = 4.d0 * aint ((0.5d0 * mpnbt * al2 * (mpnw1 + 1)) / 4.d0 + 1.d0)
-d2 = 0.25d0 * alpha**2
-
-call mpeq (tn, t2, mpnw1)
-call mpdiv (f1, t2, t3, mpnw1)
-call mpeq (t3, sum1, mpnw1)
+alpha = 2.e0_mpdk * aint (0.25e0_mpdk * mpnw1 * mpnbt * al2 + 1.e0_mpdk)
+d2 = 0.25e0_mpdk * alpha ** 2
+! t2 = tn
+call mpeq (tn(0:mpnw+6), t2(0:mpnw+6), mpnw)
+! t3 = f1 / t2
+call mpdiv (f1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw)
+! sum1 = t3
+call mpeq (t3(0:mpnw+6), sum1(0:mpnw+6), mpnw)
 
 !   Evaluate the series with t.
 
 do j = 1, itrmx
-  call mpdmc (dble (j), 0, t6, mpnw1)
-  call mpadd (t2, t6, t4, mpnw1)
-  call mpmuld (t4, dble (j), t5, mpnw1)
-  call mpdiv (t3, t5, t6, mpnw1)
-  call mpmuld (t6, d2, t3, mpnw1)
-  call mpadd (sum1, t3, t4, mpnw1)
-  call mpeq (t4, sum1, mpnw1)
-
-  call mpabs (t3, tc1, 4)
-  call mpmul (eps, sum1, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic1, 4)
-  if (ic1 <= 0) goto 100
+  d3 = real (j, mpdk)
+!   t6 = mprealdp (d3)
+  call mprealdp (d3, mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw)
+!   t4 = t2 + t6
+  call mpadd (t2(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw)
+!   t5 = t4 * real (j, mpdk)
+  call mpmuld (t4(0:mpnw+6), real (j, mpdk), mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw)
+!   t6 = t3 / t5
+  call mpdiv (t3(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw)
+!   t3 = t6 * d2
+  call mpmuld (t6(0:mpnw+6), d2, mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw)
+!   sum1 = sum1 + t3
+  call mpadd (sum1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw)
+  call mpeq (mpt1(0:mpnw+6), sum1(0:mpnw+6), mpnw)
+!mp prec="mpnwm"
+!   tc1 = abs (t3) - eps * abs (sum1)
+  call mpabs (t3, mpt1(0:mpnw+6), mpnwm)
+  call mpabs (sum1, mpt2(0:mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+  call mpeq (mpt4(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!   ic1 = mpsgn (tc1)
+  mpi1 = mpsgnr (tc1)
+  ic1 = mpi1
+  if (ic1 < 0) goto 100
 enddo
 
-write (mpldb, 3) 1, itrmx
-3 format ('*** MPGAMMAR: iteration limit exceeded',2i10)
-call mpabrt ( 557)
+write (mpldb, 3)
+3 format ('*** GAMMAR: End loop error 1')
+! call mpabrt (559)
+call mpabrt (559)
 
 100 continue
 
-call mpneg (tn, t2, mpnw1)
-call mpdiv (f1, t2, t3, mpnw1)
-call mpeq (t3, sum2, mpnw1)
+!mp prec="mpnw1"
+! t2 = - tn
+call mpneg (tn(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = f1 / t2
+call mpdiv (f1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! sum2 = t3
+call mpeq (t3(0:mpnw+6), sum2(0:mpnw+6), mpnw1)
 
 !   Evaluate the same series with -t.
 
 do j = 1, itrmx
-  call mpdmc (dble (j), 0, t6, mpnw1)
-  call mpadd (t2, t6, t4, mpnw1)
-  call mpmuld (t4, dble (j), t5, mpnw1)
-  call mpdiv (t3, t5, t6, mpnw1)
-  call mpmuld (t6, d2, t3, mpnw1)
-  call mpadd (sum2, t3, t4, mpnw1)
-  call mpeq (t4, sum2, mpnw1)
-
-  call mpabs (t3, tc1, 4)
-  call mpmul (eps, sum2, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic1, 4)
-  if (ic1 <= 0) goto 110
+  d3 = real (j, mpdk)
+!   t6 = mprealdp (d3)
+  call mprealdp (d3, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t4 = t2 + t6
+  call mpadd (t2(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t5 = t4 * real (j, mpdk)
+  call mpmuld (t4(0:mpnw+6), real (j, mpdk), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = t3 / t5
+  call mpdiv (t3(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t3 = t6 * d2
+  call mpmuld (t6(0:mpnw+6), d2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   sum2 = sum2 + t3
+  call mpadd (sum2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum2(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!   tc1 = abs (t3) - eps * abs (sum2)
+  call mpabs (t3, mpt1(0:mpnw+6), mpnwm)
+  call mpabs (sum2, mpt2(0:mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+  call mpeq (mpt4(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!   ic1 = mpsgn (tc1)
+  mpi1 = mpsgnr (tc1)
+  ic1 = mpi1
+  if (ic1 < 0) goto 110
 enddo
 
-write (mpldb, 3) 2, itrmx
-call mpabrt ( 558)
+write (mpldb, 4)
+4 format ('*** GAMMAR: End loop error 2')
+! call mpabrt (560)
+call mpabrt (560)
+
 
 110 continue
 
-!   Compute sqrt (mppic * sum1 / (tn * sin (mppic * tn) * sum2))
-!   and (alpha/2)^tn terms.
+!   Compute sqrt (pi * sum1 / (tn * sin (pi * tn) * sum2))
+!   and (alpha/2)^tn terms. Also, multiply by the factor t1, from the
+!   If block above.
 
-call mpeq (mppicon, t2, mpnw1)
-call mpmul (t2, tn, t3, mpnw1)
-call mpcssnr (t3, t4, t5, mpnw1)
-
-call mpmul (t5, sum2, t6, mpnw1)
-call mpmul (tn, t6, t5, mpnw1)
-call mpmul (t2, sum1, t3, mpnw1)
-call mpdiv (t3, t5, t6, mpnw1)
-call mpneg (t6, t4, mpnw1)
-call mpeq (t4, t6, mpnw1)
-call mpsqrt (t6, t2, mpnw1)
-call mpdmc (0.5d0 * alpha, 0, t3, mpnw1)
-call mplog (t3, t4, mpnw1)
-call mpmul (tn, t4, t5, mpnw1)
-call mpexp (t5, t6, mpnw1)
-call mpmul (t2, t6, t3, mpnw1)
-call mpmul (t1, t3, t4, mpnw1)
-
-!   Round to mpnw words precision.
-
-call mproun (t4, mpnw)
-call mpeq (t4, z, mpnw)
+!mp prec="mpnw1"
+! t2 = mppicon
+call mpeq (mppicon(0:), t2(0:mpnw+6), mpnw1)
+! t3 = t2 * tn
+call mpmul (t2(0:mpnw+6), tn(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = cos (t3)
+call mpcssnr (t3, mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t5 = sin (t3)
+call mpcssnr (t3, mpt2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+! t6 = t5 * sum2
+call mpmul (t5(0:mpnw+6), sum2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+! t5 = tn * t6
+call mpmul (tn(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+! t3 = t2 * sum1
+call mpmul (t2(0:mpnw+6), sum1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t6 = - t3 / t5
+call mpdiv (t3(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpneg (mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+call mpeq (mpt2(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+! t2 = sqrt (t6)
+call mpsqrt (t6, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+d3 = 0.5e0_mpdk * alpha
+! t3 = mprealdp (d3)
+call mprealdp (d3, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = log (t3)
+call mplog (t3, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t5 = tn * t4
+call mpmul (tn(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+! t6 = exp (t5)
+call mpexp (t5, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+! t3 = t2 * t6
+call mpmul (t2(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = t1 * t3
+call mpmul (t1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!mp prec="mpnw"
+! z = t4
+call mpeq (t4(0:mpnw+6), z(0:), mpnw)
 
 120 continue
 
@@ -2767,263 +4559,476 @@ subroutine mphurwitzzetan (is, aa, zz, mpnw)
 !   This is limited to IS >= 2 and 0 < AA < 1.
 
 implicit none
-integer i1, ic1, ic2, ic3, itrmax, k, n1, mpnw, mpnw1
-real (mprknd) d1, dk, pi
-parameter (itrmax = 1000000, pi = 3.1415926535897932385d0)
+integer, intent(in):: mpnw
 integer, intent(in):: is
+!mp dim1="0:"
+! type (mp_real), intent(in):: aa
 integer (mpiknd), intent(in):: aa(0:)
+! type (mp_real), intent(out):: zz
 integer (mpiknd), intent(out):: zz(0:)
-integer (mpiknd) gs1(0:mpnw+6), gs2(0:mpnw+6), ss(0:mpnw+6), &
-  sum1(0:mpnw+6), sum2(0:mpnw+6), sum3(0:mpnw+6), ss1(0:mpnw+6), ss2(0:mpnw+6), &
-  ss3(0:mpnw+6), ss4(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6), s3(0:mpnw+6), &
-  t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6), &
-  t6(0:mpnw+6), t7(0:mpnw+6), t8(0:mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000
+integer i1, ic1, ic2, ic3, k, n1
+real (mpdknd) d1, d2, dk
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2, tc3
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5), tc3(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) gs1, gs2, ss, sum1, sum2
+integer (mpiknd) gs1(0:mpnw+6), gs2(0:mpnw+6), ss(0:mpnw+6), sum1(0:mpnw+6), sum2(0:mpnw+6)
+! type (mp_real) sum3, ss1, ss2, ss3, ss4
+integer (mpiknd) sum3(0:mpnw+6), ss1(0:mpnw+6), ss2(0:mpnw+6), ss3(0:mpnw+6), ss4(0:mpnw+6)
+! type (mp_real) s1, s2, s3, t1, t2
+integer (mpiknd) s1(0:mpnw+6), s2(0:mpnw+6), s3(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6)
+! type (mp_real) t3, t4, t5, t6
+integer (mpiknd) t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6), t6(0:mpnw+6)
+! type (mp_real) t7, t8
+integer (mpiknd) t7(0:mpnw+6), t8(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (aa) < mpnw + 4 .or. mpspacer (zz) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPHURWITZZETAN: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 559)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc3(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (gs1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (gs2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (ss(0:mpnw+6), mpnw+6-5)
+call mpinitwds (sum1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (sum2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (sum3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (ss1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (ss2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (ss3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (ss4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (s1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (s2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (s3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t5(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t6(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t7(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t8(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (zz)
+mpi1 = mpspacer (zz)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** HURWITZZETAN: Uninitialized or inadequately sized array')
+!   call mpabrt (561)
+  call mpabrt (561)
 endif
 
-mpnw1 = mpnw + 1
 
-!   Check if Pi has been precomputed.
-
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 2) mpnw1
-2 format ('*** MPHURWITZZETAN: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 560)
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw1) then
+  write (6, 2) mpnw1
+2 format ('*** HURWITZZETAN: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (562)
+  call mpabrt (562)
 endif
 
-call mpinitwds (gs1, mpnw1)
-call mpinitwds (gs2, mpnw1)
-call mpinitwds (ss, mpnw1)
-call mpinitwds (sum1, mpnw1)
-call mpinitwds (sum2, mpnw1)
-call mpinitwds (sum3, mpnw1)
-call mpinitwds (ss1, mpnw1)
-call mpinitwds (ss2, mpnw1)
-call mpinitwds (ss3, mpnw1)
-call mpinitwds (ss4, mpnw1)
-call mpinitwds (s1, mpnw1)
-call mpinitwds (s2, mpnw1)
-call mpinitwds (s3, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (t6, mpnw1)
-call mpinitwds (t7, mpnw1)
-call mpinitwds (t8, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
+!mp prec="mpnwm"
+
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
+
+!mp prec="mpnw1"
 
 if (is <= 0) then
   write (mpldb, 3)
-3 format ('*** MPHURWITZZETAN: IS less than or equal to 0:')
-  call mpabrt ( 561)
+3 format ('*** HURWITZZETAN: Integer argument less than or equal to 0:')
+!   call mpabrt (563)
+  call mpabrt (563)
 endif
 
-call mpdmc (0.d0, 0, t1, mpnw1)
-call mpdmc (1.d0, 0, t2, mpnw1)
-call mpcpr (aa, t1, ic1, mpnw1)
-call mpcpr (aa, t2, ic2, mpnw1)
-if (ic1 <= 0 .or. ic2 >= 0) then
+! t1 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = aa - t1
+call mpsub (aa(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! ic1 = mpsgn (t3)
+mpi1 = mpsgnr (t3)
+ic1 = mpi1
+! t4 = aa - t2
+call mpsub (aa(0:), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! ic2 = mpsgn (t4)
+mpi1 = mpsgnr (t4)
+ic2 = mpi1
+if (ic2 == 0) then
+
+!   In the case AA = 1, just call the zeta function.
+
+!mp prec="mpnw"
+!   call mpzetaintr (is, zz, mpnw)
+  call mpzetaintr (is, zz, mpnw)
+  goto 200
+elseif (ic1 <= 0 .or. ic2 > 0) then
   write (mpldb, 4)
-4 format ('*** MPHURWITZZETAN: AA must be in the range (0, 1)')
-  call mpabrt ( 562)
+4 format ('*** HURWITZZETAN: Second argument must be in the range (0, 1]')
+!   call mpabrt (564)
+  call mpabrt (564)
 endif
 
-! ss = mpreal (dble (is), mpnw)
-! ss1 = 0.5d0 * ss
-! ss2 = 0.5d0 * (ss + 1.d0)
-! ss3 = 0.5d0 * (1.d0 - ss)
-! ss4 = 1.d0 - 0.5d0 * ss
+!mp prec="mpnw1"
 
-call mpdmc (dble(is), 0, ss, mpnw1)
-call mpmuld (ss, 0.5d0, ss1, mpnw1)
-call mpdmc (1.d0, 0, t1, mpnw1)
-call mpadd (t1, ss, t2, mpnw1)
-call mpmuld (t2, 0.5d0, ss2, mpnw1)
-call mpsub (t1, ss, t2, mpnw1)
-call mpmuld (t2, 0.5d0, ss3, mpnw1)
-call mpsub (t1, ss1, ss4, mpnw1)
-
-! gs1 = gamma (ss1)
-! gs2 = gamma (ss2)
-! t1 = pi * aa ** 2
-
+d2 = real (is, mpdk)
+! ss = mprealdp (d2)
+call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), ss(0:mpnw+6), mpnw1)
+! ss1 = ss * 0.5e0_mpdk
+call mpmuld (ss(0:mpnw+6), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), ss1(0:mpnw+6), mpnw1)
+! t1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = t1 + ss
+call mpadd (t1(0:mpnw+6), ss(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! ss2 = t2 * 0.5e0_mpdk
+call mpmuld (t2(0:mpnw+6), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), ss2(0:mpnw+6), mpnw1)
+! t2 = t1 - ss
+call mpsub (t1(0:mpnw+6), ss(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! ss3 = t2 * 0.5e0_mpdk
+call mpmuld (t2(0:mpnw+6), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), ss3(0:mpnw+6), mpnw1)
+! ss4 = t1 - ss1
+call mpsub (t1(0:mpnw+6), ss1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), ss4(0:mpnw+6), mpnw1)
+! call mpgammar (ss1, gs1, mpnw1)
 call mpgammar (ss1, gs1, mpnw1)
+! call mpgammar (ss2, gs2, mpnw1)
 call mpgammar (ss2, gs2, mpnw1)
-call mpmul (aa, aa, t2, mpnw1)
-call mpmul (mppicon, t2, t1, mpnw1)
+! t2 = aa ** 2
+call mpnpwr (aa(0:), 2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t1 = mppicon * t2
+call mpmul (mppicon(0:), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 
-! sum1 = (incgamma (ss1, t1) / gs1 + incgamma (ss2, t1) / gs2) / abs (aa)**is
-! sum2 = mpreal (0.d0, mpnw)
-! sum3 = mpreal (0.d0, mpnw)
-
+! call mpincgammar (ss1, t1, t2, mpnw1)
 call mpincgammar (ss1, t1, t2, mpnw1)
-call mpdiv (t2, gs1, t3, mpnw1)
+! t3 = t2 / gs1
+call mpdiv (t2(0:mpnw+6), gs1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! call mpincgammar (ss2, t1, t2, mpnw1)
 call mpincgammar (ss2, t1, t2, mpnw1)
-call mpdiv (t2, gs2, t4, mpnw1)
-call mpadd (t3, t4, t2, mpnw1)
-call mpabs (aa, t3, mpnw1)
-call mpnpwr (t3, is, t4, mpnw1)
-call mpdiv (t2, t4, sum1, mpnw1)
-call mpdmc (0.d0, 0, sum2, mpnw1)
-call mpdmc (0.d0, 0, sum3, mpnw1)
+! t4 = t2 / gs2
+call mpdiv (t2(0:mpnw+6), gs2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t2 = t3 + t4
+call mpadd (t3(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = abs (aa)
+call mpabs (aa, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = t3 ** is
+call mpnpwr (t3(0:mpnw+6), is, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! sum1 = t2 / t4
+call mpdiv (t2(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), sum1(0:mpnw+6), mpnw1)
+! sum2 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), sum2(0:mpnw+6), mpnw1)
+! sum3 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), sum3(0:mpnw+6), mpnw1)
 
 do k = 1, itrmax
-  dk = dble (k)
+  dk = real (k, mpdk)
+!   t5 = mprealdp (dk)
+  call mprealdp (dk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = t5 + aa
+  call mpadd (t5(0:mpnw+6), aa(0:), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t5 = t6 ** 2
+  call mpnpwr (t6(0:mpnw+6), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t1 = mppicon * t5
+  call mpmul (mppicon(0:), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t5 = - mprealdp (dk)
+  call mprealdp (dk, mpt1(0:mpnw+6), mpnw1)
+  call mpneg (mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = t5 + aa
+  call mpadd (t5(0:mpnw+6), aa(0:), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t6 ** 2
+  call mpnpwr (t6(0:mpnw+6), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t2 = mppicon * t7
+  call mpmul (mppicon(0:), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t6 = t5 ** 2
+  call mpnpwr (t5(0:mpnw+6), 2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t3 = mppicon * t6
+  call mpmul (mppicon(0:), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t5 = mppicon * 2.e0_mpdk * dk
+  call mpmuld (mppicon(0:), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpmuld (mpt1(0:mpnw+6), dk, mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t4 = t5 * aa
+  call mpmul (t5(0:mpnw+6), aa(0:), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
 
-!  t1 = pi * (dk + aa)**2
-!  t2 = pi * (-dk + aa)**2
-!  t3 = dk**2 * pi
-!  t4 = 2.d0 * pi * dk * aa
-
-  call mpdmc (dk, 0, t5, mpnw1)
-  call mpadd (t5, aa, t6, mpnw1)
-  call mpmul (t6, t6, t5, mpnw1)
-  call mpmul (mppicon, t5, t1, mpnw1)
-  call mpdmc (-dk, 0, t5, mpnw1)
-  call mpadd (t5, aa, t6, mpnw1)
-  call mpmul (t6, t6, t7, mpnw1)
-  call mpmul (mppicon, t7, t2, mpnw1)
-  call mpmul (t5, t5, t6, mpnw1)
-  call mpmul (mppicon, t6, t3, mpnw1)
-  call mpmuld (mppicon, 2.d0 * dk, t5, mpnw1)
-  call mpmul (t5, aa, t4, mpnw1)
-
-!  s1 = (incgamma (ss1, t1) / gs1 + incgamma (ss2, t1) / gs2) / abs (dk + aa)**is
-
+!   call mpincgammar (ss1, t1, t5, mpnw1)
   call mpincgammar (ss1, t1, t5, mpnw1)
-  call mpdiv (t5, gs1, t6, mpnw1)
+!   t6 = t5 / gs1
+  call mpdiv (t5(0:mpnw+6), gs1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   call mpincgammar (ss2, t1, t5, mpnw1)
   call mpincgammar (ss2, t1, t5, mpnw1)
-  call mpdiv (t5, gs2, t7, mpnw1)
-  call mpadd (t6, t7, t5, mpnw1)
-  call mpdmc (dk, 0, t6, mpnw1)
-  call mpadd (t6, aa, t7, mpnw1)
-  call mpabs (t7, t6, mpnw1)
-  call mpnpwr (t6, is, t7, mpnw1)
-  call mpdiv (t5, t7, s1, mpnw1)
+!   t7 = t5 / gs2
+  call mpdiv (t5(0:mpnw+6), gs2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t5 = t6 + t7
+  call mpadd (t6(0:mpnw+6), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = mprealdp (dk)
+  call mprealdp (dk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t6 + aa
+  call mpadd (t6(0:mpnw+6), aa(0:), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t6 = abs (t7)
+  call mpabs (t7, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t6 ** is
+  call mpnpwr (t6(0:mpnw+6), is, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   s1 = t5 / t7
+  call mpdiv (t5(0:mpnw+6), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), s1(0:mpnw+6), mpnw1)
 
-!  s2 = (incgamma (ss1, t2) / gs1 - incgamma (ss2, t2) / gs2) / abs (-dk + aa)**is
-
+!   call mpincgammar (ss1, t2, t5, mpnw1)
   call mpincgammar (ss1, t2, t5, mpnw1)
-  call mpdiv (t5, gs1, t6, mpnw1)
+!   t6 = t5 / gs1
+  call mpdiv (t5(0:mpnw+6), gs1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   call mpincgammar (ss2, t2, t5, mpnw1)
   call mpincgammar (ss2, t2, t5, mpnw1)
-  call mpdiv (t5, gs2, t7, mpnw1)
-  call mpsub (t6, t7, t5, mpnw1)
-  call mpdmc (-dk, 0, t6, mpnw1)
-  call mpadd (t6, aa, t7, mpnw1)
-  call mpabs (t7, t6, mpnw1)
-  call mpnpwr (t6, is, t7, mpnw1)
-  call mpdiv (t5, t7, s2, mpnw1)
+!   t7 = t5 / gs2
+  call mpdiv (t5(0:mpnw+6), gs2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t5 = t6 - t7
+  call mpsub (t6(0:mpnw+6), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = - mprealdp (dk)
+  call mprealdp (dk, mpt1(0:mpnw+6), mpnw1)
+  call mpneg (mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t6 + aa
+  call mpadd (t6(0:mpnw+6), aa(0:), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t6 = abs (t7)
+  call mpabs (t7, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t6 ** is
+  call mpnpwr (t6(0:mpnw+6), is, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   s2 = t5 / t7
+  call mpdiv (t5(0:mpnw+6), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), s2(0:mpnw+6), mpnw1)
+!   sum1 = sum1 + s1
+  call mpadd (sum1(0:mpnw+6), s1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum1(0:mpnw+6), mpnw1)
+!   sum2 = sum2 + s2
+  call mpadd (sum2(0:mpnw+6), s2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum2(0:mpnw+6), mpnw1)
 
-!  sum1 = sum1 + s1
-!  sum2 = sum2 + s2
-
-  call mpadd (sum1, s1, t5, mpnw1)
-  call mpeq (t5, sum1, mpnw1)
-  call mpadd (sum2, s2, t5, mpnw1)
-  call mpeq (t5, sum2, mpnw1)
-
-!  s3 = (incgamma (ss3, t3) * cos (t4)/ gs1 + incgamma (ss4, t3) * sin (t4) / gs2) &
-!    / mpreal (dk, mpnw)**(1-is)
-
+!   call mpincgammar (ss3, t3, t5, mpnw1)
   call mpincgammar (ss3, t3, t5, mpnw1)
-  call mpcssnr (t4, t6, t7, mpnw1)
-  call mpmul (t5, t6, t8, mpnw1)
-  call mpdiv (t8, gs1, t5, mpnw1)
+!   t6 = cos (t4)
+  call mpcssnr (t4, mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = sin (t4)
+  call mpcssnr (t4, mpt2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t8 = t5 * t6
+  call mpmul (t5(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t8(0:mpnw+6), mpnw1)
+!   t5 = t8 / gs1
+  call mpdiv (t8(0:mpnw+6), gs1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   call mpincgammar (ss4, t3, t6, mpnw1)
   call mpincgammar (ss4, t3, t6, mpnw1)
-  call mpmul (t6, t7, t8, mpnw1)
-  call mpdiv (t8, gs2, t6, mpnw1)
-  call mpadd (t5, t6, t7, mpnw1)
-  call mpdmc (dk, 0, t5, mpnw1)
+!   t8 = t6 * t7
+  call mpmul (t6(0:mpnw+6), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t8(0:mpnw+6), mpnw1)
+!   t6 = t8 / gs2
+  call mpdiv (t8(0:mpnw+6), gs2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t5 + t6
+  call mpadd (t5(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t5 = mprealdp (dk)
+  call mprealdp (dk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
   i1 = 1 - is
-  call mpnpwr (t5, i1, t6, mpnw1)
-  call mpdiv (t7, t6, s3, mpnw1)
-
-!  sum3 = sum3 + s3
-
-  call mpadd (sum3, s3, t5, mpnw1)
-  call mpeq (t5, sum3, mpnw1)
-
-!  if (abs (s1) < eps * abs (sum1) .and. abs (s2) < eps * abs (sum2) .and. &
-!    abs (s3) < eps * abs (sum3)) goto 100
-
-  call mpabs (s1, tc1, 4)
-  call mpmul (eps, sum1, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic1, 4)
-  call mpabs (s2, tc1, 4)
-  call mpmul (eps, sum2, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic2, 4)
-  call mpabs (s3, tc1, 4)
-  call mpmul (eps, sum3, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic3, 4)
-  if (ic1 <= 0 .and. ic2 <= 0 .and. ic3 <= 0) goto 100
+!   t6 = t5 ** i1
+  call mpnpwr (t5(0:mpnw+6), i1, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   s3 = t7 / t6
+  call mpdiv (t7(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), s3(0:mpnw+6), mpnw1)
+!   sum3 = sum3 + s3
+  call mpadd (sum3(0:mpnw+6), s3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum3(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!   tc1 = abs (s1) - eps * abs (sum1)
+  call mpabs (s1, mpt1(0:mpnw+6), mpnwm)
+  call mpabs (sum1, mpt2(0:mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+  call mpeq (mpt4(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!   tc2 = abs (s2) - eps * abs (sum2)
+  call mpabs (s2, mpt1(0:mpnw+6), mpnwm)
+  call mpabs (sum2, mpt2(0:mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+  call mpeq (mpt4(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!   tc3 = abs (s3) - eps * abs (sum3)
+  call mpabs (s3, mpt1(0:mpnw+6), mpnwm)
+  call mpabs (sum3, mpt2(0:mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+  call mpeq (mpt4(0:mpnw+6), tc3(0:mpnwm+5), mpnwm)
+!   ic1 = mpsgn (tc1)
+  mpi1 = mpsgnr (tc1)
+  ic1 = mpi1
+!   ic2 = mpsgn (tc2)
+  mpi1 = mpsgnr (tc2)
+  ic2 = mpi1
+!   ic3 = mpsgn (tc3)
+  mpi1 = mpsgnr (tc3)
+  ic3 = mpi1
+  if (ic1 < 0 .and. ic2 < 0 .and. ic3 < 0) goto 100
 enddo
 
 write (mpldb, 5)
-5 format ('*** MPHURWITZZETAN: Loop end error')
-call mpabrt ( 563)
+5 format ('*** HURWITZZETAN: Loop end error')
+! call mpabrt (565)
+call mpabrt (565)
 
 100 continue
 
+!mp prec="mpnw1"
 if (mod (is, 2) == 0) then
-!  t1 = pi ** (is / 2) / ((ss - 1.d0) * gamma (ss1))
-
   i1 = is / 2
-  call mpnpwr (mppicon, i1, t2, mpnw1)
-  call mpdmc (1.d0, 0, t3, mpnw1)
-  call mpsub (ss, t3, t4, mpnw1)
+!   t2 = mppicon ** i1
+  call mpnpwr (mppicon(0:), i1, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t4 = ss - t3
+  call mpsub (ss(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   call mpgammar (ss1, t5, mpnw1)
   call mpgammar (ss1, t5, mpnw1)
-  call mpmul (t4, t5, t6, mpnw1)
-  call mpdiv (t2, t6, t1, mpnw1)
+!   t6 = t4 * t5
+  call mpmul (t4(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t1 = t2 / t6
+  call mpdiv (t2(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 else
-!  t1 = sqrt (pi) * pi ** ((is - 1) / 2) / ((ss - 1.d0) * gamma (ss1))
-
   i1 = (is - 1) / 2
-  call mpnpwr (mppicon, i1, t2, mpnw1)
-  call mpsqrt (mppicon, t3, mpnw1)
-  call mpmul (t2, t3, t4, mpnw1)
-  call mpdmc (1.d0, 0, t2, mpnw1)
-  call mpsub (ss, t2, t3, mpnw1)
+!   t2 = mppicon ** i1
+  call mpnpwr (mppicon(0:), i1, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = sqrt (mppicon)
+  call mpsqrt (mppicon, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t4 = t2 * t3
+  call mpmul (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t2 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = ss - t2
+  call mpsub (ss(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   call mpgammar (ss1, t5, mpnw1)
   call mpgammar (ss1, t5, mpnw1)
-  call mpmul (t3, t5, t6, mpnw1)
-  call mpdiv (t4, t6, t1, mpnw1)
+!   t6 = t3 * t5
+  call mpmul (t3(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t1 = t4 / t6
+  call mpdiv (t4(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 endif
 
-!t2 = pi ** is / sqrt (pi)
+! t3 = mppicon ** is
+call mpnpwr (mppicon(0:), is, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = sqrt (mppicon)
+call mpsqrt (mppicon, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t2 = t3 / t4
+call mpdiv (t3(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = sum1 * 0.5e0_mpdk
+call mpmuld (sum1(0:mpnw+6), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = sum2 * 0.5e0_mpdk
+call mpmuld (sum2(0:mpnw+6), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t5 = sum3 * t2
+call mpmul (sum3(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+! t6 = t1 + t3
+call mpadd (t1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+! t7 = t6 + t4
+call mpadd (t6(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+! t1 = t7 + t5
+call mpadd (t7(0:mpnw+6), t5(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!mp prec="mpnw"
+! zz = t1
+call mpeq (t1(0:mpnw+6), zz(0:), mpnw)
 
-call mpnpwr (mppicon, is, t3, mpnw1)
-call mpsqrt (mppicon, t4, mpnw1)
-call mpdiv (t3, t4, t2, mpnw1)
-
-! hurwitzzetan = t1 + 0.5d0 * sum1 + 0.5d0 * sum2 + t2 * sum3
-
-call mpmuld (sum1, 0.5d0, t3, mpnw1)
-call mpmuld (sum2, 0.5d0, t4, mpnw1)
-call mpmul (sum3, t2, t5, mpnw1)
-call mpadd (t1, t3, t6, mpnw1)
-call mpadd (t6, t4, t7, mpnw1)
-call mpadd (t7, t5, t1, mpnw1)
-call mproun (t1, mpnw)
-call mpeq (t1, zz, mpnw)
+200 continue
 
 return
 end subroutine mphurwitzzetan
@@ -3037,211 +5042,316 @@ subroutine mphurwitzzetanbe (nb1, nb2, berne, iss, aa, zz, mpnw)
 !  shown below. NB2 must be greater than 1.4 x precision in decimal digits.
 
 implicit none
-integer i1, i2, ic1, iqq, itrmax, k, n1, mpnw, mpnw1
-real (mprknd) d1, dber, dcon, dp
-parameter (itrmax = 1000000, dber = 1.4d0, dcon = 0.6d0)
-integer, intent(in):: nb1, nb2, iss
-integer (mpiknd), intent(in):: berne(0:nb1+5,nb2), aa(0:)
+integer, intent(in):: nb1, mpnw
+integer, intent(in):: nb2, iss
+!mp dim1="0:nb1+5"
+! type (mp_real), intent(in):: berne(1:nb2)
+integer (mpiknd), intent(in):: berne(0:nb1+5,1:nb2)
+!mp dim1="0:"
+! type (mp_real), intent(in):: aa
+integer (mpiknd), intent(in):: aa(0:)
+! type (mp_real), intent(out):: zz
 integer (mpiknd), intent(out):: zz(0:)
-integer (mpiknd) aq(0:mpnw+6), aq2(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6), &
-  s3(0:mpnw+6), s4(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), &
-  t4(0:mpnw+6), t5(0:mpnw+6), t6(0:mpnw+6), eps(0:9), f1(0:9), tc1(0:9), &
-  tc2(0:9), tc3(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000
+real (mpdknd), parameter:: dber = 0.4e0_mpdk, dcon = 0.18e0_mpdk
+integer i1, i2, ic1, ic2, iqq, k, n1
+real (mpdknd) d1, d2, dp
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) aq, aq2, s1, s2, s3
+integer (mpiknd) aq(0:mpnw+6), aq2(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6), s3(0:mpnw+6)
+! type (mp_real) s4, t1, t2, t3, t4
+integer (mpiknd) s4(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6)
+! type (mp_real) t5, t6, f1
+integer (mpiknd) t5(0:mpnw+6), t6(0:mpnw+6), f1(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (aa) < mpnw + 4 .or. mpspacer (zz) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPHURWITZZETANBE: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 564)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (aq(0:mpnw+6), mpnw+6-5)
+call mpinitwds (aq2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (s1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (s2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (s3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (s4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t5(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t6(0:mpnw+6), mpnw+6-5)
+call mpinitwds (f1(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (zz)
+mpi1 = mpspacer (zz)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** HURWITZZETANBE: Uninitialized or inadequately sized array')
+!   call mpabrt (566)
+  call mpabrt (566)
 endif
 
-mpnw1 = mpnw + 1
+!mp prec="mpnwm"
+
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
+
+!mp prec="mpnw1"
 
 !   Check if berne array has been initialized.
 
-i1 = 1000000000
-i2 = 1000000000
-
-do k = 1, nb2
-  i1 = min (i1, mpspacer (berne(0:nb1+5,k)))
-  i2 = min (i2, mpwprecr (berne(0:nb1+5,k)))
-enddo
-
-call mpmdc (berne(0:nb1+5,1), d1, n1, mpnw)
-d1 = d1 * 2.d0 ** n1
-
-if (i1 < mpnw + 6 .or. i2 < mpnw .or. abs (d1 - 1.d0 / 6.d0) > mprdfz .or. &
-  nb2 < int (dber * mpdpw * (mpnw - 2))) then
-  write (mpldb, 3) int (dber * mpdpw * (mpnw - 2))
-3 format ('*** MPHURWITZZETANBE: Array of even Bernoulli coefficients must be initialized'/ &
-   'with at least',i8,' entries by calling MPBERNE or MPBERNER.')
-  call mpabrt ( 565)
+! d1 = dpreal (berne(1))
+call mpdpreal (berne(0:nb1+5,1), mpd1, mpnw1)
+d1 = mpd1
+if (abs (d1 - 1.e0_mpdk / 6.e0_mpdk) > mprdfz .or. nb2 < int (dber * mpnbt * mpnw1)) then
+  write (mpldb, 2) int (dber * mpnbt * mpnw1)
+2 format ('*** HURWITZZETANBE: Array of even Bernoulli coefficients must be initialized'/ &
+   'with at least',i8,' entries using BERNE or BERNER.')
+!   call mpabrt (567)
+  call mpabrt (567)
 endif
 
-call mpinitwds (aq, mpnw1)
-call mpinitwds (aq2, mpnw1)
-call mpinitwds (s1, mpnw1)
-call mpinitwds (s2, mpnw1)
-call mpinitwds (s3, mpnw1)
-call mpinitwds (s4, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (t6, mpnw1)
-call mpinitwds (eps, 4)
-call mpinitwds (f1, 4)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
-call mpdmc (1.d0, 0, f1, 4)
-call mpdmc (0.d0, 0, s1, mpnw1)
-call mpdmc (0.d0, 0, s2, mpnw1)
-call mpdmc (0.d0, 0, s3, mpnw1)
-call mpdmc (0.d0, 0, s4, mpnw1)
+! f1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), f1(0:mpnw+6), mpnw1)
+! s1 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), s1(0:mpnw+6), mpnw1)
+! s2 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), s2(0:mpnw+6), mpnw1)
+! s3 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), s3(0:mpnw+6), mpnw1)
+! s4 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), s4(0:mpnw+6), mpnw1)
 
 if (iss <= 0) then
+  write (mpldb, 3)
+3 format ('*** HURWITZZETANBE: Integer argument <= 0')
+!   call mpabrt (568)
+  call mpabrt (568)
+endif
+
+! ic1 = mpsgn (aa)
+mpi1 = mpsgnr (aa)
+ic1 = mpi1
+if (ic1 < 0) then
   write (mpldb, 4)
-4 format ('*** MPHURWITZZETANBE: ISS <= 0')
-  call mpabrt ( 566)
+4 format ('*** HURWITZZETANBE: Argument < 0')
+!   call mpabrt (569)
+  call mpabrt (569)
 endif
-
-if (mpsgn (aa) < 0) then
-  write (mpldb, 5)
-5 format ('*** MPHURWITZZETANBE: AA < 0')
-  call mpabrt ( 567)
-endif
-
-dp = anint (mpnw1 * mpdpw)
 
 !   If iss > a certain value, then use definition formula.
 
-if (iss > 2.303d0 * dp / log (2.515d0 * dp)) then
+if (iss > mpnbt * mpnw * log (2.e0_mpdk) / log (2.e0_mpdk * mpnbt * mpnw / 3.e0_mpdk)) then
   do k = 0, itrmax
-!    t1 = 1.d0 / (aa + dble (k))**iss
-!    s1 = s1 + t1
-
-    call mpdmc (dble (k), 0, t1, mpnw1)
-    call mpadd (aa, t1, t2, mpnw1)
-    call mpnpwr (t2, iss, t3, mpnw1)
-    call mpdiv (f1, t3, t1, mpnw1)
-    call mpadd (s1, t1, t2,  mpnw1)
-    call mpeq (t2, s1, mpnw1)
-
-!    if (abs (t1 / s1) < eps) goto 110
-
-    call mpabs (t1, tc1, 4)
-    call mpmul (eps, s1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 110
+    d2 = real (k, mpdk)
+!     t1 = mprealdp (d2)
+    call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!     t2 = aa + t1
+    call mpadd (aa(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     t3 = t2 ** iss
+    call mpnpwr (t2(0:mpnw+6), iss, mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!     t1 = f1 / t3
+    call mpdiv (f1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!     s1 = s1 + t1
+    call mpadd (s1(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), s1(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t1) - eps * abs (s1)
+    call mpabs (t1, mpt1(0:mpnw+6), mpnwm)
+    call mpabs (s1, mpt2(0:mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+    call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+    call mpeq (mpt4(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 110
   enddo
 
-  write (6, 6)
-6 format ('*** MPHURWITZZETANBE: Loop end error 1')
-  call mpabrt ( 568)
+  write (6, 5)
+5 format ('*** HURWITZZETANBE: Loop end error 1')
+!   call mpabrt (570)
+  call mpabrt (570)
 endif
 
-call mpmdc (aa, d1, n1, mpnw1)
-d1 = d1 * 2.d0**n1
-iqq = max (dcon * mpnw1 * mpdpw - d1, 0.d0)
+!mp prec="mpnw1"
+! d1 = dpreal (aa)
+call mpdpreal (aa, mpd1, mpnw1)
+d1 = mpd1
+iqq = max (dcon * mpnw1 * mpnbt - d1, 0.e0_mpdk)
 
 do k = 0, iqq - 1
-!  s1 = s1 + 1.d0 / (aa + dble (k))**iss
-
-  call mpdmc (dble (k), 0, t1, mpnw1)
-  call mpadd (aa, t1, t2, mpnw1)
-  call mpnpwr (t2, iss, t3, mpnw1)
-  call mpdiv (f1, t3, t1, mpnw1)
-  call mpadd (s1, t1, t2, mpnw1)
-  call mpeq (t2, s1, mpnw1)
+  d2 = real (k, mpdk)
+!   t1 = mprealdp (d2)
+  call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = aa + t1
+  call mpadd (aa(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = t2 ** iss
+  call mpnpwr (t2(0:mpnw+6), iss, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t1 = f1 / t3
+  call mpdiv (f1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   s1 = s1 + t1
+  call mpadd (s1(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), s1(0:mpnw+6), mpnw1)
 enddo
 
-! aq = aa + dble (iqq)
+d2 = real (iqq, mpdk)
+! t1 = mprealdp (d2)
+call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! aq = aa + t1
+call mpadd (aa(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), aq(0:mpnw+6), mpnw1)
+i1 = iss - 1
+d2 = real (i1, mpdk)
+! t1 = mprealdp (d2)
+call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = aq ** i1
+call mpnpwr (aq(0:mpnw+6), i1, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = t1 * t2
+call mpmul (t1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! s2 = f1 / t3
+call mpdiv (f1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), s2(0:mpnw+6), mpnw1)
+! t1 = aq ** iss
+call mpnpwr (aq(0:mpnw+6), iss, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = t1 * 2.e0_mpdk
+call mpmuld (t1(0:mpnw+6), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! s3 = f1 / t2
+call mpdiv (f1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), s3(0:mpnw+6), mpnw1)
 
-call mpdmc (dble (iqq), 0, t1, mpnw1)
-call mpadd (aa, t1, aq, mpnw1)
-
-! s2 = 1.d0 / (dble (iss - 1) * aq**(iss -  1))
-
-call mpdmc (dble (iss - 1), 0, t1, mpnw1)
-call mpnpwr (aq, iss - 1, t2, mpnw1)
-call mpmul (t1, t2, t3,  mpnw1)
-call mpdiv (f1, t3, s2, mpnw1)
-
-! s3 = 1.d0 / (2.d0 * aq**iss)
-
-call mpnpwr (aq, iss, t1, mpnw1)
-call mpmuld (t1, 2.d0, t2, mpnw1)
-call mpdiv (f1, t2, s3, mpnw1)
-
-! t1 = mpreal (dble (iss), nwds)
-! t2 = mpreal (1.d0, nwds)
-! t3 = aq**(iss - 1)
-! aq2 = aq**2
-
-call mpdmc (dble (iss), 0, t1, mpnw1)
-call mpdmc (1.d0, 0, t2, mpnw1)
-call mpnpwr (aq, iss - 1, t3, mpnw1)
-call mpmul (aq, aq, aq2, mpnw1)
+d2 = real (iss, mpdk)
+! t1 = mprealdp (d2)
+call mprealdp (d2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+i1 = iss - 1
+! t3 = aq ** i1
+call mpnpwr (aq(0:mpnw+6), i1, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! aq2 = aq ** 2
+call mpnpwr (aq(0:mpnw+6), 2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), aq2(0:mpnw+6), mpnw1)
 
 do k = 1, nb2
-!  if (k > 1) t1 = t1 * dble (iss + 2*k - 3) * dble (iss + 2*k - 2)
-
   if (k > 1) then
-    call mpmuld (t1, dble (iss + 2*k - 3), t5, mpnw1)
-    call mpmuld (t5, dble (iss + 2*k - 2), t1, mpnw1)
+    i1 = iss + 2*k - 3
+    i2 = iss + 2*k - 2
+!     t5 = t1 * real (i1, mpdk)
+    call mpmuld (t1(0:mpnw+6), real (i1, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!     t1 = t5 * real (i2, mpdk)
+    call mpmuld (t5(0:mpnw+6), real (i2, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
   endif
-
-!  t2 = t2 * dble (2 * k - 1) * dble (2 * k)
-
-  call mpmuld (t2, dble (2 * k - 1), t5, mpnw1)
-  call mpmuld (t5, dble (2 * k), t2, mpnw1)
-
-!  t3 = t3 * aq2
-!  t4 = rb(k) * t1 / (t2 * t3)
-!  s4 = s4 + t4
-
-  call mpmul (t3, aq2, t5, mpnw1)
-  call mpeq (t5, t3, mpnw1)
-  call mpmul (berne(0:nb1+5,k), t1, t5, mpnw1)
-  call mpmul (t2, t3, t6, mpnw1)
-  call mpdiv (t5, t6, t4, mpnw1)
-  call mpadd (s4, t4, t5, mpnw1)
-  call mpeq (t5, s4, mpnw1)
-
-!  if (abs (t4) < eps) goto 110
-
-  call mpabs (t4, tc1, 4)
-  call mpmul (eps, s4, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic1, 4)
-  if (ic1 <= 0) goto 110
+  i1 = 2*k - 1
+  i2 = 2*k
+!   t5 = t2 * real (i1, mpdk)
+  call mpmuld (t2(0:mpnw+6), real (i1, mpdk), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t2 = t5 * real (i2, mpdk)
+  call mpmuld (t5(0:mpnw+6), real (i2, mpdk), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = t3 * aq2
+  call mpmul (t3(0:mpnw+6), aq2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t5 = berne(k) * t1
+  call mpmul (berne(0:nb1+5,k), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t6 = t2 * t3
+  call mpmul (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t4 = t5 / t6
+  call mpdiv (t5(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   s4 = s4 + t4
+  call mpadd (s4(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), s4(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!   tc2 = abs (t4) - eps * abs (s4)
+  call mpabs (t4, mpt1(0:mpnw+6), mpnwm)
+  call mpabs (s4, mpt2(0:mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+  call mpeq (mpt4(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!   ic2 = mpsgn (tc2)
+  mpi1 = mpsgnr (tc2)
+  ic2 = mpi1
+  if (ic2 < 0) goto 110
 enddo
 
-write (6, 7)
-7 format ('*** MPHURWITZZETANBE: End loop error 2; call MPBERNE with larger NB.')
-call mpabrt ( 569)
+write (6, 6)
+6 format ('*** HURWITZZETANBE: End loop error 2; call BERNE with larger NB.')
+! call mpabrt (571)
+call mpabrt (571)
 
 110 continue
 
-! hurwitz_be = s1 + s2 + s3 + s4
-
-call mpadd (s1, s2, t5, mpnw1)
-call mpadd (t5, s3, t6, mpnw1)
-call mpadd (t6, s4, s1, mpnw1)
-call mproun (s1, mpnw)
-call mpeq (s1, zz, mpnw)
+!mp prec="mpnw1"
+! t5 = s1 + s2
+call mpadd (s1(0:mpnw+6), s2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+! t6 = t5 + s3
+call mpadd (t5(0:mpnw+6), s3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+! s1 = t6 + s4
+call mpadd (t6(0:mpnw+6), s4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), s1(0:mpnw+6), mpnw1)
+!mp prec="mpnw"
+! zz = s1
+call mpeq (s1(0:mpnw+6), zz(0:), mpnw)
 
 return
 end subroutine mphurwitzzetanbe
 
-subroutine mphypergeompfq (np, nq, nw, aa, bb, xx, yy, mpnw)
+subroutine mphypergeompfq (nw, np, nq, aa, bb, xx, yy, mpnw)
 
 !  This returns the HypergeometricPFQ function, namely the sum of the infinite series
 
@@ -3253,98 +5363,156 @@ subroutine mphypergeompfq (np, nq, nw, aa, bb, xx, yy, mpnw)
 !  NP and NQ are limited to [1,10].
 
 implicit none
-integer, intent(in):: np, nq, nw, mpnw
-integer i1, i2, ic1, itrmax, j, k, mpnw1, npq
-parameter (itrmax = 1000000, npq = 10)
-integer (mpiknd), intent(in):: aa(0:nw+5,np), bb(0:nw+5,nq), xx(0:)
+integer, intent(in):: nw, mpnw
+integer, intent(in):: np, nq
+!mp dim1="0:nw+5"
+! type (mp_real), intent(in):: aa(1:np), bb(1:nq)
+integer (mpiknd), intent(in):: aa(0:nw+5,1:np), bb(0:nw+5,1:nq)
+!mp dim1="0:"
+! type (mp_real), intent(in):: xx
+integer (mpiknd), intent(in):: xx(0:)
+! type (mp_real), intent(out):: yy
 integer (mpiknd), intent(out):: yy(0:)
-integer (mpiknd) sum(0:mpnw+6), td(0:mpnw+6), tn(0:mpnw+6), t1(0:mpnw+6), &
-  t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000, npq = 10
+integer i1, i2, ic1, ic2, j, k
+real (mpdknd) d1
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) sum, td, tn, t1, t2
+integer (mpiknd) sum(0:mpnw+6), td(0:mpnw+6), tn(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6)
+! type (mp_real) t3, t4
+integer (mpiknd) t3(0:mpnw+6), t4(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-i1 = 1000000
-i2 = 1000000
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (sum(0:mpnw+6), mpnw+6-5)
+call mpinitwds (td(0:mpnw+6), mpnw+6-5)
+call mpinitwds (tn(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
 
-do k = 1, np
-  i1 = min (i1, mpspacer(aa(0:nw+5,k)))
-enddo
+!  End of initialization
 
-do k = 1, nq
-  i2 = min (i2, mpspacer(bb(0:nw+5,k)))
-enddo
 
-if (mpnw < 4 .or. min (i1, i2) < mpnw + 4 .or. mpspacer (xx) < mpnw + 4 .or. &
-  mpspacer (yy) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPHYPERGEOMPFQ: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 570)
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (yy)
+mpi1 = mpspacer (yy)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** HYPERGEOMPFQ: Uninitialized or inadequately sized array')
+!   call mpabrt (572)
+  call mpabrt (572)
 endif
 
-mpnw1 = mpnw + 1
-call mpinitwds (sum, mpnw1)
-call mpinitwds (td, mpnw1)
-call mpinitwds (tn, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
+!mp prec="mpnwm"
+
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
 
 if (np < 1 .or. np > npq .or. nq < 1 .or. nq > npq) then
   write (mpldb, 2) npq
-2 format ('*** MPHYPERGEOMPFQ: NP and NQ must be between 1 and',i4)
-  call mpabrt ( 571)
+2 format ('*** HYPERGEOMPFQ: NP and NQ must be between 1 and',i4)
+!   call mpabrt (573)
+  call mpabrt (573)
 endif
 
-call mpdmc (1.d0, 0, sum, mpnw1)
-call mpdmc (1.d0, 0, td, mpnw1)
-call mpdmc (1.d0, 0, tn, mpnw1)
+!mp prec="mpnw1"
+
+! sum = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), sum(0:mpnw+6), mpnw1)
+! td = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
+! tn = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), tn(0:mpnw+6), mpnw1)
 
 do k = 1, itrmax
-  call mpdmc (dble (k - 1), 0, t1, mpnw1)
+  i1 = k - 1
+  d1 = real (i1, mpdk)
+!   t1 = mprealdp (d1)
+  call mprealdp (d1, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 
   do j = 1, np
-    call mpadd (t1, aa(0:nw+5,j), t2, mpnw1)
-    call mpmul (tn, t2, t3, mpnw1)
-    call mpeq (t3, tn, mpnw1)
+!     t2 = t1 + aa(j)
+    call mpadd (t1(0:mpnw+6), aa(0:nw+5,j), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     tn = tn * t2
+    call mpmul (tn(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), tn(0:mpnw+6), mpnw1)
   enddo
 
   do j = 1, nq
-    call mpadd (t1, bb(0:nw+5,j), t2, mpnw1)
-    call mpmul (td, t2, t3, mpnw1)
-    call mpeq (t3, td, mpnw1)
+!     t2 = t1 + bb(j)
+    call mpadd (t1(0:mpnw+6), bb(0:nw+5,j), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     td = td * t2
+    call mpmul (td(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
   enddo
 
-  call mpmul (tn, xx, t2, mpnw1)
-  call mpeq (t2, tn, mpnw1)
-  call mpmuld (td, dble (k), t3,  mpnw1)
-  call mpeq (t3, td, mpnw1)
-  call mpdiv (tn, td, t1, mpnw1)
-  call mpadd (sum, t1, t2, mpnw1)
-  call mpeq (t2, sum, mpnw1)
-
-  call mpabs (t1, tc1, 4)
-  call mpmul (eps, sum, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic1, 4)
-  if (ic1 <= 0) goto 100
+!   tn = tn * xx
+  call mpmul (tn(0:mpnw+6), xx(0:), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), tn(0:mpnw+6), mpnw1)
+!   td = td * real (k, mpdk)
+  call mpmuld (td(0:mpnw+6), real (k, mpdk), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), td(0:mpnw+6), mpnw1)
+!   t1 = tn / td
+  call mpdiv (tn(0:mpnw+6), td(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   sum = sum + t1
+  call mpadd (sum(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), sum(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!   tc1 = abs (t1) - eps * sum
+  call mpabs (t1, mpt1(0:mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), sum(0:mpnw+6), mpt2(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+  call mpeq (mpt3(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!   ic1 = mpsgn (tc1)
+  mpi1 = mpsgnr (tc1)
+  ic1 = mpi1
+  if (ic1 < 0) goto 100
 enddo
 
-    write (mpldb, 3) itrmax
-3   format ('*** MPHYPERGEOMPFQ: Loop end error',i10)
-    call mpabrt ( 572)
+write (mpldb, 3) itrmax
+3 format ('*** HYPERGEOMPFQ: Loop end error',i10)
+! call mpabrt (574)
+call mpabrt (574)
 
-100  continue
+100 continue
 
-call mproun (sum, mpnw)
-call mpeq (sum, yy, mpnw)
+!mp prec="mpnw"
+! yy = sum
+call mpeq (sum(0:mpnw+6), yy(0:), mpnw)
+
 return
 end subroutine mphypergeompfq
 
@@ -3359,239 +5527,448 @@ subroutine mpincgammar (s, z, g, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer ic1, itrmax, k, mpnw1, mpnw2, nn, n1, n2
-real (mprknd) d1, d2, bits, dmax, egam
-parameter (dmax = 0.833d0, itrmax = 1000000, egam = 0.5772156649015328606d0)
+!mp dim1="0:"
+! type (mp_real), intent(in):: s, z
 integer (mpiknd), intent(in):: s(0:), z(0:)
+! type (mp_real), intent(out):: g
 integer (mpiknd), intent(out):: g(0:)
-integer (mpiknd) t0(0:5*mpnw/2+6), t1(0:5*mpnw/2+6), t2(0:5*mpnw/2+6), &
-  t3(0:5*mpnw/2+6), t4(0:5*mpnw/2+6), t5(0:5*mpnw/2+6), f1(0:5*mpnw/2+6), &
-  tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000, ipx = 3
+real (mpdknd), parameter:: dfrac1 = 0.833e0_mpdk, dfrac2 = 1.46e0_mpdk
+integer i1, ic1, ic2, ic3, k, nn, n1, n2
+real (mpdknd) d1, d2, d3
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, f1, tc1, tc2, tc3
+integer (mpiknd) eps(0:mpnwm+5), f1(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5), tc3(0:mpnwm+5)
+!mp dim1="0:ipx*mpnw+6"
+! type (mp_real) t0, t1, t2, t3
+integer (mpiknd) t0(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6)
+! type (mp_real) t4, t5
+integer (mpiknd) t4(0:ipx*mpnw+6), t5(0:ipx*mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6)
+integer (mpiknd) mpt4(0:ipx*mpnw+6), mpt5(0:ipx*mpnw+6), mpt6(0:ipx*mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (s) < mpnw + 4 .or. mpspacer (z) < mpnw + 4 &
-  .or. mpspacer (g) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPINCGAMMAR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 573)
+call mpinitwds (mpt1, ipx*mpnw+6-5)
+call mpinitwds (mpt2, ipx*mpnw+6-5)
+call mpinitwds (mpt3, ipx*mpnw+6-5)
+call mpinitwds (mpt4, ipx*mpnw+6-5)
+call mpinitwds (mpt5, ipx*mpnw+6-5)
+call mpinitwds (mpt6, ipx*mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc3(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (t0(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t4(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t5(0:ipx*mpnw+6), ipx*mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = min (ipx*mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (g)
+mpi1 = mpspacer (g)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** INCGAMMAR: Uninitialized or inadequately sized array')
+!   call mpabrt (575)
+  call mpabrt (575)
 endif
 
-n1 = mpsgn (s)
-n2 = mpsgn (z)
+!mp prec="mpnwm"
+
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+! f1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+call mpeq (mpt1(0:ipx*mpnw+6), f1(0:mpnwm+5), mpnwm)
+
+!mp prec="mpnw1"
+
+! n1 = mpsgn (s)
+mpi1 = mpsgnr (s)
+n1 = mpi1
+! n2 = mpsgn (z)
+mpi1 = mpsgnr (z)
+n2 = mpi1
 if (n2 == 0 .or. n1 /= 0 .and. n2 < 0) then
   write (mpldb, 2)
-2 format ('*** MPINCGAMMAR: The second argument must not be zero,'/ &
+2 format ('*** INCGAMMAR: The second argument must not be zero,'/ &
     'and must not be negative unless the first is zero.')
-  call mpabrt ( 574)
+!   call mpabrt (576)
+  call mpabrt (576)
 endif
 
-!   Check if EGAMMA has been precomputed.
+! d1 = dpreal (z)
+call mpdpreal (z, mpd1, mpnw1)
+d1 = mpd1
 
-mpnw1 = mpnw + 1
-call mpmdc (mpegammacon, d1, n1, mpnw1)
-if (n1 /= -1 .or. abs (d1 * 2.d0**n1 - egam) > mprdfz &
-  .or. mpwprecr (mpegammacon) < mpnw1) then
-  write (mpldb, 3) mpnw
-3 format ('*** MPINCGAMMAR: EGAMMA must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 575)
-endif
-
-call mpinitwds (t0, 5*mpnw/2+1)
-call mpinitwds (t1, 5*mpnw/2+1)
-call mpinitwds (t2, 5*mpnw/2+1)
-call mpinitwds (t3, 5*mpnw/2+1)
-call mpinitwds (t4, 5*mpnw/2+1)
-call mpinitwds (t5, 5*mpnw/2+1)
-call mpinitwds (f1, 5*mpnw/2+1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
-
-call mpdmc (1.d0, 0, f1, mpnw1)
-call mpmdc (z, d1, n1, mpnw1)
-d1 = d1 * 2.d0 ** n1
-bits = mpnw1 * mpnbt
-
-if (abs (d1) < dmax * bits) then
+if (abs (d1) < dfrac1 * mpnw1 * mpnbt) then
 
 !   This is for modest-sized z.
 
-  call mpinfr (s, t1, t2, mpnw1)
-  call mpcpr (s, t1, ic1, mpnw1)
-  call mpmdc (s, d2, n2, mpnw1)
-  nn = d2 * 2.d0**n2
+!   t1 = aint (s)
+  call mpinfr (s, mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!   t2 = s - t1
+  call mpsub (s(0:), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   ic1 = mpsgn (t2)
+  mpi1 = mpsgnr (t2)
+  ic1 = mpi1
+!   d2 = dpreal (s)
+  call mpdpreal (s, mpd1, mpnw1)
+  d2 = mpd1
+  nn = nint (d2)
 
   if (ic1 == 0 .and. nn == 1) then
-
-!   S = 1; result is exp (-z).
-
-    call mpneg (z, t0,  mpnw1)
-    call mpexp (t0, t1, mpnw1)
+!     t2 = - z
+    call mpneg (z(0:), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     t1 = exp (t2)
+    call mpexp (t2, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
     goto 200
   elseif (ic1 == 0 .and. nn <= 0) then
 
 !    S is zero or a negative integer -- use a different algorithm. In
 !    either event, first compute incgamma for S = 0. For large Z, the
-!    working precision must be increased, up to 2.5X times normal.
+!    working precision must be increased.
 
-!    mpnw2 = min (mpnw1 + 1.5d0 * d1 / (dmax * bits) * mpnw, 5*mpnw/2+1.d0)
-    mpnw2 = mpnw1
-    call mpeq (z, t0, mpnw2)
-    call mpeq (z, t1, mpnw2)
-    call mpdmc (1.d0, 0, t2, mpnw2)
+    mpnw2 = min (mpnw + nint (dfrac2 * d1 / mpnbt) + 1, mpnwx)
+    if (mpnw2 > ipx*mpnw+1) then
+      write (6, 3) mpnw2
+3     format ('*** INCGAMMAR: Inadequate working precision:',i6)
+!       call mpabrt (577)
+      call mpabrt (577)
+    endif
+
+!mp prec="mpnwm"
+!     tc2 = mprealdp (2.e0_mpdk)
+    call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+    ic2 = -mpnw2*mpnbt
+!     eps = tc2 ** ic2
+    call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw2"
+!     t0 = z
+    call mpeq (z(0:), t0(0:ipx*mpnw+6), mpnw2)
+!     t1 = z
+    call mpeq (z(0:), t1(0:ipx*mpnw+6), mpnw2)
+!     t2 = mprealdp (1.e0_mpdk)
+    call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
 
     do k = 2, itrmax
       if (mod (k, 2) == 1) then
-        d1 = dble (k)
-        call mpdivd (f1, d1, t3, mpnw2)
-        call mpadd (t2, t3, t4, mpnw2)
-        call mpeq (t4, t2, mpnw2)
+        d1 = real (k, mpdk)
+!         t3 = f1 / d1
+        call mpdivd (f1(0:mpnwm+5), d1, mpt1(0:ipx*mpnw+6), mpnw2)
+        call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!         t2 = t2 + t3
+        call mpadd (t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+        call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
       endif
-      call mpmul (z, t1, t3, mpnw2)
-      d1 = 2.d0 * dble (k)
-      call mpdivd (t3, d1, t1, mpnw2)
-      call mpmul (t1, t2, t3, mpnw2)
-      call mpadd (t0, t3, t4, mpnw2)
-      call mpeq (t4, t0, mpnw2)
-
-      call mpabs (t3, tc1, 4)
-      call mpmul (eps, t0, tc3, 4)
-      call mpabs (tc3, tc2, 4)
-      call mpcpr (tc1, tc2, ic1, 4)
-      if (ic1 <= 0) goto 100
+!       t3 = z * t1
+      call mpmul (z(0:), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+      d1 = real (2*k, mpdk)
+!       t1 = t3 / d1
+      call mpdivd (t3(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!       t3 = t1 * t2
+      call mpmul (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!       t0 = t0 + t3
+      call mpadd (t0(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpnw2)
+!mp prec="mpnwm"
+!       tc1 = abs (t3) - eps * abs (t0)
+      call mpabs (t3, mpt1(0:ipx*mpnw+6), mpnwm)
+      call mpabs (t0, mpt2(0:ipx*mpnw+6), mpnwm)
+      call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+      call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+      call mpeq (mpt4(0:ipx*mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!       ic1 = mpsgn (tc1)
+      mpi1 = mpsgnr (tc1)
+      ic1 = mpi1
+      if (ic1 < 0) goto 100
     enddo
 
     write (mpldb, 4)
-4   format ('*** MPINCGAMMAR: Loop end error 1')
-    call mpabrt ( 576)
+4   format ('*** INCGAMMAR: Loop end error 1')
+!     call mpabrt (578)
+    call mpabrt (578)
 
 100  continue
 
-    call mpneg (mpegammacon, t1, mpnw1)
-    call mpabs (z, t3, mpnw1)
-    call mplog (t3, t2, mpnw1)
-    call mpsub (t1, t2, t3,  mpnw1)
-    call mpmuld (z, -0.5d0, t4, mpnw1)
-    call mpexp (t4, t5, mpnw1)
-    call mpmul (t5, t0, t4, mpnw1)
-    call mpadd (t3, t4, t1, mpnw1)
+!mp prec="mpnw2"
+!     t1 = - mpegammacon
+    call mpneg (mpegammacon(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!     t3 = abs (z)
+    call mpabs (z, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     t2 = log (t3)
+    call mplog (t3, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     t3 = t1 - t2
+    call mpsub (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     t4 = - z * 0.5e0_mpdk
+    call mpmuld (z(0:), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt2(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!     t5 = exp (t4)
+    call mpexp (t4, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw2)
+!     t4 = t5 * t0
+    call mpmul (t5(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!     t1 = t3 + t4
+    call mpadd (t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
     if (nn == 0) goto 200
 
 !   S is negative integer (not zero).
 
     nn = abs (nn)
-    call mpdmc (1.d0, 0, t0, mpnw1)
-    call mpeq (t0, t2, mpnw1)
+!     t0 = mprealdp (1.e0_mpdk)
+    call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpnw2)
+!     t2 = t0
+    call mpeq (t0(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
 
     do k = 1, nn - 1
-      call mpmuld (t0, dble (k), t2, mpnw1)
-      call mpeq (t2, t0, mpnw1)
+!       t0 = t0 * real (k, mpdk)
+      call mpmuld (t0(0:ipx*mpnw+6), real (k, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpnw2)
+!       t2 = t0
+      call mpeq (t0(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
     enddo
 
-    call mpmuld (t0, dble (nn), t5, mpnw1)
+!     t5 = t0 * real (nn, mpdk)
+    call mpmuld (t0(0:ipx*mpnw+6), real (nn, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw2)
 
     do k = 1, nn - 1
-      call mpmul (t2, z, t3, mpnw1)
-      call mpdivd (t3, dble (nn - k), t4, mpnw1)
-      call mpneg (t4, t2, mpnw1)
-      call mpadd (t0, t2, t3, mpnw1)
-      call mpeq (t3, t0, mpnw1)
+!       t3 = t2 * z
+      call mpmul (t2(0:ipx*mpnw+6), z(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+      i1 = nn - k
+!       t4 = t3 / real (i1, mpdk)
+      call mpdivd (t3(0:ipx*mpnw+6), real (i1, mpdk), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!       t2 = - t4
+      call mpneg (t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!       t0 = t0 + t2
+      call mpadd (t0(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpnw2)
     enddo
 
-    call mpexp (z, t2, mpnw1)
-    call mpdiv (t0, t2, t3, mpnw1)
-    call mpnpwr (z, nn, t4, mpnw1)
-    call mpdiv (t3, t4, t2, mpnw1)
+!     t2 = exp (z)
+    call mpexp (z, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     t3 = t0 / t2
+    call mpdiv (t0(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     t4 = z ** nn
+    call mpnpwr (z(0:), nn, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!     t2 = t3 / t4
+    call mpdiv (t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
 
     if (mod (nn, 2) == 0) then
-      call mpadd (t2, t1, t3, mpnw1)
+!       t3 = t2 + t1
+      call mpadd (t2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
     else
-      call mpsub (t2, t1, t3, mpnw1)
+!       t3 = t2 - t1
+      call mpsub (t2(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+      call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
     endif
-    call mpdiv (t3, t5, t1, mpnw1)
+!     t1 = t3 / t5
+    call mpdiv (t3(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
     goto 200
   endif
 
-  call mpgammar (s, t1, mpnw1)
-  call mpmul (s, t1, t3, mpnw1)
-  call mpdiv (f1, t3, t2, mpnw1)
-  call mpeq (t2, t0, mpnw1)
+  mpnw2 = min (mpnw + nint (dfrac2 * d1 / mpnbt) + 1, mpnwx)
+  if (mpnw2 > ipx*mpnw+1) then
+    write (6, 5) mpnw2
+5   format ('*** INCGAMMAR: Inadequate working precision:',i6)
+!     call mpabrt (579)
+    call mpabrt (579)
+  endif
+
+!mp prec="mpnwm"
+!     tc2 = mprealdp (2.e0_mpdk)
+    call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+    ic2 = -mpnw2*mpnbt
+!     eps = tc2 ** ic2
+    call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+!mp prec="mpnw2"
+!   call mpgammar (s, t1, mpnw2)
+  call mpgammar (s, t1, mpnw2)
+!   t3 = s * t1
+  call mpmul (s(0:), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t2 = f1 / t3
+  call mpdiv (f1(0:mpnwm+5), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t0 = t2
+  call mpeq (t2(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpnw2)
 
   do k = 1, itrmax
-    call mpmul (t2, z, t5, mpnw1)
-    call mpdmc (dble (k), 0, t3, mpnw1)
-    call mpadd (s, t3, t4, mpnw1)
-    call mpdiv (t5, t4, t2, mpnw1)
-    call mpadd (t0, t2, t3, mpnw1)
-    call mpeq (t3, t0, mpnw1)
-
-    call mpabs (t2, tc1, 4)
-    call mpmul (eps, t0, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 110
+!     t5 = t2  * z
+    call mpmul (t2(0:ipx*mpnw+6), z(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw2)
+    d3 = real (k, mpdk)
+!     t3 = mprealdp (d3)
+    call mprealdp (d3, mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!     t4 = s + t3
+    call mpadd (s(0:), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!     t2 = t5 / t4
+    call mpdiv (t5(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!     t0 = t0 + t2
+    call mpadd (t0(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+    call mpeq (mpt1(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpnw2)
+!mp prec="mpnwm"
+!     tc2 = abs (t2) - eps * abs (t0)
+    call mpabs (t2, mpt1(0:ipx*mpnw+6), mpnwm)
+    call mpabs (t0, mpt2(0:ipx*mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!     ic2 = mpsgn (tc2)
+    mpi1 = mpsgnr (tc2)
+    ic2 = mpi1
+    if (ic2 < 0) goto 110
   enddo
 
-  write (mpldb, 3) itrmax
-  call mpabrt ( 577)
+  write (mpldb, 6) itrmax
+6   format ('*** INCGAMMAR: Loop end error 1')
+!   call mpabrt (580)
+  call mpabrt (580)
 
 110 continue
 
-  call mppower (z, s, t2, mpnw1)
-  call mpexp (z, t3, mpnw1)
-  call mpdiv (t2, t3, t4, mpnw1)
-  call mpmul (t4, t0, t5, mpnw1)
-  call mpsub (f1, t5, t2, mpnw1)
-  call mpmul (t1, t2, t3, mpnw1)
-  call mpeq (t3, t1, mpnw1)
+!mp prec="mpnw2"
+!   t2 = z ** s
+  call mppower (z(0:), s(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t3 = exp (z)
+  call mpexp (z, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t4 = t2 / t3
+  call mpdiv (t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!   t5 = t4 * t0
+  call mpmul (t4(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t5(0:ipx*mpnw+6), mpnw2)
+!   t2 = f1 - t5
+  call mpsub (f1(0:mpnwm+5), t5(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t1 = t1 * t2
+  call mpmul (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
   goto 200
 else
 
 !   This is for large z. Note that if S is a positive integer, this loop
 !   is finite.
 
-  call mpdmc (1.d0, 0, t0, mpnw1)
-  call mpdmc (1.d0, 0, t1, mpnw1)
+!mp prec="mpnw1"
+!   t0 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpnw1)
+!   t1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
 
   do k = 1, itrmax
-    call mpdmc (dble (k), 0, t2, mpnw1)
-    call mpsub (s, t2, t3, mpnw1)
-    call mpmul (t1, t3, t4, mpnw1)
-    call mpdiv (t4, z, t1, mpnw1)
-    call mpadd (t0, t1, t2, mpnw1)
-    call mpeq (t2, t0, mpnw1)
-
-    call mpabs (t1, tc1, 4)
-    call mpmul (eps, t0, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 120
+    d3 = real (k, mpdk)
+!     t2 = mprealdp (d3)
+    call mprealdp (d3, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!     t3 = s - t2
+    call mpsub (s(0:), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!     t4 = t1 * t3
+    call mpmul (t1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw1)
+!     t1 = t4 / z
+    call mpdiv (t4(0:ipx*mpnw+6), z(0:), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+!     t0 = t0 + t1
+    call mpadd (t0(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt1(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpnw1)
+!     tc3 = abs (t1) - eps * abs (t0)
+    call mpabs (t1, mpt1(0:ipx*mpnw+6), mpnw1)
+    call mpabs (t0, mpt2(0:ipx*mpnw+6), mpnw1)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnw1)
+    call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnw1)
+    call mpeq (mpt4(0:ipx*mpnw+6), tc3(0:mpnwm+5), mpnw1)
+!     ic3 = mpsgn (tc3)
+    mpi1 = mpsgnr (tc3)
+    ic3 = mpi1
+    if (ic3 < 0) goto 120
   enddo
 
-  write (mpldb, 5)
-5 format ('*** MPINCGAMMAR: Loop end error 2')
-  call mpabrt ( 578)
+  write (mpldb, 7)
+7 format ('*** INCGAMMAR: Loop end error 3')
+!   call mpabrt (581)
+  call mpabrt (581)
 
 120 continue
 
-   call mpsub (s, f1, t2, mpnw1)
-   call mppower (z, t2, t3, mpnw1)
-   call mpexp (z, t4, mpnw1)
-   call mpdiv (t3, t4, t2, mpnw1)
-   call mpmul (t2, t0, t1, mpnw1)
-   goto 200
+!   t2 = s - f1
+  call mpsub (s(0:), f1(0:mpnwm+5), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t3 = z ** t2
+  call mppower (z(0:), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw1)
+!   t4 = exp (z)
+  call mpexp (z, mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw1)
+!   t2 = t3 / t4
+  call mpdiv (t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw1)
+!   t1 = t2 * t0
+  call mpmul (t2(0:ipx*mpnw+6), t0(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw1)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+  goto 200
 endif
 
 200 continue
 
-call mproun (t1, mpnw)
-call mpeq (t1, g, mpnw)
+!mp prec="mpnw"
+! g = t1
+call mpeq (t1(0:ipx*mpnw+6), g(0:), mpnw)
 
 return
 end subroutine mpincgammar
@@ -3602,57 +5979,111 @@ subroutine mppolygamma (nn, x, y, mpnw)
 !   mphurwitzzetan.
 
 implicit none
-integer, intent(in):: nn, mpnw
-integer ic1, ic2, k, mpnw1
+integer, intent(in):: mpnw
+integer, intent(in):: nn
+!mp dim1="0:"
+! type (mp_real), intent(in):: x
 integer (mpiknd), intent(in):: x(0:)
+! type (mp_real), intent(out):: y
 integer (mpiknd), intent(out):: y(0:)
-integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6)
-integer (mpiknd) ix8
+integer i1, ic1, ic2, k
+!mp dim1="0:mpnw+6"
+! type (mp_real) t1, t2, t3, t4
+integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (x) < mpnw + 4 .or. mpspacer (y) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPPOLYGAMMA: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 579)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (y)
+mpi1 = mpspacer (y)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** POLYGAMMA: Uninitialized or inadequately sized array')
+!   call mpabrt (582)
+  call mpabrt (582)
 endif
 
-mpnw1 = mpnw
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
+!mp prec="mpnw1"
 
 if (nn <= 0) then
   write (mpldb, 2)
-2 format ('*** MPPOLYGAMMA: NN <= 0')
-  call mpabrt ( 580)
+2 format ('*** POLYGAMMA: Integer argument <= 0')
+!   call mpabrt (583)
+  call mpabrt (583)
 endif
 
-call mpdmc (0.d0, 0, t1, mpnw1)
-call mpdmc (1.d0, 0, t2, mpnw1)
-call mpcpr (x, t1, ic1, mpnw1)
-call mpcpr (x, t2, ic2, mpnw1)
+! t1 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = x - t1
+call mpsub (x(0:), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! ic1 = mpsgn (t3)
+mpi1 = mpsgnr (t3)
+ic1 = mpi1
+! t4 = x - t2
+call mpsub (x(0:), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! ic2 = mpsgn (t4)
+mpi1 = mpsgnr (t4)
+ic2 = mpi1
+
 if (ic1 <= 0 .or. ic2 >= 0) then
   write (mpldb, 3)
-3 format ('*** MPPOLYGAMMA: X must be in the range (0, 1)')
-  call mpabrt ( 581)
+3 format ('*** POLYGAMMA: Argument must be in the range (0, 1)')
+!   call mpabrt (584)
+  call mpabrt (584)
 endif
 
-call mpdmc (1.d0, 0, t1, mpnw1)
+! t1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 
 do k = 1, nn
-  call mpmuld (t1, dble(k), t2, mpnw1)
-  call mpeq (t2, t1, mpnw1)
+!   t1 = t1 * real (k, mpdk)
+  call mpmuld (t1(0:mpnw+6), real (k, mpdk), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 enddo
 
 if (mod (nn + 1, 2) == 1) then
-  call mpneg (t1, t2, mpnw1)
-  call mpeq (t2, t1, mpnw1)
+!   t1 = - t1
+  call mpneg (t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 endif
-call mphurwitzzetan (nn + 1, x, t2, mpnw1)
-call mpmul (t1, t2, t3, mpnw1)
-call mproun (t3, mpnw)
-call mpeq (t3, y, mpnw)
+
+i1 = nn + 1
+! call mphurwitzzetan (i1, x, t2, mpnw1)
+call mphurwitzzetan (i1, x, t2, mpnw1)
+! t3 = t1 * t2
+call mpmul (t1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!mp prec="mpnw"
+! y = t3
+call mpeq (t3(0:mpnw+6), y(0:), mpnw)
 
 return
 end subroutine mppolygamma
@@ -3665,77 +6096,112 @@ subroutine mppolygammabe (nb1, nb2, berne, nn, x, y, mpnw)
 !  1.4 x precision in decimal digits.
 
 implicit none
-integer, intent(in):: nb1, nb2, nn, mpnw
-integer i1, i2, k, mpnw1, n1
-real (mprknd) dber, d1
-parameter (dber = 1.4d0)
-integer (mpiknd), intent(in):: berne(0:nb1+5,nb2), x(0:)
+integer, intent(in):: nb1, mpnw
+integer, intent(in):: nb2, nn
+!mp dim1="0:nb1+5"
+! type (mp_real), intent(in):: berne(1:nb2)
+integer (mpiknd), intent(in):: berne(0:nb1+5,1:nb2)
+!mp dim1="0:"
+! type (mp_real), intent(in):: x
+integer (mpiknd), intent(in):: x(0:)
+! type (mp_real), intent(out):: y
 integer (mpiknd), intent(out):: y(0:)
+real (mpdknd), parameter:: dber = 0.4e0_mpdk
+integer ic1, i1, i2, k, n1
+real (mpdknd) d1
+!mp dim1="0:mpnw+6"
+! type (mp_real) t1, t2, t3
 integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6)
-integer (mpiknd) ix8
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (x) < mpnw + 4 .or. mpspacer (y) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPPOLYGAMMABE: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 582)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (y)
+mpi1 = mpspacer (y)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** POLYGAMMABE: Uninitialized or inadequately sized array')
+!   call mpabrt (585)
+  call mpabrt (585)
 endif
 
-mpnw1 = mpnw
+!mp prec="mpnw1"
 
 !   Check if berne array has been initialized.
 
-i1 = 1000000000
-i2 = 1000000000
-
-do k = 1, nb2
-  i1 = min (i1, mpspacer (berne(0:nb1+5,k)))
-  i2 = min (i2, mpwprecr (berne(0:nb1+5,k)))
-enddo
-
-call mpmdc (berne(0:nb1+5,1), d1, n1, mpnw)
-d1 = d1 * 2.d0 ** n1
-
-if (i1 < mpnw + 6 .or. i2 < mpnw .or. abs (d1 - 1.d0 / 6.d0) > mprdfz .or. &
-  nb2 < int (dber * mpdpw * (mpnw - 2))) then
-  write (mpldb, 2) int (dber * mpdpw * (mpnw - 2))
-2 format ('*** MPPOLYGAMMABE: Array of even Bernoulli coefficients must be initialized'/ &
-   'with at least',i8,' entries by calling MPBERNE or MPBERER.')
-  call mpabrt ( 583)
+! d1 = dpreal (berne(1))
+call mpdpreal (berne(0:nb1+5,1), mpd1, mpnw1)
+d1 = mpd1
+if (abs (d1 - 1.e0_mpdk / 6.e0_mpdk) > mprdfz .or. nb2 < int (dber * mpnbt * mpnw1)) then
+  write (mpldb, 2) int (dber * mpnbt * mpnw1)
+2 format ('*** POLYGAMMABE: Array of even Bernoulli coefficients must be initialized'/ &
+   'with at least',i8,' entries using BERNE or BERNER.')
+!   call mpabrt (586)
+  call mpabrt (586)
 endif
-
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
 
 if (nn <= 0) then
   write (mpldb, 3)
-3 format ('*** MPPOLYGAMMABE: NN <= 0')
-  call mpabrt ( 584)
+3 format ('*** POLYGAMMABE: Integer argument <= 0')
+!   call mpabrt (587)
+  call mpabrt (587)
 endif
 
-if (mpsgn (x) < 0) then
+! ic1 = mpsgn (x)
+mpi1 = mpsgnr (x)
+ic1 = mpi1
+if (ic1 < 0) then
   write (mpldb, 4)
-4 format ('*** MPPOLYGAMMABE: X < 0')
-  call mpabrt ( 585)
+4 format ('*** POLYGAMMABE: Argument < 0')
+!   call mpabrt (588)
+  call mpabrt (588)
 endif
 
-call mpdmc (1.d0, 0, t1, mpnw1)
+! t1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 
 do k = 1, nn
-  call mpmuld (t1, dble(k), t2, mpnw1)
-  call mpeq (t2, t1, mpnw1)
+!   t1 = t1 * real (k, mpdk)
+  call mpmuld (t1(0:mpnw+6), real (k, mpdk), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 enddo
 
 if (mod (nn + 1, 2) == 1) then
-  call mpneg (t1, t2, mpnw1)
-  call mpeq (t2, t1, mpnw1)
+!   t1 = - t1
+  call mpneg (t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 endif
-call mphurwitzzetanbe (nb1, nb2, berne, nn + 1, x, t2, mpnw1)
-call mpmul (t1, t2, t3, mpnw1)
-call mproun (t3, mpnw)
-call mpeq (t3, y, mpnw)
+
+i1 = nn + 1
+! call mphurwitzzetanbe (nb1, nb2, berne, i1, x, t2, mpnw1)
+call mphurwitzzetanbe (nb1, nb2, berne, i1, x, t2, mpnw1)
+! t3 = t1 * t2
+call mpmul (t1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!mp prec="mpnw"
+! y = t3
+call mpeq (t3(0:mpnw+6), y(0:), mpnw)
 
 return
 end subroutine mppolygammabe
@@ -3746,49 +6212,72 @@ subroutine mppolylogini (na, nn, arr, mpnw)
 !   NN must be in the range (-nmax, -1).
 
 implicit none
-integer, intent(in):: na, nn, mpnw
-integer i1, i2, k, n, nmax, nna, mpnw1
-parameter (nmax = 1000)
+integer, intent(in):: na, mpnw
+integer, intent(in):: nn
+!mp dim1="0:na+5"
+! type (mp_real), intent(out):: arr(1:abs(nn))
 integer (mpiknd), intent(out):: arr(0:na+5,1:abs(nn))
-integer (mpiknd) aa(0:mpnw+6,2,abs(nn)), t1(0:mpnw+6), t2(0:mpnw+6)
-integer (mpiknd) ix8
+integer, parameter:: nmax = 1000
+integer ic1, ic2, i1, i2, i3, k, n, nna
+!mp dim1="0:mpnw+6"
+! type (mp_real) aa(1:2,1:abs(nn)), t1, t2
+integer (mpiknd) aa(0:mpnw+6,1:2,1:abs(nn)), t1(0:mpnw+6), t2(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (nn == 0 .or. abs (nn) > nmax) then
-  write (mpldb, 1) -nmax
-1 format ('*** MPPOLYLOGINI: N = 0 or N > ',i6)
-  call mpabrt ( 586)
-endif
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+do mpi1 = 1,2; do mpi2 = 1,abs(nn)
+  call mpinitwds (aa(0:mpnw+6,mpi1,mpi2), mpnw+6-5)
+enddo; enddo
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
 
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
 nna = abs (nn)
-i1 = 1000000000
 
-do k = 1, nna
-  i1 = min (i1, mpspacer (arr(0:na+5,k)))
+do ic1 = 1, nna
+!   ic2 = mpspacer (arr(ic1))
+  mpi1 = mpspacer (arr(0:na+5,ic1))
+  ic2 = mpi1
+  if (mpnw < mpnwm .or. ic2 < mpnw + 6) then
+    write (6, 1)
+1   format ('*** POLYLOGINI: Uninitialized or inadequately sized array')
+!     call mpabrt (589)
+    call mpabrt (589)
+  endif
 enddo
 
-if (mpnw < 4 .or. i1 < mpnw + 6) then
-  write (mpldb, 2)
-2 format ('*** MPPOLYLOGINI: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 587)
-endif
+!mp prec="mpnw1"
 
-mpnw1 = mpnw + 1
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
 i1 = 2
 i2 = 1
-call mpinitwds (aa(0:mpnw+6,1,1), mpnw1)
-call mpinitwds (aa(0:mpnw+6,2,1), mpnw1)
-call mpdmc (1.d0, 0, aa(0:mpnw+6,1,1), mpnw1)
-call mpdmc (1.d0, 0, aa(0:mpnw+6,2,1), mpnw1)
+! aa(1,1) = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), aa(0:mpnw+6,1,1), mpnw1)
+! aa(2,1) = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), aa(0:mpnw+6,2,1), mpnw1)
 
 do k = 2, nna
-  call mpinitwds (aa(0:mpnw+6,1,k), mpnw1)
-  call mpinitwds (aa(0:mpnw+6,2,k), mpnw1)
-  call mpdmc (0.d0, 0, aa(0:mpnw+6,1,k), mpnw1)
-  call mpdmc (0.d0, 0, aa(0:mpnw+6,2,k), mpnw1)
+!   aa(1,k) = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), aa(0:mpnw+6,1,k), mpnw1)
+!   aa(2,k) = mprealdp (0.e0_mpdk)
+  call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), aa(0:mpnw+6,2,k), mpnw1)
 enddo
 
 do n = 2, nna
@@ -3796,13 +6285,22 @@ do n = 2, nna
   i2 = 3 - i1
 
   do k = 2, n
-    call mpmuld (aa(0:mpnw+6,i1,k-1), dble (n + 1 - k), t1, mpnw1)
-    call mpmuld (aa(0:mpnw+6,i1,k), dble (k), t2, mpnw1)
-    call mpadd (t1, t2, aa(0:mpnw+6,i2,k), mpnw1)
+    i3 = n + 1 - k
+!     t1 = aa(i1,k-1) * real (i3, mpdk)
+    call mpmuld (aa(0:mpnw+6,i1,k-1), real (i3, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!     t2 = aa(i1,k) * real (k, mpdk)
+    call mpmuld (aa(0:mpnw+6,i1,k), real (k, mpdk), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     aa(i2,k) = t1 + t2
+    call mpadd (t1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), aa(0:mpnw+6,i2,k), mpnw1)
   enddo
 enddo
 
+!mp prec="mpnw"
 do k = 1, nna
+!   arr(k) = aa(i2,k)
   call mpeq (aa(0:mpnw+6,i2,k), arr(0:na+5,k), mpnw)
 enddo
 
@@ -3815,81 +6313,132 @@ subroutine mppolylogneg (na, nn, arr, x, y, mpnw)
 !   one must call mppolylognini to initialize the array arr for this NN.
 !   The dimensions of arr must be as shown below.
 !   NN must be in the range (-nmax, -1).
-!   The parameter nmxa is the maximum number of additional words of
-!   precision needed to overcome cancelation errors when x is negative,
-!   for nmax = 1000.
 
 implicit none
-integer, intent(in):: na, nn, mpnw
-integer i1, i2, k, mpnw1, n1, n2, nna, nmax, nmxa
-parameter (nmax = 1000, nmxa = 8525 / mpnbt + 1)
-real (mprknd) d1, d2
-integer (mpiknd), intent(in):: arr(0:na+5,1:abs(nn)), x(0:)
+integer, intent(in):: na, mpnw
+integer, intent(in):: nn
+!mp dim1="0:na+5"
+! type (mp_real), intent(in):: arr(1:abs(nn))
+integer (mpiknd), intent(in):: arr(0:na+5,1:abs(nn))
+!mp dim1="0:"
+! type (mp_real), intent(in):: x
+integer (mpiknd), intent(in):: x(0:)
+! type (mp_real), intent(out):: y
 integer (mpiknd), intent(out):: y(0:)
-integer (mpiknd) t1(0:mpnw+6+nmxa), t2(0:mpnw+6+nmxa), t3(0:mpnw+6+nmxa), &
-  t4(0:mpnw+6+nmxa)
-integer (mpiknd) ix8
+integer, parameter:: ipx = 3, nmax = 1000
+real (mpdknd), parameter:: al2 = 0.69314718055994530941723212145817657e0_mpdk
+integer ic1, i1, i2, k, n1, n2, nna
+real (mpdknd) d1, d2
+!mp dim1="0:ipx*mpnw+6"
+! type (mp_real) t1, t2, t3, t4
+integer (mpiknd) t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), t4(0:ipx*mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6)
+integer (mpiknd) mpt4(0:ipx*mpnw+6), mpt5(0:ipx*mpnw+6), mpt6(0:ipx*mpnw+6)
 
-if (nn < -nmax .or. nn >= 0) then
-  write (mpldb, 1) -nmax
-1 format ('*** MPPOLYLOGNEG: N is <',i6,' or n >= 0.'/ &
-  'For n >= 0, call mppolylogpos or polylog_pos.')
-  call mpabrt ( 588)
-endif
+call mpinitwds (mpt1, ipx*mpnw+6-5)
+call mpinitwds (mpt2, ipx*mpnw+6-5)
+call mpinitwds (mpt3, ipx*mpnw+6-5)
+call mpinitwds (mpt4, ipx*mpnw+6-5)
+call mpinitwds (mpt5, ipx*mpnw+6-5)
+call mpinitwds (mpt6, ipx*mpnw+6-5)
+call mpinitwds (t1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t3(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t4(0:ipx*mpnw+6), ipx*mpnw+6-5)
 
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = min (ipx*mpnw + 1, mpnwx)
 nna = abs (nn)
-i1 = 1000000000
-i2 = 1000000000
 
-do k = 1, nna
-  i1 = min (i1, mpspacer (arr(0:na+5,k)))
-  i2 = min (i2, mpwprecr (arr(0:na+5,k)))
-enddo
+! ic1 = mpspacer (y)
+mpi1 = mpspacer (y)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** POLYLOGNEG: Uninitialized or inadequately sized array')
+!   call mpabrt (590)
+  call mpabrt (590)
+endif
 
-call mpmdc (arr(0:na+5,1), d1, n1, mpnw)
-d1 = d1 * 2.d0 ** n1
-call mpmdc (arr(0:na+5,nna), d2, n2, mpnw)
-d2 = d2 * 2.d0 ** n2
+!mp prec="mpnw1"
 
-if (mpnw < 4 .or. i1 < mpnw + 6 .or. i2 < mpnw .or. d1 /= 1.d0 .or. d2 /= 1.d0 &
-  .or. mpspacer (x) < mpnw + 4 .or. mpspacer (y) < mpnw + 6) then
+! d1 = dpreal (arr(1))
+call mpdpreal (arr(0:na+5,1), mpd1, mpnw1)
+d1 = mpd1
+! d2 = dpreal (arr(nna))
+call mpdpreal (arr(0:na+5,nna), mpd1, mpnw1)
+d2 = mpd1
+
+if (d1 /= 1.e0_mpdk .or. d2 /= 1.e0_mpdk) then
   write (mpldb, 2)
-2 format ('*** MPPOLYLOGNEG: Uninitialized or inadequately sized arrays'/ &
-  'Call mppolylogini or polylog_ini to initialize array. See documentation.')
-  call mpabrt ( 589)
+2 format ('*** POLYLOGNEG: Uninitialized or inadequately sized arrays'/ &
+  'Call polylogini or polylog_ini to initialize array. See documentation.')
+!   call mpabrt (591)
+  call mpabrt (591)
 endif
 
-mpnw1 = mpnw + 1
-call mpinitwds (t1, mpnw + nmxa + 1)
-call mpinitwds (t2, mpnw + nmxa + 1)
-call mpinitwds (t3, mpnw + nmxa + 1)
-call mpinitwds (t4, mpnw + nmxa + 1)
+!   Use higher precision, based on the largest (middle) value in arr.
 
-if (mpsgn (x) < 0) then
+! ic1 = mpsgn (x)
+mpi1 = mpsgnr (x)
+ic1 = mpi1
+if (ic1 < 0) then
   i1 = (nna + 1) / 2
-  call mpmdc (arr(0:mpnw+5,i1), d1, n1, mpnw1)
-  mpnw1 = mpnw1 + (n1 + 1) / mpnbt + 1
+!   d1 = dpreal (arr(i1))
+  call mpdpreal (arr(0:na+5,i1), mpd1, mpnw1)
+  d1 = mpd1
+  n1 = log (d1) / al2
+  mpnw2 = min (mpnw + (n1 + 1) / mpnbt + 1, ipx*mpnw + 1, mpnwx)
+  if (mpnw2 > ipx*mpnw+1) then
+    write (6, 3) mpnw2
+3   format ('*** POLYLOGNEG: Inadequate working precision:',i6)
+!     call mpabrt (592)
+    call mpabrt (592)
+  endif
 endif
 
-call mpeq (x, t1, mpnw1)
-call mpeq (t1, t2, mpnw1)
+!mp prec="mpnw2"
+! t1 = x
+call mpeq (x(0:), t1(0:ipx*mpnw+6), mpnw2)
+! t2 = t1
+call mpeq (t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
 
 do k = 2, nna
-  call mpmul (x, t1, t3, mpnw1)
-  call mpeq (t3, t1, mpnw1)
-  call mpmul (arr(0:mpnw+5,k), t1, t3, mpnw1)
-  call mpadd (t2, t3, t4, mpnw1)
-  call mpeq (t4, t2, mpnw1)
+!   t1 = x * t1
+  call mpmul (x(0:), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   t3 = arr(k) * t1
+  call mpmul (arr(0:na+5,k), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+!   t2 = t2 + t3
+  call mpadd (t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
 enddo
 
-call mpdmc (1.d0, 0, t3, mpnw1)
-call mpsub (t3, x, t4, mpnw1)
-call mpnpwr (t4, nna + 1, t3, mpnw1)
-call mpdiv (t2, t3, t4, mpnw1)
-call mproun (t4, mpnw)
-call mpeq (t4, y, mpnw)
+! t3 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+! t4 = t3 - x
+call mpsub (t3(0:ipx*mpnw+6), x(0:), mpt1(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+i1 = nna + 1
+! t3 = t4 ** i1
+call mpnpwr (t4(0:ipx*mpnw+6), i1, mpt1(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt1(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpnw2)
+! t4 = t2 / t3
+call mpdiv (t2(0:ipx*mpnw+6), t3(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt1(0:ipx*mpnw+6), t4(0:ipx*mpnw+6), mpnw2)
+!mp prec="mpnw"
+! y = t4
+call mpeq (t4(0:ipx*mpnw+6), y(0:), mpnw)
 
 return
 end subroutine mppolylogneg
@@ -3899,86 +6448,157 @@ subroutine mppolylogpos (nn, x, y, mpnw)
 !   This returns polylog (nn, x) for the case nn >= 0.
 
 implicit none
-integer, intent(in):: nn, mpnw
-integer ic1, itrmax, k, mpnw1
-parameter (itrmax = 1000000)
+integer, intent(in):: mpnw
+integer, intent(in):: nn
+!mp dim1="0:"
+! type (mp_real), intent(in):: x
 integer (mpiknd), intent(in):: x(0:)
+! type (mp_real), intent(out):: y
 integer (mpiknd), intent(out):: y(0:)
-integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), &
-  t5(0:mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps (0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000, ipx = 3
+integer ic1, ic2, k
+real (mpdknd) d1
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) t1, t2, t3, t4, t5
+integer (mpiknd) t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
+
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t5(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = min (ipx*mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (y)
+mpi1 = mpspacer (y)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** polylogpos: Uninitialized or inadequately sized array')
+!   call mpabrt (593)
+  call mpabrt (593)
+endif
+
+!mp prec="mpnwm"
 
 if (nn < 0) then
-  write (mpldb, 1)
-1 format ('*** MPPOLYLOGPOS: N is less than zero.'/ &
-  'For negative n, call mppolylogneg or polylog_neg. See documentation.')
-  call mpabrt ( 590)
-endif
-
-if (mpnw < 4 .or. mpspacer (x) < mpnw + 4 .or. mpspacer (y) < mpnw + 6) then
   write (mpldb, 2)
-2 format ('*** MPPOLYLOGPOS: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 591)
+2 format ('*** POLYLOGPOS: N is less than zero.'/ &
+  'For negative n, call POLYLOGNEG or POLYLOG_NEG. See documentation.')
+!   call mpabrt (594)
+  call mpabrt (594)
 endif
 
-mpnw1 = mpnw + 1
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
 
-call mpabs (x, t1, mpnw)
-call mpdmc (1.d0, 0, t2, mpnw)
-call mpcpr (t1, t2, ic1, mpnw)
+!mp prec="mpnw1"
+
+! t1 = abs (x)
+call mpabs (x, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! t2 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = t1 - t2
+call mpsub (t1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! ic1 = mpsgn (t3)
+mpi1 = mpsgnr (t3)
+ic1 = mpi1
+
 if (ic1 >= 0) then
   write (mpldb, 3)
-3 format ('*** MPPOLYLOGPOS: |X| must be less than one.')
-  call mpabrt ( 592)
+3 format ('*** POLYLOGPOS: Absolute value of argument must be less than one.')
+!   call mpabrt (595)
+  call mpabrt (595)
 endif
 
 if (nn == 0) then
-  call mpdmc (1.d0, 0, t1, mpnw1)
-  call mpsub (t1, x, t2, mpnw1)
-  call mpdiv (x, t2, t3, mpnw1)
-  call mproun (t3, mpnw)
-  call mpeq (t3, y, mpnw)
+!   t1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = t1 - x
+  call mpsub (t1(0:mpnw+6), x(0:), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   y = x / t2
+  call mpdiv (x(0:), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), y(0:), mpnw1)
 else
-  call mpeq (x, t1, mpnw1)
-  call mpeq (x, t2, mpnw1)
+!   t1 = x
+  call mpeq (x(0:), t1(0:mpnw+6), mpnw1)
+!   t2 = x
+  call mpeq (x(0:), t2(0:mpnw+6), mpnw1)
 
   do k = 2, itrmax
-    call mpmul (x, t2, t3, mpnw1)
-    call mpeq (t3, t2, mpnw1)
-    call mpdmc (dble (k), 0, t3, mpnw1)
-    call mpnpwr (t3, nn, t4, mpnw1)
-    call mpdiv (t2, t4, t3, mpnw1)
-    call mpadd (t1, t3, t4, mpnw1)
-    call mpeq (t4, t1, mpnw1)
-
-    call mpabs (t3, tc1, 4)
-    call mpmul (eps, t1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 100
+!     t2 = x * t2
+    call mpmul (x(0:), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+    d1 = real (k, mpdk)
+!     t3 = mprealdp (d1)
+    call mprealdp (d1, mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!     t4 = t3 ** nn
+    call mpnpwr (t3(0:mpnw+6), nn, mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!     t3 = t2 / t4
+    call mpdiv (t2(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!     t1 = t1 + t3
+    call mpadd (t1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t3) - eps * abs (t1)
+    call mpabs (t3, mpt1(0:mpnw+6), mpnwm)
+    call mpabs (t1, mpt2(0:mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+    call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+    call mpeq (mpt4(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 100
   enddo
 
   write (mpldb, 4)
-4 format ('*** MPPOLYLOGPOS: Loop end error')
-  call mpabrt ( 593)
+4 format ('*** POLYLOGPOS: Loop end error')
+!   call mpabrt (596)
+  call mpabrt (596)
 
 100 continue
 
-  call mproun (t1, mpnw)
-  call mpeq (t1, y, mpnw)
+!mp prec="mpnw"
+!   y = t1
+  call mpeq (t1(0:mpnw+6), y(0:), mpnw)
 endif
 
 return
@@ -3990,309 +6610,525 @@ subroutine mpstruvehn (nu, ss, zz, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer ic1, itrmax, mpnw1, k, n1
-real (mprknd) dmax, d1, pi
-parameter (itrmax = 1000000, dmax = 1000.d0, pi = 3.1415926535897932385d0)
 integer, intent(in):: nu
+!mp dim1="0:"
+! type (mp_real), intent(in):: ss
 integer (mpiknd), intent(in):: ss(0:)
+! type (mp_real), intent(out):: zz
 integer (mpiknd), intent(out):: zz(0:)
-integer (mpiknd) sum(0:2*mpnw+6), td1(0:2*mpnw+6), td2(0:2*mpnw+6), tn1(0:2*mpnw+6), &
-  tnm1(0:2*mpnw+6), t1(0:2*mpnw+6), t2(0:2*mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000, ipx = 3
+real (mpdknd), parameter:: dmax = 1000.e0_mpdk
+integer ic1, ic2, k, n1
+real (mpdknd) d1, d2
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:ipx*mpnw+6"
+! type (mp_real) sum, td1, td2, tn1
+integer (mpiknd) sum(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6)
+! type (mp_real) tnm1, t1, t2
+integer (mpiknd) tnm1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6)
+integer (mpiknd) mpt4(0:ipx*mpnw+6), mpt5(0:ipx*mpnw+6), mpt6(0:ipx*mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (ss) < mpnw + 4 .or. mpspacer (zz) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPSTRUVEHN: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 594)
+call mpinitwds (mpt1, ipx*mpnw+6-5)
+call mpinitwds (mpt2, ipx*mpnw+6-5)
+call mpinitwds (mpt3, ipx*mpnw+6-5)
+call mpinitwds (mpt4, ipx*mpnw+6-5)
+call mpinitwds (mpt5, ipx*mpnw+6-5)
+call mpinitwds (mpt6, ipx*mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (sum(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (td2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tn1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (tnm1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t1(0:ipx*mpnw+6), ipx*mpnw+6-5)
+call mpinitwds (t2(0:ipx*mpnw+6), ipx*mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+mpnw2 = min (ipx * mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (zz)
+mpi1 = mpspacer (zz)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** STRUVEHN: Uninitialized or inadequately sized array')
+!   call mpabrt (597)
+  call mpabrt (597)
 endif
+
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw2) then
+  write (6, 2) mpnw2
+2 format ('*** STRUVEHN: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (598)
+  call mpabrt (598)
+endif
+
+!mp prec="mpnw1"
 
 if (nu < 0) then
-  write (mpldb, 2)
-2 format ('*** MPSTRUVEHN: NU < 0')
-  call mpabrt ( 595)
-endif
-
-call mpmdc (ss, d1, n1, mpnw)
-d1 = abs (d1) * 2.d0**n1
-if (d1 > dmax) then
   write (mpldb, 3)
-3 format ('*** MPSTRUVEHN: ABS(SS) >',f8.2)
-  call mpabrt ( 596)
+3 format ('*** STRUVEHN: Integer argument < 0')
+!   call mpabrt (599)
+  call mpabrt (599)
 endif
 
-mpnw1 = mpnw * (1.d0 + d1 / dmax)
-
-!   Check if Pi has been precomputed.
-
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 4) mpnw1
-4 format ('*** MPSTRUVEHN: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 597)
+! t1 = abs (ss)
+call mpabs (ss, mpt1(0:ipx*mpnw+6), mpnw1)
+call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw1)
+! d1 = dpreal (t1)
+call mpdpreal (t1, mpd1, mpnw1)
+d1 = mpd1
+if (d1 > dmax) then
+  write (mpldb, 4) dmax
+4 format ('*** STRUVEHN: Argument too large >',f8.2)
+!   call mpabrt (600)
+  call mpabrt (600)
 endif
 
-call mpinitwds (sum, 2*mpnw+1)
-call mpinitwds (td1, 2*mpnw+1)
-call mpinitwds (td2, 2*mpnw+1)
-call mpinitwds (tn1, 2*mpnw+1)
-call mpinitwds (tnm1, 2*mpnw+1)
-call mpinitwds (t1, 2*mpnw+1)
-call mpinitwds (t2, 2*mpnw+1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw*mpnbt, eps, 4)
+mpnw2 = min (mpnw + nint (d1 * mpnw / dmax) + 1, mpnwx)
+if (mpnw2 > ipx*mpnw+1) then
+  write (6, 5) mpnw2
+5 format ('*** STRUVEHNN: Inadequate working precision:',i6)
+!   call mpabrt (601)
+  call mpabrt (601)
+endif
 
-! tn1 = mpreal (1.d0, nwds1)
-! tnm1 = -0.25d0 * mpreal (ss, nwds1)**2
-! td1 = 0.5d0 * sqrt (mppi (nwds1))
+!mp prec="mpnwm"
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnwm)
+call mpeq (mpt1(0:ipx*mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw2*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:ipx*mpnw+6), mpnwm)
+call mpeq (mpt1(0:ipx*mpnw+6), eps(0:mpnwm+5), mpnwm)
+
+!mp prec="mpnw2"
+! tn1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw2)
+! t1 = ss ** 2
+call mpnpwr (ss(0:), 2, mpt1(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+! tnm1 = - t1 * 0.25e0_mpdk
+call mpmuld (t1(0:ipx*mpnw+6), 0.25e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+call mpneg (mpt1(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt2(0:ipx*mpnw+6), tnm1(0:ipx*mpnw+6), mpnw2)
+! td1 = sqrt (mppicon) * 0.5e0_mpdk
+call mpsqrt (mppicon, mpt1(0:ipx*mpnw+6), mpnw2)
+call mpmuld (mpt1(0:ipx*mpnw+6), 0.5e0_mpdk, mpt2(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt2(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw2)
 ! td2 = td1
-
-call mpdmc (1.d0, 0, tn1, mpnw1)
-call mpmul (ss, ss, t1, mpnw1)
-call mpmuld (t1, -0.25d0, tnm1, mpnw1)
-call mpsqrt (mppicon, t1, mpnw1)
-call mpmuld (t1, 0.5d0, td1, mpnw1)
-call mpeq (td1, td2, mpnw1)
-
-! do k = 1, nu
-!  td2 = (k + 0.5d0) * td2
-! enddo
+call mpeq (td1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpnw2)
 
 do k = 1, nu
-  d1 = k + 0.5d0
-  call mpmuld (td2, d1, t1, mpnw1)
-  call mpeq (t1, td2, mpnw1)
+  d1 = real (k, mpdk) + 0.5e0_mpdk
+!   td2 = td2 * d1
+  call mpmuld (td2(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpnw2)
 enddo
 
-! sum = tn1 / (td1 * td2)
-
-call mpmul (td1, td2, t2, mpnw1)
-call mpdiv (tn1, t2, sum, mpnw1)
+! sum = tn1 / td1 / td2
+call mpdiv (tn1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+call mpdiv (mpt1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpt2(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt2(0:ipx*mpnw+6), sum(0:ipx*mpnw+6), mpnw2)
 
 do k = 1, itrmax
-
-!  tn1 = tnm1 * tn1
-!  td1 = (k + 0.5d0) * td1
-!  td2 = (nu + k + 0.5d0) * td2
-!  t1 = tn1 / (td1 * td2)
-!  sum = sum + t1
-
-  call mpmul (tnm1, tn1, t1, mpnw1)
-  call mpeq (t1, tn1, mpnw1)
-  d1 = k + 0.5d0
-  call mpmuld (td1, d1, t1, mpnw1)
-  call mpeq (t1, td1, mpnw1)
-  d1 = nu + k + 0.5d0
-  call mpmuld (td2, d1, t1, mpnw1)
-  call mpeq (t1, td2, mpnw1)
-  call mpmul (td1, td2, t2, mpnw1)
-  call mpdiv (tn1, t2, t1, mpnw1)
-  call mpadd (sum, t1, t2, mpnw1)
-  call mpeq (t2, sum, mpnw1)
-
-!  if (abs (t1) < eps) goto 100
-
-  call mpabs (t1, tc1, 4)
-  call mpmul (eps, sum, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic1, 4)
-  if (ic1 <= 0) goto 100
+!   tn1 = tn1 * tnm1
+  call mpmul (tn1(0:ipx*mpnw+6), tnm1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), tn1(0:ipx*mpnw+6), mpnw2)
+  d1 = real (k, mpdk) + 0.5e0_mpdk
+!   td1 = td1 * d1
+  call mpmuld (td1(0:ipx*mpnw+6), d1, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), td1(0:ipx*mpnw+6), mpnw2)
+  d2 = real (nu+k, mpdk) + 0.5e0_mpdk
+!   td2 = td2 * d2
+  call mpmuld (td2(0:ipx*mpnw+6), d2, mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpnw2)
+!   t2 = td1 * td2
+  call mpmul (td1(0:ipx*mpnw+6), td2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+!   t1 = tn1 / t2
+  call mpdiv (tn1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!   sum = sum + t1
+  call mpadd (sum(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+  call mpeq (mpt1(0:ipx*mpnw+6), sum(0:ipx*mpnw+6), mpnw2)
+!mp prec="mpnwm"
+!   tc1 = abs (t1) - eps * abs (sum)
+  call mpabs (t1, mpt1(0:ipx*mpnw+6), mpnwm)
+  call mpabs (sum, mpt2(0:ipx*mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), mpt2(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpnwm)
+  call mpsub (mpt1(0:ipx*mpnw+6), mpt3(0:ipx*mpnw+6), mpt4(0:ipx*mpnw+6), mpnwm)
+  call mpeq (mpt4(0:ipx*mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!   ic1 = mpsgn (tc1)
+  mpi1 = mpsgnr (tc1)
+  ic1 = mpi1
+  if (ic1 < 0) goto 100
 enddo
 
-write (mpldb, 5)
-5 format ('*** MPSTRUVEHN: Loop end error')
-call mpabrt ( 598)
+write (mpldb, 6)
+6 format ('*** STRUVEHN: Loop end error')
+! call mpabrt (602)
+call mpabrt (602)
 
 100 continue
 
-! struvehn = (0.5d0 * ss)**(nu + 1) * sum
+!mp prec="mpnw2"
+! t1 = ss * 0.5e0_mpdk
+call mpmuld (ss(0:), 0.5e0_mpdk, mpt1(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+ic1 = nu + 1
+! t2 = t1 ** ic1
+call mpnpwr (t1(0:ipx*mpnw+6), ic1, mpt1(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt1(0:ipx*mpnw+6), t2(0:ipx*mpnw+6), mpnw2)
+! t1 = t2 * sum
+call mpmul (t2(0:ipx*mpnw+6), sum(0:ipx*mpnw+6), mpt1(0:ipx*mpnw+6), mpnw2)
+call mpeq (mpt1(0:ipx*mpnw+6), t1(0:ipx*mpnw+6), mpnw2)
+!mp prec="mpnw"
+! zz = t1
+call mpeq (t1(0:ipx*mpnw+6), zz(0:), mpnw)
 
-call mpmuld (ss, 0.5d0, t1, mpnw1)
-n1 = nu + 1
-call mpnpwr (t1, n1, t2, mpnw1)
-call mpmul (t2, sum, t1, mpnw1)
-call mproun (t1, mpnw)
-call mpeq (t1, zz, mpnw)
 return
-end
+end subroutine mpstruvehn
 
 subroutine mpzetar (ss, zz, mpnw)
 
 !   This returns the zeta function of an MPR argument SS using an algorithm
 !   due to Peter Borwein.
+!   Parameters:
+!   dcon = conversion factor for computing n; default = 0.31e0_mpdk.
+!   dmp = multiplier for additional precision; dmp = 1.125e0_mpdk;
+!         must be an exact multiple of 1/16.
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ic1, iss, itrmax, j, mpnw1, n, n1, n2
-real (mprknd) dfrac, d1, d2, pi
-parameter (itrmax = 1000000, dfrac = 1.d0+ceiling(mpdpw), pi = 3.1415926535897932385d0)
+!mp dim1="0:"
+! type (mp_real), intent(in):: ss
 integer (mpiknd), intent(in):: ss(0:)
+! type (mp_real), intent(out):: zz
 integer (mpiknd), intent(out):: zz(0:)
-integer (mpiknd) f1(0:mpnw+6), s(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6), &
-  t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6), tn(0:mpnw+6), tt(0:mpnw+6), &
-  tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-real (mprknd) sgn
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000
+real (mpdknd), parameter:: dcon = 0.31e0_mpdk, dmp = 1.125e0_mpdk
+integer, parameter:: imp = dmp * 16.d0
+real (mpdknd) sgn
+integer i, i1, i2, ic1, ic2, ic3, iss, j, n, n1, n2
+real (mpdknd) d1, d2, d3
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:imp*mpnw/16+5"
+! type (mp_real) f1, s, t1, t2, t3
+integer (mpiknd) f1(0:imp*mpnw/16+5), s(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5)
+! type (mp_real) t4, t5, tn, tt
+integer (mpiknd) t4(0:imp*mpnw/16+5), t5(0:imp*mpnw/16+5), tn(0:imp*mpnw/16+5), tt(0:imp*mpnw/16+5)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:imp*mpnw/16+5), mpt2(0:imp*mpnw/16+5), mpt3(0:imp*mpnw/16+5)
+integer (mpiknd) mpt4(0:imp*mpnw/16+5), mpt5(0:imp*mpnw/16+5), mpt6(0:imp*mpnw/16+5)
 
-if (mpnw < 4 .or. mpspacer (ss) < mpnw + 4 .or. mpspacer (zz) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPZETAR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 599)
+call mpinitwds (mpt1, imp*mpnw/16+5-5)
+call mpinitwds (mpt2, imp*mpnw/16+5-5)
+call mpinitwds (mpt3, imp*mpnw/16+5-5)
+call mpinitwds (mpt4, imp*mpnw/16+5-5)
+call mpinitwds (mpt5, imp*mpnw/16+5-5)
+call mpinitwds (mpt6, imp*mpnw/16+5-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (s(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t1(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t2(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t3(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t4(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t5(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (tn(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (tt(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+
+!  End of initialization
+
+
+mpnw1 = min (int (dmp*mpnw), mpnwx)
+
+! ic1 = mpspacer (zz)
+mpi1 = mpspacer (zz)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** ZETAR: Uninitialized or inadequately sized array')
+!   call mpabrt (603)
+  call mpabrt (603)
 endif
 
-mpnw1 = mpnw + 1
-
-!   Check if Pi has been precomputed.
-
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 4) mpnw1
-4 format ('*** MPZETAR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 600)
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw1) then
+  write (6, 2) mpnw1
+2 format ('*** ZETAR: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (604)
+  call mpabrt (604)
 endif
 
-call mpinitwds (f1, mpnw1)
-call mpinitwds (s, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (tn, mpnw1)
-call mpinitwds (tt, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
+!mp prec="mpnwm"
 
-call mpdmc (1.d0, 0, f1, mpnw1)
-call mpcpr (ss, f1, ic1, mpnw1)
-call mpinfr (ss, t1, t2, mpnw1)
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnwm)
+call mpeq (mpt1(0:imp*mpnw/16+5), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:imp*mpnw/16+5), mpnwm)
+call mpeq (mpt1(0:imp*mpnw/16+5), eps(0:mpnwm+5), mpnwm)
+
+!mp prec="mpnw1"
+
+! f1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), f1(0:imp*mpnw/16+5), mpnw1)
+! t1 = ss - f1
+call mpsub (ss(0:), f1(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+! t2 = ss - anint (ss)
+call mpnint (ss, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpsub (ss(0:), mpt1(0:imp*mpnw/16+5), mpt2(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt2(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+! ic1 = mpsgn (t1)
+mpi1 = mpsgnr (t1)
+ic1 = mpi1
+! ic2 = mpsgn (t2)
+mpi1 = mpsgnr (t2)
+ic2 = mpi1
+! ic3 = mpsgn (ss)
+mpi1 = mpsgnr (ss)
+ic3 = mpi1
 
 if (ic1 == 0) then
-  write (mpldb, 2)
-2 format ('*** MPZETAR: argument is 1')
-  call mpabrt ( 601)
-elseif (mpsgn (t2) == 0) then
+  write (mpldb, 3)
+3 format ('*** ZETAR: Argument is 1')
+!   call mpabrt (605)
+  call mpabrt (605)
+elseif (ic2 == 0) then
 
 !   The argument is an integer value. Call mpzetaintr instead.
 
-  call mpmdc (ss, d1, n1, mpnw)
-  iss = d1 * 2.d0**n1
-  call mpzetaintr (iss, t1, mpnw)
-  goto 200
-elseif (mpsgn (ss) < 0) then
+!   d1 = dpreal (ss)
+  call mpdpreal (ss, mpd1, mpnw1)
+  d1 = mpd1
+  iss = nint (d1)
+!   call mpzetaintr (iss, zz, mpnw)
+  call mpzetaintr (iss, zz, mpnw)
+  goto 210
+elseif (ic3 < 0) then
 
 !   If arg < 0, compute zeta(1-ss), and later apply Riemann's formula.
 
-  call mpsub (f1, ss, tt, mpnw1)
+!   tt = f1 - ss
+  call mpsub (f1(0:imp*mpnw/16+5), ss(0:), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), tt(0:imp*mpnw/16+5), mpnw1)
 else
-  call mpeq (ss, tt, mpnw1)
+!   tt = ss
+  call mpeq (ss(0:), tt(0:imp*mpnw/16+5), mpnw1)
 endif
 
 !  Check if argument is large enough that computing with definition is faster.
 
-d1 = mpnbt * mpnw * log (2.d0) / log (2.d0 * mpnbt * mpnw / 3.d0)
-call mpmdc (tt, d2, n2, mpnw1)
-d2 = d2 * 2.d0 ** n2
+d3 = log (2.e0_mpdk) / log (2.e0_mpdk * mpnbt * mpnw1 / 3.e0_mpdk)
+d1 = mpnbt * mpnw1 * d3
+! d2 = dpreal (tt)
+call mpdpreal (tt, mpd1, mpnw1)
+d2 = mpd1
 
 if (d2 > d1) then
 
 !   Evaluate the infinite series.
 
-  call mpdmc (1.d0, 0, t1, mpnw1)
+!   t1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
 
   do i = 2, itrmax
-    call mpdmc (dble (i), 0, t4, mpnw1)
-    call mppower (t4, tt, t2, mpnw1)
-    call mpdiv (f1, t2, t3, mpnw1)
-    call mpadd (t1, t3, t2, mpnw1)
-    call mpeq (t2, t1, mpnw1)
-
-    call mpabs (t3, tc1, 4)
-    call mpmul (eps, t1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 200
+    d3 = real (i, mpdk)
+!     t4 = mprealdp (d3)
+    call mprealdp (d3, mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+!     t2 = t4 ** tt
+    call mppower (t4(0:imp*mpnw/16+5), tt(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+!     t3 = f1 / t2
+    call mpdiv (f1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!     t1 = t1 + t3
+    call mpadd (t1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t3) - eps * abs (t1)
+    call mpabs (t3, mpt1(0:imp*mpnw/16+5), mpnwm)
+    call mpabs (t1, mpt2(0:imp*mpnw/16+5), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:imp*mpnw/16+5), mpt3(0:imp*mpnw/16+5), mpnwm)
+    call mpsub (mpt1(0:imp*mpnw/16+5), mpt3(0:imp*mpnw/16+5), mpt4(0:imp*mpnw/16+5), mpnwm)
+    call mpeq (mpt4(0:imp*mpnw/16+5), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 200
   enddo
 
-  write (mpldb, 3) 1, itrmax
-3 format ('*** MPZETAR: iteration limit exceeded',2i10)
-  call mpabrt ( 602)
+  write (mpldb, 4)
+4 format ('*** ZETAR: End loop error')
+!   call mpabrt (606)
+  call mpabrt (606)
 endif
 
-n = dfrac * mpnw1
-call mpdmc (2.d0, 0, t1, mpnw1)
-call mpnpwr (t1, n, tn, mpnw1)
-call mpneg (tn, t1, mpnw1)
-call mpdmc (0.d0, 0, t2, mpnw1)
-call mpdmc (0.d0, 0, s, mpnw1)
-
-sgn = 1.d0
+!mp prec="mpnw1"
+n = nint (dcon * mpnbt * mpnw1)
+! t1 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+! tn = t1 ** n
+call mpnpwr (t1(0:imp*mpnw/16+5), n, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), tn(0:imp*mpnw/16+5), mpnw1)
+! t1 = - tn
+call mpneg (tn(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+! t2 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+! s = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), s(0:imp*mpnw/16+5), mpnw1)
+sgn = 1.e0_mpdk
 
 do j = 0, 2 * n - 1
-  call mpdmc (dble (j + 1), 0, t4, mpnw1)
-  call mppower (t4, tt, t3, mpnw1)
-  call mpdiv (t1, t3, t4, mpnw1)
-  call mpmuld (t4, sgn, t5, mpnw1)
-  call mpadd (s, t5, t4, mpnw1)
-  call mpeq (t4, s, mpnw1)
+  i1 = j + 1
+  d3 = real (i1, mpdk)
+!   t4 = mprealdp (d3)
+  call mprealdp (d3, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+!   t3 = t4 ** tt
+  call mppower (t4(0:imp*mpnw/16+5), tt(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!   t4 = t1 / t3
+  call mpdiv (t1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+!   t5 = t4 * sgn
+  call mpmuld (t4(0:imp*mpnw/16+5), sgn, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t5(0:imp*mpnw/16+5), mpnw1)
+!   t4 = s + t5
+  call mpadd (s(0:imp*mpnw/16+5), t5(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+!   s = t4
+  call mpeq (t4(0:imp*mpnw/16+5), s(0:imp*mpnw/16+5), mpnw1)
   sgn = - sgn
 
-  if (j .lt. n - 1) then
-    call mpdmc (0.d0, 0, t2, mpnw1)
-  elseif (j .eq. n - 1) then
-    call mpdmc (1.d0, 0, t2, mpnw1)
+  if (j < n - 1) then
+!     t2 = mprealdp (0.e0_mpdk)
+    call mprealdp (0.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+  elseif (j == n - 1) then
+!     t2 = mprealdp (1.e0_mpdk)
+    call mprealdp (1.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
   else
-    call mpmuld (t2, dble (2 * n - j), t3, mpnw1)
-    call mpdivd (t3, dble (j + 1 - n), t2, mpnw1)
+    i1 = 2*n - j
+    i2 = j + 1 - n
+!     t3 = t2 * real (i1, mpdk)
+    call mpmuld (t2(0:imp*mpnw/16+5), real (i1, mpdk), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!     t2 = t3 / real (i2, mpdk)
+    call mpdivd (t3(0:imp*mpnw/16+5), real (i2, mpdk), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
   endif
-  call mpadd (t1, t2, t3, mpnw1)
-  call mpeq (t3, t1, mpnw1)
+!   t1 = t1 + t2
+  call mpadd (t1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
 enddo
 
-call mpsub (f1, tt, t3, mpnw1)
-call mpdmc (2.d0, 0, t2, mpnw1)
-call mppower (t2, t3, t4, mpnw1)
-call mpsub (f1, t4, t2, mpnw1)
-call mpmul (tn, t2, t3, mpnw1)
-call mpdiv (s, t3, t1, mpnw1)
-call mpneg (t1, t2, mpnw1)
-call mpeq (t2, t1, mpnw1)
+! t3 = 1.e0_mpdk - tt
+call mpdmc (1.e0_mpdk, 0, mpt2(0:imp*mpnw/16+5), mpnw1)
+call mpsub (mpt2(0:imp*mpnw/16+5), tt(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+! t2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+! t4 = t2 ** t3
+call mppower (t2(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+! t2 = f1 - t4
+call mpsub (f1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+! t3 = tn * t2
+call mpmul (tn(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+! t1 = - s / t3
+call mpdiv (s(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpneg (mpt1(0:imp*mpnw/16+5), mpt2(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt2(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
 
 !   If original argument was negative, apply Riemann's formula.
 
-if (mpsgn (ss) < 0) then
+! ic1 = mpsgn (ss)
+mpi1 = mpsgnr (ss)
+ic1 = mpi1
+if (ic1 < 0) then
+!   call mpgammar (tt, t3, mpnw1)
   call mpgammar (tt, t3, mpnw1)
-  call mpmul (t1, t3, t2, mpnw1)
-  call mpmul (mppicon, tt, t1, mpnw1)
-  call mpmuld (t1, 0.5d0, t3, mpnw1)
-  call mpcssnr (t3, t4, t5, mpnw1)
-  call mpmul (t2, t4, t1, mpnw1)
-  call mpmuld (mppicon, 2.d0, t2, mpnw1)
-  call mppower (t2, tt, t3, mpnw1)
-  call mpdiv (t1, t3, t2, mpnw1)
-  call mpmuld (t2, 2.d0, t1, mpnw1)
+!   t2 = t1 * t3
+  call mpmul (t1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+!   t1 = mppicon * tt
+  call mpmul (mppicon(0:), tt(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+!   t3 = t1 * 0.5e0_mpdk
+  call mpmuld (t1(0:imp*mpnw/16+5), 0.5e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!   t4 = cos (t3)
+  call mpcssnr (t3, mpt1(0:imp*mpnw/16+5), mpt2(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+!   t5 = sin (t3)
+  call mpcssnr (t3, mpt2(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t5(0:imp*mpnw/16+5), mpnw1)
+!   t1 = t2 * t4
+  call mpmul (t2(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+!   t2 = mppicon * 2.e0_mpdk
+  call mpmuld (mppicon(0:), 2.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+!   t3 = t2 ** tt
+  call mppower (t2(0:imp*mpnw/16+5), tt(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!   t1 = t1 / t3 * 2.e0_mpdk
+  call mpdiv (t1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpmuld (mpt1(0:imp*mpnw/16+5), 2.e0_mpdk, mpt2(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt2(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
 endif
 
 200 continue
 
-call mproun (t1, mpnw)
-call mpeq (t1, zz, mpnw)
+!mp prec="mpnw"
+! zz = t1
+call mpeq (t1(0:imp*mpnw/16+5), zz(0:), mpnw)
+
+210 continue
+
 return
 end subroutine mpzetar
 
@@ -4300,75 +7136,117 @@ subroutine mpzetaintr (iss, zz, mpnw)
 
 !   This returns the zeta function of the integer argument ISS using an algorithm
 !   due to Peter Borwein.
+!   dcon = conversion factor for computing n; default = 0.31e0_mpdk.
+!   dmp = multiplier for additional precision; dmp = 1.125e0_mpdk;
+!         must be an exact multiple of 1/16.
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ic1, itrmax, j, mpnw1, n, n1, itt
-real (mprknd) dfrac, d1, pi
-parameter (itrmax = 1000000, dfrac = 1.d0+ceiling(mpdpw), pi = 3.1415926535897932385d0)
 integer, intent(in):: iss
+!mp dim1="0:"
+! type (mp_real), intent(out):: zz
 integer (mpiknd), intent(out):: zz(0:)
-integer (mpiknd) f1(0:mpnw+6), s(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6), &
-  t3(0:mpnw+6), t4(0:mpnw+6), t5(0:mpnw+6), tn(0:mpnw+6), &
-  tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-real (mprknd) sgn
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000
+real (mpdknd), parameter:: dcon = 0.31e0_mpdk, dmp = 1.125e0_mpdk
+integer, parameter:: imp = dmp * 16.d0
+integer i, i1, i2, ic1, ic2, j, n, n1, itt
+real (mpdknd) d1, d2, d3, sgn
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:imp*mpnw/16+5"
+! type (mp_real) f1, s, t1, t2, t3
+integer (mpiknd) f1(0:imp*mpnw/16+5), s(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5)
+! type (mp_real) t4, t5, tn
+integer (mpiknd) t4(0:imp*mpnw/16+5), t5(0:imp*mpnw/16+5), tn(0:imp*mpnw/16+5)
+integer mpnw1, mpnw2
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:imp*mpnw/16+5), mpt2(0:imp*mpnw/16+5), mpt3(0:imp*mpnw/16+5)
+integer (mpiknd) mpt4(0:imp*mpnw/16+5), mpt5(0:imp*mpnw/16+5), mpt6(0:imp*mpnw/16+5)
 
-if (mpnw < 4 .or. mpspacer (zz) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPZETAINTR: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 603)
+call mpinitwds (mpt1, imp*mpnw/16+5-5)
+call mpinitwds (mpt2, imp*mpnw/16+5-5)
+call mpinitwds (mpt3, imp*mpnw/16+5-5)
+call mpinitwds (mpt4, imp*mpnw/16+5-5)
+call mpinitwds (mpt5, imp*mpnw/16+5-5)
+call mpinitwds (mpt6, imp*mpnw/16+5-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (f1(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (s(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t1(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t2(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t3(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t4(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (t5(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+call mpinitwds (tn(0:imp*mpnw/16+5), imp*mpnw/16+5-5)
+
+!  End of initialization
+
+
+mpnw1 = min (int (dmp*mpnw), mpnwx)
+
+! ic1 = mpspacer (zz)
+mpi1 = mpspacer (zz)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** ZETAINTR: Uninitialized or inadequately sized array')
+!   call mpabrt (607)
+  call mpabrt (607)
 endif
 
-mpnw1 = mpnw + 1
-
-!   Check if Pi has been precomputed.
-
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 4) mpnw1
-4 format ('*** MPZETAINTR: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 604)
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw1) then
+  write (6, 2) mpnw1
+2 format ('*** ZETAINTR: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (608)
+  call mpabrt (608)
 endif
 
-call mpinitwds (f1, mpnw1)
-call mpinitwds (s, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (tn, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
+!mp prec="mpnwm"
 
-call mpdmc (1.d0, 0, f1, mpnw1)
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnwm)
+call mpeq (mpt1(0:imp*mpnw/16+5), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:imp*mpnw/16+5), mpnwm)
+call mpeq (mpt1(0:imp*mpnw/16+5), eps(0:mpnwm+5), mpnwm)
+
+!mp prec="mpnw1"
+
+! f1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), f1(0:imp*mpnw/16+5), mpnw1)
 
 if (iss == 1) then
-  write (mpldb, 2)
-2 format ('*** MPZETAINTR: argument is 1')
-  call mpabrt ( 605)
+  write (mpldb, 3)
+3 format ('*** ZETAINTR: Argument is 1')
+!   call mpabrt (609)
+  call mpabrt (609)
 elseif (iss == 0) then
 
 !   Argument is zero -- result is -1/2.
 
-  call mpdmc (-0.5d0, 0, t1, mpnw1)
+!   t1 = mprealdp (-0.5e0_mpdk)
+  call mprealdp (-0.5e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
   goto 200
 elseif (iss < 0) then
 
 !   If argument is a negative even integer, the result is zero.
 
   if (mod (iss, 2) == 0) then
-    call mpdmc (0.d0, 0, t1, mpnw1)
+!     t1 = mprealdp (0.e0_mpdk)
+    call mprealdp (0.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
     goto 200
   endif
 
@@ -4381,96 +7259,180 @@ endif
 
 !  Check if argument is large enough that computing with definition is faster.
 
-d1 = mpnbt * mpnw * log (2.d0) / log (2.d0 * mpnbt * mpnw / 3.d0)
+d3 = log (2.e0_mpdk) / log (2.e0_mpdk * mpnbt * mpnw1 / 3.e0_mpdk)
+d1 = mpnbt * mpnw1 * d3
 
 if (itt > d1) then
 
 !   Evaluate the infinite series.
 
-  call mpdmc (1.d0, 0, t1, mpnw1)
+!   t1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
 
   do i = 2, itrmax
-    call mpdmc (dble (i), 0, t4, mpnw1)
-    call mpnpwr (t4, itt, t2, mpnw1)
-    call mpdiv (f1, t2, t3, mpnw1)
-    call mpadd (t1, t3, t2, mpnw1)
-    call mpeq (t2, t1, mpnw1)
-
-    call mpabs (t3, tc1, 4)
-    call mpmul (eps, t1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 200
+    d3 = real (i, mpdk)
+!     t4 = mprealdp (d3)
+    call mprealdp (d3, mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+!     t2 = t4 ** itt
+    call mpnpwr (t4(0:imp*mpnw/16+5), itt, mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+!     t3 = f1 / t2
+    call mpdiv (f1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!     t1 = t1 + t3
+    call mpadd (t1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t3) - eps * abs (t1)
+    call mpabs (t3, mpt1(0:imp*mpnw/16+5), mpnwm)
+    call mpabs (t1, mpt2(0:imp*mpnw/16+5), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:imp*mpnw/16+5), mpt3(0:imp*mpnw/16+5), mpnwm)
+    call mpsub (mpt1(0:imp*mpnw/16+5), mpt3(0:imp*mpnw/16+5), mpt4(0:imp*mpnw/16+5), mpnwm)
+    call mpeq (mpt4(0:imp*mpnw/16+5), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 200
   enddo
 
-  write (mpldb, 3) 1, itrmax
-3 format ('*** MPZETAINTR: iteration limit exceeded',2i10)
-  call mpabrt ( 606)
+  write (mpldb, 4)
+4 format ('*** ZETAINTR: End loop error')
+!   call mpabrt (610)
+  call mpabrt (610)
 endif
 
-n = dfrac * mpnw1
-call mpdmc (2.d0, 0, t1, mpnw1)
-call mpnpwr (t1, n, tn, mpnw1)
-call mpneg (tn, t1, mpnw1)
-call mpdmc (0.d0, 0, t2, mpnw1)
-call mpdmc (0.d0, 0, s, mpnw1)
-
-sgn = 1.d0
+!mp prec="mpnw1"
+n = nint (dcon * mpnbt * mpnw1)
+! t1 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+! tn = t1 ** n
+call mpnpwr (t1(0:imp*mpnw/16+5), n, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), tn(0:imp*mpnw/16+5), mpnw1)
+! t1 = - tn
+call mpneg (tn(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+! t2 = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+! s = mprealdp (0.e0_mpdk)
+call mprealdp (0.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), s(0:imp*mpnw/16+5), mpnw1)
+sgn = 1.e0_mpdk
 
 do j = 0, 2 * n - 1
-  call mpdmc (dble (j + 1), 0, t4, mpnw1)
-  call mpnpwr (t4, itt, t3, mpnw1)
-  call mpdiv (t1, t3, t4, mpnw1)
-  call mpmuld (t4, sgn, t5, mpnw1)
-  call mpadd (s, t5, t4, mpnw1)
-  call mpeq (t4, s, mpnw1)
+  i1 = j + 1
+  d3 = real (i1, mpdk)
+!   t4 = mprealdp (d3)
+  call mprealdp (d3, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+!   t3 = t4 ** itt
+  call mpnpwr (t4(0:imp*mpnw/16+5), itt, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!   t4 = t1 / t3
+  call mpdiv (t1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+!   t5 = t4 * sgn
+  call mpmuld (t4(0:imp*mpnw/16+5), sgn, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t5(0:imp*mpnw/16+5), mpnw1)
+!   s = s + t5
+  call mpadd (s(0:imp*mpnw/16+5), t5(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), s(0:imp*mpnw/16+5), mpnw1)
   sgn = - sgn
 
-  if (j .lt. n - 1) then
-    call mpdmc (0.d0, 0, t2, mpnw1)
-  elseif (j .eq. n - 1) then
-    call mpdmc (1.d0, 0, t2, mpnw1)
+  if (j < n - 1) then
+!     t2 = mprealdp (0.e0_mpdk)
+    call mprealdp (0.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+  elseif (j == n - 1) then
+!     t2 = mprealdp (1.e0_mpdk)
+    call mprealdp (1.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
   else
-    call mpmuld (t2, dble (2 * n - j), t3, mpnw1)
-    call mpdivd (t3, dble (j + 1 - n), t2, mpnw1)
+    i1 = 2*n - j
+    i2 = j + 1 - n
+!     t3 = t2 * real (i1, mpdk)
+    call mpmuld (t2(0:imp*mpnw/16+5), real (i1, mpdk), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!     t2 = t3 / real (i2, mpdk)
+    call mpdivd (t3(0:imp*mpnw/16+5), real (i2, mpdk), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
   endif
 
-  call mpadd (t1, t2, t3, mpnw1)
-  call mpeq (t3, t1, mpnw1)
+!   t1 = t1 + t2
+  call mpadd (t1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
 enddo
 
-call mpdmc (2.d0, 0, t2, mpnw1)
-call mpnpwr (t2, 1 - itt, t4, mpnw1)
-call mpsub (f1, t4, t2, mpnw1)
-call mpmul (tn, t2, t3, mpnw1)
-call mpdiv (s, t3, t1, mpnw1)
-call mpneg (t1, t2, mpnw1)
-call mpeq (t2, t1, mpnw1)
+! t2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+ic1 = 1 - itt
+! t4 = t2 ** ic1
+call mpnpwr (t2(0:imp*mpnw/16+5), ic1, mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+! t2 = f1 - t4
+call mpsub (f1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+! t3 = tn * t2
+call mpmul (tn(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+! t1 = - s / t3
+call mpdiv (s(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+call mpneg (mpt1(0:imp*mpnw/16+5), mpt2(0:imp*mpnw/16+5), mpnw1)
+call mpeq (mpt2(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
 
 !   If original argument was negative, apply Riemann's formula.
 
 if (iss < 0) then
-  call mpdmc (1.d0, 0, t3, mpnw1)
+!   t3 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+
   do i = 1, itt - 1
-    call mpmuld (t3, dble (i), t4, mpnw1)
-    call mpeq (t4, t3, mpnw1)
+!     t3 = t3 * real (i, mpdk)
+    call mpmuld (t3(0:imp*mpnw/16+5), real (i, mpdk), mpt1(0:imp*mpnw/16+5), mpnw1)
+    call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
   enddo
 
-  call mpmul (t1, t3, t2, mpnw1)
-  call mpmuld (mppicon, dble (itt), t1, mpnw1)
-  call mpmuld (t1, 0.5d0, t3, mpnw1)
-  call mpcssnr (t3, t4, t5, mpnw1)
-  call mpmul (t2, t4, t1, mpnw1)
-  call mpmuld (mppicon, 2.d0, t2, mpnw1)
-  call mpnpwr (t2, itt, t3, mpnw1)
-  call mpdiv (t1, t3, t2, mpnw1)
-  call mpmuld (t2, 2.d0, t1, mpnw1)
+!   t2 = t1 * t3
+  call mpmul (t1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+!   t1 = mppicon * real (itt, mpdk)
+  call mpmuld (mppicon(0:), real (itt, mpdk), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+!   t3 = t1 * 0.5e0_mpdk
+  call mpmuld (t1(0:imp*mpnw/16+5), 0.5e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!   t4 = cos (t3)
+  call mpcssnr (t3, mpt1(0:imp*mpnw/16+5), mpt2(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpnw1)
+!   t5 = sin (t3)
+  call mpcssnr (t3, mpt2(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t5(0:imp*mpnw/16+5), mpnw1)
+!   t1 = t2 * t4
+  call mpmul (t2(0:imp*mpnw/16+5), t4(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
+!   t2 = mppicon * 2.e0_mpdk
+  call mpmuld (mppicon(0:), 2.e0_mpdk, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t2(0:imp*mpnw/16+5), mpnw1)
+!   t3 = t2 ** itt
+  call mpnpwr (t2(0:imp*mpnw/16+5), itt, mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpnw1)
+!   t1 = t1 / t3 * 2.e0_mpdk
+  call mpdiv (t1(0:imp*mpnw/16+5), t3(0:imp*mpnw/16+5), mpt1(0:imp*mpnw/16+5), mpnw1)
+  call mpmuld (mpt1(0:imp*mpnw/16+5), 2.e0_mpdk, mpt2(0:imp*mpnw/16+5), mpnw1)
+  call mpeq (mpt2(0:imp*mpnw/16+5), t1(0:imp*mpnw/16+5), mpnw1)
 endif
 
 200 continue
 
-call mproun (t1, mpnw)
-call mpeq (t1, zz, mpnw)
+!mp prec="mpnw"
+! zz = t1
+call mpeq (t1(0:imp*mpnw/16+5), zz(0:), mpnw)
+
 return
 end subroutine mpzetaintr
 
@@ -4483,230 +7445,1279 @@ subroutine mpzetabe (nb1, nb2, berne, s, z, mpnw)
 !  shown below. NB2 must be greater than 1.4 x precision in decimal digits.
 
 implicit none
-integer, intent(in):: nb1, nb2, mpnw
-integer i, i1, i2, ic1, itrmax, k, mpnw1, n1, n2, nn
-real (mprknd) dber, dfrac, dlogb, d1, d2, pi
-parameter (itrmax = 1000000, dber = 1.4d0, dfrac = 8.5d0, &
-  dlogb = 33.27106466687737d0, pi = 3.1415926535897932385d0)
-integer (mpiknd), intent(in):: berne(0:nb1+5,nb2), s(0:)
+integer, intent(in):: nb1, mpnw
+integer, intent(in):: nb2
+!mp dim1="0:nb1+5"
+! type (mp_real), intent(in):: berne(1:nb2)
+integer (mpiknd), intent(in):: berne(0:nb1+5,1:nb2)
+!mp dim1="0:"
+! type (mp_real), intent(in):: s
+integer (mpiknd), intent(in):: s(0:)
+! type (mp_real), intent(out):: z
 integer (mpiknd), intent(out):: z(0:)
-integer (mpiknd) t0(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), &
-  t4(0:mpnw+6), t5(0:mpnw+6), t6(0:mpnw+6), t7(0:mpnw+6), t8(0:mpnw+6), &
-  t9(0:mpnw+6), tt(0:mpnw+6), f1(0:mpnw+6), tc1(0:9), tc2(0:9), tc3(0:9), eps(0:9)
-integer (mpiknd) ix8
+integer, parameter:: itrmax = 1000000
+real (mpdknd), parameter:: dber = 0.45e0_mpdk, dfrac = 0.18e0_mpdk
+integer i, ic1, ic2, ic3, i1, i2, k, n1, n2, nn
+real (mpdknd) d1, d2, d3, d4
+!mp dim1="0:mpnwm+5"
+! type (mp_real) eps, tc1, tc2
+integer (mpiknd) eps(0:mpnwm+5), tc1(0:mpnwm+5), tc2(0:mpnwm+5)
+!mp dim1="0:mpnw+6"
+! type (mp_real) t0, t1, t2, t3, t4
+integer (mpiknd) t0(0:mpnw+6), t1(0:mpnw+6), t2(0:mpnw+6), t3(0:mpnw+6), t4(0:mpnw+6)
+! type (mp_real) t5, t6, t7, t8, t9
+integer (mpiknd) t5(0:mpnw+6), t6(0:mpnw+6), t7(0:mpnw+6), t8(0:mpnw+6), t9(0:mpnw+6)
+! type (mp_real) tt, f1
+integer (mpiknd) tt(0:mpnw+6), f1(0:mpnw+6)
+integer mpnw1
 
-!  End of declaration.
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpt3(0:mpnw+6)
+integer (mpiknd) mpt4(0:mpnw+6), mpt5(0:mpnw+6), mpt6(0:mpnw+6)
 
-if (mpnw < 4 .or. mpspacer (s) < mpnw + 4 .or. mpspacer (z) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPZETABE: Uninitialized or inadequately sized arrays')
-  call mpabrt ( 607)
+call mpinitwds (mpt1, mpnw+6-5)
+call mpinitwds (mpt2, mpnw+6-5)
+call mpinitwds (mpt3, mpnw+6-5)
+call mpinitwds (mpt4, mpnw+6-5)
+call mpinitwds (mpt5, mpnw+6-5)
+call mpinitwds (mpt6, mpnw+6-5)
+call mpinitwds (eps(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc1(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (tc2(0:mpnwm+5), mpnwm+5-5)
+call mpinitwds (t0(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t1(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t2(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t3(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t4(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t5(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t6(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t7(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t8(0:mpnw+6), mpnw+6-5)
+call mpinitwds (t9(0:mpnw+6), mpnw+6-5)
+call mpinitwds (tt(0:mpnw+6), mpnw+6-5)
+call mpinitwds (f1(0:mpnw+6), mpnw+6-5)
+
+!  End of initialization
+
+
+mpnw1 = min (mpnw + 1, mpnwx)
+
+! ic1 = mpspacer (z)
+mpi1 = mpspacer (z)
+ic1 = mpi1
+if (mpnw < mpnwm .or. ic1 < mpnw + 6) then
+  write (6, 1)
+1 format ('*** ZETABE: Uninitialized or inadequately sized array')
+!   call mpabrt (611)
+  call mpabrt (611)
+endif
+
+! ic1 = mpwprecr (mppicon)
+mpi1 = mpwprecr (mppicon)
+ic1 = mpi1
+if (ic1 < mpnw1) then
+  write (6, 2) mpnw1
+2 format ('*** ZETABE: Pi must be initialized to',i6,' words by calling mpinit.')
+!   call mpabrt (612)
+  call mpabrt (612)
+endif
+
+!mp prec="mpnw1"
+
+!   Check if berne array has been initialized.
+
+! d1 = dpreal (berne(1))
+call mpdpreal (berne(0:nb1+5,1), mpd1, mpnw1)
+d1 = mpd1
+if (abs (d1 - 1.e0_mpdk / 6.e0_mpdk) > mprdfz .or. nb2 < int (dber * mpnbt * mpnw1)) then
+  write (mpldb, 3) int (dber * mpnbt * mpnw1)
+3 format ('*** ZETABE: Array of even Bernoulli coefficients must be initialized'/ &
+   'with at least',i8,' entries.')
+!   call mpabrt (613)
+  call mpabrt (613)
 endif
 
 i = 0
 k = 0
-mpnw1 = mpnw + 1
-
-!   Check if Pi has been precomputed.
-
-call mpmdc (mppicon, d1, n1, mpnw1)
-if (n1 /= 1 .or. abs (d1 * 2.d0**n1 - pi) > mprdfz &
-  .or. mpwprecr (mppicon) < mpnw1) then
-  write (mpldb, 5) mpnw1
-5 format ('*** MPZETABE: Pi must be precomputed to precision',i9,' words.'/ &
-  'See documentation for details.')
-  call mpabrt ( 608)
-endif
-
-call mpinitwds (t0, mpnw1)
-call mpinitwds (t1, mpnw1)
-call mpinitwds (t2, mpnw1)
-call mpinitwds (t3, mpnw1)
-call mpinitwds (t4, mpnw1)
-call mpinitwds (t5, mpnw1)
-call mpinitwds (t6, mpnw1)
-call mpinitwds (t7, mpnw1)
-call mpinitwds (t8, mpnw1)
-call mpinitwds (t9, mpnw1)
-call mpinitwds (tt, mpnw1)
-call mpinitwds (f1, mpnw1)
-
-call mpinitwds (tc1, 4)
-call mpinitwds (tc2, 4)
-call mpinitwds (tc3, 4)
-call mpinitwds (eps, 4)
-call mpdmc (2.d0, 0, tc1, 4)
-call mpnpwr (tc1, -mpnw1*mpnbt, eps, 4)
+!mp prec="mpnwm"
+! tc2 = mprealdp (2.e0_mpdk)
+call mprealdp (2.e0_mpdk, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+ic2 = -mpnw1*mpnbt
+! eps = tc2 ** ic2
+call mpnpwr (tc2(0:mpnwm+5), ic2, mpt1(0:mpnw+6), mpnwm)
+call mpeq (mpt1(0:mpnw+6), eps(0:mpnwm+5), mpnwm)
 
 !   Check if argument is 1 -- undefined.
 
-call mpdmc (1.d0, 0, t0, mpnw1)
-call mpcpr (s, t0, ic1, mpnw1)
+!mp prec="mpnw1"
+! t0 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t0(0:mpnw+6), mpnw1)
+! t1 = s - t0
+call mpsub (s(0:), t0(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+! ic1 = mpsgn (t1)
+mpi1 = mpsgnr (t1)
+ic1 = mpi1
+! ic2 = mpsgn (s)
+mpi1 = mpsgnr (s)
+ic2 = mpi1
+
 if (ic1 == 0) then
-  write (mpldb, 2)
-2 format ('*** MPZETABE: argument is 1')
-  call mpabrt ( 609)
+  write (mpldb, 4)
+4 format ('*** ZETABE: Argument is 1')
+!   call mpabrt (614)
+  call mpabrt (614)
 endif
 
-!   Check if berne array has been initialized.
+! f1 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), f1(0:mpnw+6), mpnw1)
 
-i1 = 1000000000
-i2 = 1000000000
+!   Check if argument is zero. If so, result is - 1/2.
 
-do k = 1, nb2
-  i1 = min (i1, mpspacer (berne(0:nb1+5,k)))
-  i2 = min (i2, mpwprecr (berne(0:nb1+5,k)))
-enddo
-
-call mpmdc (berne(0:nb1+5,1), d1, n1, mpnw)
-d1 = d1 * 2.d0 ** n1
-
-if (i1 < mpnw + 6 .or. i2 < mpnw .or. abs (d1 - 1.d0 / 6.d0) > mprdfz .or. &
-  nb2 < int (dber * mpdpw * (mpnw - 2))) then
-  write (mpldb, 3) int (dber * mpdpw * (mpnw - 2))
-3 format ('*** MPZETABE: Array of even Bernoulli coefficients must be initialized'/ &
-   'with at least',i8,' entries.')
-  call mpabrt ( 610)
-endif
-
-call mpdmc (1.d0, 0, f1, mpnw1)
-
-!   Check if argument is zero.  If so, result is - 1/2.
-
-if (mpsgn (s) == 0) then
-  call mpdmc (-0.5d0, 0, t1, mpnw)
+if (ic2 == 0) then
+!   t1 = mprealdp (-0.5e0_mpdk)
+  call mprealdp (-0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
   goto 200
 endif
 
 !   Check if argument is negative.
 
-if (mpsgn (s) < 0) then
+if (ic2 < 0) then
 
-!   Check if argument is a negative even integer.  If so, the result is zero.
+!   Check if argument is a negative even integer. If so, the result is zero.
 
-  call mpmuld (s, 0.5d0, t1, mpnw1)
-  call mpinfr (t1, t2, t3, mpnw1)
-  if (mpsgn (t3) == 0) then
-    call mpdmc (0.d0, 0, t1, mpnw1)
+!   t1 = s * 0.5e0_mpdk
+  call mpmuld (s(0:), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t3 = t1 - anint (t1)
+  call mpnint (t1, mpt1(0:mpnw+6), mpnw1)
+  call mpsub (t1(0:mpnw+6), mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt2(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   ic3 = mpsgn (t3)
+  mpi1 = mpsgnr (t3)
+  ic3 = mpi1
+  if (ic3 == 0) then
+!     t1 = mprealdp (0.e0_mpdk)
+    call mprealdp (0.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
     goto 200
   endif
 
 !   Otherwise compute zeta(1-s), and later apply the reflection formula.
 
-  call mpsub (f1, s, tt, mpnw1)
+!   tt = f1 - s
+  call mpsub (f1(0:mpnw+6), s(0:), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), tt(0:mpnw+6), mpnw1)
 else
-  call mpeq (s, tt, mpnw1)
+!   tt = s
+  call mpeq (s(0:), tt(0:mpnw+6), mpnw1)
 endif
 
 !  Check if argument is large enough that computing with definition is faster.
 
-d1 = dlogb * mpnw1 / log (32.d0 * mpnw1)
-call mpmdc (tt, d2, n2, mpnw1)
-d2 = d2 * 2.d0**n2
+d1 = mplogb * mpnw1 / log (32.e0_mpdk * mpnw1)
+! d2 = dpreal (tt)
+call mpdpreal (tt, mpd1, mpnw1)
+d2 = mpd1
+
 if (d2 > d1) then
-  call mpdmc (1.d0, 0, t1, mpnw1)
+!   t1 = mprealdp (1.e0_mpdk)
+  call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 
   do i = 2, itrmax
-    call mpdmc (dble (i), 0, t4, mpnw1)
-    call mppower (t4, tt, t2, mpnw1)
-    call mpdiv (f1, t2, t3, mpnw1)
-    call mpadd (t1, t3, t2, mpnw1)
-    call mpeq (t2, t1, mpnw1)
-
-    call mpabs (t3, tc1, 4)
-    call mpmul (eps, t1, tc3, 4)
-    call mpabs (tc3, tc2, 4)
-    call mpcpr (tc1, tc2, ic1, 4)
-    if (ic1 <= 0) goto 200
+    d3 = real (i, mpdk)
+!     t4 = mprealdp (d3)
+    call mprealdp (d3, mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!     t2 = t4 ** tt
+    call mppower (t4(0:mpnw+6), tt(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!     t3 = f1 / t2
+    call mpdiv (f1(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!     t1 = t1 + t3
+    call mpadd (t1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+    call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!     tc1 = abs (t3) - eps * abs (t1)
+    call mpabs (t3, mpt1(0:mpnw+6), mpnwm)
+    call mpabs (t1, mpt2(0:mpnw+6), mpnwm)
+    call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+    call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+    call mpeq (mpt4(0:mpnw+6), tc1(0:mpnwm+5), mpnwm)
+!     ic1 = mpsgn (tc1)
+    mpi1 = mpsgnr (tc1)
+    ic1 = mpi1
+    if (ic1 < 0) goto 200
   enddo
 
-  write (mpldb, 4) 1, itrmax
-4 format ('*** MPZETABE: iteration limit exceeded',2i10)
-  call mpabrt ( 611)
+  write (mpldb, 5)
+5 format ('*** ZETABE: End loop error 1')
+!   call mpabrt (615)
+  call mpabrt (615)
 endif
 
-call mpdmc (1.d0, 0, t0, mpnw1)
-nn = dfrac * mpnw1
+!mp prec="mpnw1"
+! t0 = mprealdp (1.e0_mpdk)
+call mprealdp (1.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t0(0:mpnw+6), mpnw1)
+nn = dfrac * mpnbt * mpnw1
 
 do k = 2, nn
-  call mpdmc (dble (k), 0, t2, mpnw1)
-  call mppower (t2, tt, t1, mpnw1)
-  call mpdiv (f1, t1, t2, mpnw1)
-  call mpadd (t0, t2, t3, mpnw1)
-  call mpeq (t3, t0, mpnw1)
+  d3 = real (k, mpdk)
+!   t2 = mprealdp (d3)
+  call mprealdp (d3, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t1 = t2 ** tt
+  call mppower (t2(0:mpnw+6), tt(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = f1 / t1
+  call mpdiv (f1(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t0 = t0 + t2
+  call mpadd (t0(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t0(0:mpnw+6), mpnw1)
 enddo
 
-call mpdmc (dble (nn), 0, t2, mpnw1)
-call mpsub (tt, f1, t3, mpnw1)
-call mpmul (t1, t3, t4, mpnw1)
-call mpdiv (t2, t4, t3, mpnw1)
-call mpadd (t0, t3, t2, mpnw1)
-call mpdmc (0.5d0, 0, t3, mpnw1)
-call mpdiv (t3, t1, t4, mpnw1)
-call mpsub (t2, t4, t0, mpnw1)
+d3 = real (nn, mpdk)
+! t2 = mprealdp (d3)
+call mprealdp (d3, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = tt - f1
+call mpsub (tt(0:mpnw+6), f1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = t1 * t3
+call mpmul (t1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t3 = t2 / t4
+call mpdiv (t2(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t2 = t0 + t3
+call mpadd (t0(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t3 = mprealdp (0.5e0_mpdk)
+call mprealdp (0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+! t4 = t3 / t1
+call mpdiv (t3(0:mpnw+6), t1(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t0 = t2 - t4
+call mpsub (t2(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t0(0:mpnw+6), mpnw1)
 
-call mpeq (tt, t3, mpnw1)
-d1 = 12.d0 * dble (nn)
-call mpmuld (t1, d1, t4, mpnw1)
-call mpdiv (t3, t4, t2, mpnw1)
-call mpmuld (t1, dble (nn), t5, mpnw1)
-call mpdmc (dble (nn), 0, t6, mpnw1)
-call mpmul (t6, t6, t9, mpnw1)
+! t3 = tt
+call mpeq (tt(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+d1 = 12.e0_mpdk * real (nn, mpdk)
+! t4 = t1 * d1
+call mpmuld (t1(0:mpnw+6), d1, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+! t2 = t3 / t4
+call mpdiv (t3(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+! t5 = t1 * real (nn, mpdk)
+call mpmuld (t1(0:mpnw+6), real (nn, mpdk), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+d3 = real (nn, mpdk)
+! t6 = mprealdp (d3)
+call mprealdp (d3, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+! t9 = t6 ** 2
+call mpnpwr (t6(0:mpnw+6), 2, mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t9(0:mpnw+6), mpnw1)
 
 do k = 2, min (nb2, itrmax)
-  call mpdmc (dble (2 * k - 2), 0, t4, mpnw1)
-  call mpadd (tt, t4, t6, mpnw1)
-  call mpdmc (dble (2 * k - 3), 0, t7, mpnw1)
-  call mpadd (tt, t7, t8, mpnw1)
-  call mpmul (t6, t8, t7, mpnw1)
-  call mpmul (t3, t7, t4, mpnw1)
-  call mpdmc (dble (2 * k - 1), 0, t6, mpnw1)
-  call mpdmc (dble (2 * k - 2), 0, t7, mpnw1)
-  call mpmul (t6, t7, t8, mpnw1)
-  call mpdiv (t4, t8, t3, mpnw1)
-  call mpmul (t5, t9, t6, mpnw1)
-  call mpeq (t6, t5, mpnw1)
-  call mpmul (t3, berne(0:nb1+5,k), t4, mpnw1)
-  call mpmuld (t5, dble (2 * k), t6, mpnw1)
-  call mpdiv (t4, t6, t7, mpnw1)
-  call mpadd (t2, t7, t4, mpnw1)
-  call mpeq (t4, t2, mpnw1)
-
-  call mpabs (t7, tc1, 4)
-  call mpmul (eps, t2, tc3, 4)
-  call mpabs (tc3, tc2, 4)
-  call mpcpr (tc1, tc2, ic1, 4)
-  if (ic1 <= 0) goto 110
+  i1 = 2*k - 2
+  i2 = 2*k - 3
+  d3 = real (i1, mpdk)
+!   t4 = mprealdp (d3)
+  call mprealdp (d3, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t6 = tt + t4
+  call mpadd (tt(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+  d4 = real (i2, mpdk)
+!   t7 = mprealdp (d4)
+  call mprealdp (d4, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t8 = tt + t7
+  call mpadd (tt(0:mpnw+6), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t8(0:mpnw+6), mpnw1)
+!   t7 = t6 * t8
+  call mpmul (t6(0:mpnw+6), t8(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t4 = t3 * t7
+  call mpmul (t3(0:mpnw+6), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+  i1 = 2*k - 1
+  i2 = 2*k - 2
+  d3 = real (i1, mpdk)
+!   t6 = mprealdp (d3)
+  call mprealdp (d3, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+  d4 = real (i2, mpdk)
+!   t7 = mprealdp (d4)
+  call mprealdp (d4, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t8 = t6 * t7
+  call mpmul (t6(0:mpnw+6), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t8(0:mpnw+6), mpnw1)
+!   t3 = t4 / t8
+  call mpdiv (t4(0:mpnw+6), t8(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t5 = t5 * t9
+  call mpmul (t5(0:mpnw+6), t9(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t4 = t3 * berne(k)
+  call mpmul (t3(0:mpnw+6), berne(0:nb1+5,k), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+  i1 = 2*k
+!   t6 = t5 * real (i1, mpdk)
+  call mpmuld (t5(0:mpnw+6), real (i1, mpdk), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t6(0:mpnw+6), mpnw1)
+!   t7 = t4 / t6
+  call mpdiv (t4(0:mpnw+6), t6(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t7(0:mpnw+6), mpnw1)
+!   t2 = t2 + t7
+  call mpadd (t2(0:mpnw+6), t7(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!mp prec="mpnwm"
+!   tc2 = abs (t7) - eps * abs (t2)
+  call mpabs (t7, mpt1(0:mpnw+6), mpnwm)
+  call mpabs (t2, mpt2(0:mpnw+6), mpnwm)
+  call mpmul (eps(0:mpnwm+5), mpt2(0:mpnw+6), mpt3(0:mpnw+6), mpnwm)
+  call mpsub (mpt1(0:mpnw+6), mpt3(0:mpnw+6), mpt4(0:mpnw+6), mpnwm)
+  call mpeq (mpt4(0:mpnw+6), tc2(0:mpnwm+5), mpnwm)
+!   ic2 = mpsgn (tc2)
+  mpi1 = mpsgnr (tc2)
+  ic2 = mpi1
+  if (ic2 < 0) goto 110
 enddo
 
-write (mpldb, 3) 2, min (nb2, itrmax)
-call mpabrt ( 612)
+write (mpldb, 6)
+6 format ('*** ZETABE: End loop error 2')
+! call mpabrt (616)
+call mpabrt (616)
 
 110 continue
 
-call mpadd (t0, t2, t1, mpnw1)
+!mp prec="mpnw1"
+! t1 = t0 + t2
+call mpadd (t0(0:mpnw+6), t2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 
 !   If original argument was negative, apply the reflection formula.
 
-if (mpsgn (s) < 0) then
+! ic1 = mpsgn (s)
+mpi1 = mpsgnr (s)
+ic1 = mpi1
+if (ic1 < 0) then
+!   call mpgammar (tt, t3, mpnw1)
   call mpgammar (tt, t3, mpnw1)
-  call mpmul (t1, t3, t2, mpnw1)
-  call mpmul (mppicon, tt, t1, mpnw1)
-  call mpmuld (t1, 0.5d0, t3, mpnw1)
-  call mpcssnr (t3, t4, t5, mpnw1)
-  call mpmul (t2, t4, t1, mpnw1)
-  call mpmuld (mppicon, 2.d0, t2, mpnw1)
-  call mppower (t2, tt, t3, mpnw1)
-  call mpdiv (t1, t3, t2, mpnw1)
-  call mpmuld (t2, 2.d0, t1, mpnw1)
+!   t2 = t1 * t3
+  call mpmul (t1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t1 = mppicon * tt
+  call mpmul (mppicon(0:), tt(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t3 = t1 * 0.5e0_mpdk
+  call mpmuld (t1(0:mpnw+6), 0.5e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t4 = cos (t3)
+  call mpcssnr (t3, mpt1(0:mpnw+6), mpt2(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t4(0:mpnw+6), mpnw1)
+!   t5 = sin (t3)
+  call mpcssnr (t3, mpt2(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t5(0:mpnw+6), mpnw1)
+!   t1 = t2 * t4
+  call mpmul (t2(0:mpnw+6), t4(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
+!   t2 = mppicon * 2.e0_mpdk
+  call mpmuld (mppicon(0:), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t3 = t2 ** t3
+  call mppower (t2(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t3(0:mpnw+6), mpnw1)
+!   t2 = t1 / t3
+  call mpdiv (t1(0:mpnw+6), t3(0:mpnw+6), mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t2(0:mpnw+6), mpnw1)
+!   t1 = t2 * 2.e0_mpdk
+  call mpmuld (t2(0:mpnw+6), 2.e0_mpdk, mpt1(0:mpnw+6), mpnw1)
+  call mpeq (mpt1(0:mpnw+6), t1(0:mpnw+6), mpnw1)
 endif
 
 200 continue
 
-call mproun (t1, mpnw)
-call mpeq (t1, z, mpnw)
+!mp prec="mpnw"
+! z = t1
+call mpeq (t1(0:mpnw+6), z(0:), mpnw)
 
 return
 end subroutine mpzetabe
+
+!  Polynomial package routines start here.
+
+subroutine mprpolysolvex (nd1, nq, polyq, rootapp, root, mpnw)
+
+!   This finds a high-precision real root of the real polynomial polyq
+!   (degree nq), which is assumed to be reduced, starting with the
+!   approximation in rootapp.
+
+!   Arguments:
+!     nd1      Input first dim parameter: first raw dim of polyq is 0:nd1+5.
+!     nq       Input degree of polynomial in polyq.
+!     polyq    Input vector of MPR polynomial coefficients, polyq(0:nq).
+!     rootapp  Input MPR approx to root (usually just a few correct digits).
+!     root     Output MPR root.
+!     rooterr  Output estimated error of root.
+!     mpnw     Input working precision in words.
+
+!   Parameters:
+!     itol    "Fuzz" in bits for setting eps; default = 80.
+!     itrmax  The maximum number of iterations; default = 200.
+!     mpnw0   Initial precision level in words for Newton iterations;
+!               default = 5.
+!     idb     Debug output is enabled if nonzero.
+
+implicit none
+integer, intent (in):: nd1, nq, mpnw
+!mp dim1="0:nd1+5"
+! type (mp_real), intent(in):: polyq(0:nq)
+integer (mpiknd), intent(in):: polyq(0:nd1+5,0:nq)
+! type (mp_real):: polyd(0:nq)
+integer (mpiknd):: polyd(0:nd1+5,0:nq)
+!mp dim1="0:mpnw+5"
+! type (mp_real), intent(in):: rootapp
+integer (mpiknd), intent(in):: rootapp(0:mpnw+5)
+! type (mp_real), intent(out):: root
+integer (mpiknd), intent(out):: root(0:mpnw+5)
+integer:: i, i1, i4, itr, j, k, n, npx, mpnw2, nd
+integer, parameter:: itol = 80, itrmax = 200, mpnw0 = 5, idb = 0
+real (mpdknd) d1
+! type (mp_real):: eps, rooterr
+integer (mpiknd):: eps(0:mpnw+5), rooterr(0:mpnw+5)
+! type (mp_real):: rootx, t1, t2, t3, t4
+integer (mpiknd):: rootx(0:mpnw+5), t1(0:mpnw+5), t2(0:mpnw+5), t3(0:mpnw+5), t4(0:mpnw+5)
+!mp dim1="0:nd1+5"
+
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:nd1+5), mpt2(0:nd1+5), mpt3(0:nd1+5)
+integer (mpiknd) mpt4(0:nd1+5), mpt5(0:nd1+5), mpt6(0:nd1+5)
+
+call mpinitwds (mpt1, nd1+5-5)
+call mpinitwds (mpt2, nd1+5-5)
+call mpinitwds (mpt3, nd1+5-5)
+call mpinitwds (mpt4, nd1+5-5)
+call mpinitwds (mpt5, nd1+5-5)
+call mpinitwds (mpt6, nd1+5-5)
+do mpi1 = 0,nq
+  call mpinitwds (polyd(0:nd1+5,mpi1), nd1+5-5)
+enddo
+call mpinitwds (eps(0:mpnw+5), mpnw+5-5)
+call mpinitwds (rooterr(0:mpnw+5), mpnw+5-5)
+call mpinitwds (rootx(0:mpnw+5), mpnw+5-5)
+call mpinitwds (t1(0:mpnw+5), mpnw+5-5)
+call mpinitwds (t2(0:mpnw+5), mpnw+5-5)
+call mpinitwds (t3(0:mpnw+5), mpnw+5-5)
+call mpinitwds (t4(0:mpnw+5), mpnw+5-5)
+
+!  End of initialization
+
+!mp prec="mpnw"
+
+!   Compute polyd = derivative of polyq.
+
+do j = 0, nq - 1
+  d1 = dble (j + 1)
+!   polyd(j) = d1 * polyq(j+1)
+  call mpmuld (polyq(0:nd1+5,j+1), d1, mpt1(0:nd1+5), mpnw)
+  call mpeq (mpt1(0:nd1+5), polyd(0:nd1+5,j), mpnw)
+enddo
+
+npx = mpnw
+nd = nq - 1
+itr = 0
+mpnw2 = mpnw0
+!mp prec="mpnw2"
+i4 = itol - mpnw2 * mpnbt
+! eps = mprealdp (2.d0) ** i4
+call mprealdp (2.d0, mpt1(0:nd1+5), mpnw2)
+call mpnpwr (mpt1(0:nd1+5), i4, mpt2(0:nd1+5), mpnw2)
+call mpeq (mpt2(0:nd1+5), eps(0:mpnw+5), mpnw2)
+
+if (idb > 0) then
+!   call mpdecmdr (eps, d1, i1)
+  call mpdecmdr(eps, d1, i1, mpnw2)
+  write (6, 1) mpnw2, d1, i1
+1 format ('RPolysolve: mpnw2 =',i5,'; eps =',f12.8,'e',i6)
+endif
+
+! rootx = mpreal (rootapp, mpnw2)
+! rootx = rootapp
+call mpeq (rootapp(0:mpnw+5), rootx(0:mpnw+5), mpnw2)
+
+if (idb > 0) then
+  write (6, 2)
+2 format ('RPolysolve: rootx =')
+!   call mpwrite (6, 80, 60, rootx)
+  call mpout(6, 80, 60, rootx, mpnw2)
+endif
+
+!   Start of Newton iteration loop.
+
+100 continue
+
+itr = itr + 1
+
+if (idb > 0) write (6, 3) itr
+3 format ('RPolysolve: itr =',i4)
+
+if (itr > itrmax) then
+  write (6, 4)
+4 format ('*** RPolysolve: Iterations limit exceeded')
+!   root = mprealdp (0.d0)
+  call mprealdp (0.d0, mpt1(0:nd1+5), mpnw2)
+  call mpeq (mpt1(0:nd1+5), root(0:mpnw+5), mpnw2)
+  goto 120
+endif
+
+! call mprpolyevalx (nd1, nq, polyq, rootx, t1, mpnw2)
+call mprpolyevalx (nd1, nq, polyq, rootx, t1, mpnw2)
+! call mprpolyevalx (nd1, nd, polyd, rootx, t2, mpnw2)
+call mprpolyevalx (nd1, nd, polyd, rootx, t2, mpnw2)
+! t3 = t1 / t2
+call mpdiv (t1(0:mpnw+5), t2(0:mpnw+5), mpt1(0:nd1+5), mpnw2)
+call mpeq (mpt1(0:nd1+5), t3(0:mpnw+5), mpnw2)
+! rootx = rootx - t3
+call mpsub (rootx(0:mpnw+5), t3(0:mpnw+5), mpt1(0:nd1+5), mpnw2)
+call mpeq (mpt1(0:nd1+5), rootx(0:mpnw+5), mpnw2)
+
+!   If convergence has been achieved at a given precision level, then
+!   double the working precision and continue, until full precision.
+
+! if (abs (t3) < eps * abs (rootx)) then
+! t4 = abs (t3) - eps * abs (rootx)
+call mpabs (t3, mpt1(0:nd1+5), mpnw2)
+call mpabs (rootx, mpt2(0:nd1+5), mpnw2)
+call mpmul (eps(0:mpnw+5), mpt2(0:nd1+5), mpt3(0:nd1+5), mpnw2)
+call mpsub (mpt1(0:nd1+5), mpt3(0:nd1+5), mpt4(0:nd1+5), mpnw2)
+call mpeq (mpt4(0:nd1+5), t4(0:mpnw+5), mpnw2)
+! i4 = mpsgn (t4)
+mpi1 = mpsgnr (t4)
+i4 = mpi1
+if (i4 < 0) then
+  if (mpnw == mpnw2) goto 110
+  mpnw2 = min (2 * mpnw2, mpnw)
+!mp prec="mpnw0"
+!  eps = mprealdp (2.d0, mpnw0) ** (itol - mpnw2 * mpnbt)
+  i4 = itol - mpnw2 * mpnbt
+!   eps = mprealdp (2.d0) ** i4
+  call mprealdp (2.d0, mpt1(0:nd1+5), mpnw0)
+  call mpnpwr (mpt1(0:nd1+5), i4, mpt2(0:nd1+5), mpnw0)
+  call mpeq (mpt2(0:nd1+5), eps(0:mpnw+5), mpnw0)
+
+!   call mpdecmd (eps, d1, i1)
+  call mpdecmdr(eps, d1, i1, mpnw0)
+  if (idb > 0) write (6, 1) mpnw2, d1, i1
+!mp prec="mpnw2"
+!   t1 = rootx
+  call mpeq (rootx(0:mpnw+5), t1(0:mpnw+5), mpnw2)
+!   rootx = t1
+  call mpeq (t1(0:mpnw+5), rootx(0:mpnw+5), mpnw2)
+
+  if (idb > 0) then
+    write (6, 2)
+!     call mpwrite (6, 80, 60, rootx)
+    call mpout(6, 80, 60, rootx, mpnw2)
+  endif
+endif
+goto 100
+
+110 continue
+
+! root = rootx
+call mpeq (rootx(0:mpnw+5), root(0:mpnw+5), mpnw2)
+
+if (idb > 0) then
+! if (abs (rootx) == 0.d0) then
+!   t4 = abs (rootx)
+  call mpabs (rootx, mpt1(0:nd1+5), mpnw2)
+  call mpeq (mpt1(0:nd1+5), t4(0:mpnw+5), mpnw2)
+!   i4 = mpsgn (t4)
+  mpi1 = mpsgnr (t4)
+  i4 = mpi1
+  if (i4 == 0) then
+!     rooterr = abs (t3)
+    call mpabs (t3, mpt1(0:nd1+5), mpnw2)
+    call mpeq (mpt1(0:nd1+5), rooterr(0:mpnw+5), mpnw2)
+  else
+!     rooterr = abs (t3) / abs (rootx)
+    call mpabs (t3, mpt1(0:nd1+5), mpnw2)
+    call mpabs (rootx, mpt2(0:nd1+5), mpnw2)
+    call mpdiv (mpt1(0:nd1+5), mpt2(0:nd1+5), mpt3(0:nd1+5), mpnw2)
+    call mpeq (mpt3(0:nd1+5), rooterr(0:mpnw+5), mpnw2)
+  endif
+
+  write (6, 5)
+5 format ('RPolysolve: relative error =')
+!   call mpwrite (6, 80, 60, rooterr)
+  call mpout(6, 80, 60, rooterr, mpnw2)
+endif
+
+120 continue
+
+return
+end subroutine mprpolysolvex
+
+subroutine mpcpolysolvex (nd1, nq, polyq, rootapp, root, mpnw)
+
+!   This finds a high-precision complex root of the real polynomial polyq
+!   (degree nq), which is assumed to be reduced, starting with the
+!   approximation in rootapp.
+
+!   Arguments:
+!     nd1      Input first dim parameter: first raw dim of polyq is 0:nd1+5.
+!     nq       Input degree of polynomial in polyq.
+!     polyq    Input vector of MPR polynomial coefficients, polyq(0:nq).
+!     rootapp  Input MPC approx to root (usually just a few correct digits).
+!     root     Output MPC root.
+!     rooterr  Output estimated error of root.
+!     mpnw     Input working precision in words.
+
+!   Parameters:
+!     itol    "Fuzz" in bits for setting eps; default = 80.
+!     itrmax  The maximum number of iterations; default = 200.
+!     mpnw0   Initial precision level in words for Newton iterations;
+!               default = 5.
+!     idb     Debug output is enabled if nonzero.
+
+implicit none
+integer, intent (in):: nd1, nq, mpnw
+!mp dim1="0:nd1+5"
+! type (mp_real), intent(in):: polyq(0:nq)
+integer (mpiknd), intent(in):: polyq(0:nd1+5,0:nq)
+! type (mp_real):: polyd(0:nq)
+integer (mpiknd):: polyd(0:nd1+5,0:nq)
+!mp dim1="0:mpnw+5"
+! type (mp_complex), intent(in):: rootapp
+integer (mpiknd), intent(in):: rootapp(0:2*(mpnw+5)+1)
+! type (mp_complex), intent(out):: root
+integer (mpiknd), intent(out):: root(0:2*(mpnw+5)+1)
+integer:: i, i1, i4, itr, j, k, n, mpnw2, nd, npx
+integer, parameter:: itol = 80, itrmax = 200, mpnw0 = 5, idb = 0
+real (mpdknd) d1
+! type (mp_real):: eps, rooterr, r3, r4
+integer (mpiknd):: eps(0:mpnw+5), rooterr(0:mpnw+5), r3(0:mpnw+5), r4(0:mpnw+5)
+! type (mp_complex):: rootx, t1, t2, t3, t4
+integer (mpiknd):: rootx(0:2*(mpnw+5)+1), t1(0:2*(mpnw+5)+1), t2(0:2*(mpnw+5)+1), t3(0:2*(mpnw+5)+1), t4(0:2*(mpnw+5)+1)
+complex (mpdknd) dc1
+!mp dim1="0:nd1+5"
+
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:nd1+5), mpt2(0:nd1+5), mpt3(0:nd1+5)
+integer (mpiknd) mpt4(0:nd1+5), mpt5(0:nd1+5), mpt6(0:nd1+5)
+integer (mpiknd) mpz1(0:2*(nd1+5)+1), mpz2(0:2*(nd1+5)+1), mpz3(0:2*(nd1+5)+1)
+integer (mpiknd) mpz4(0:2*(nd1+5)+1), mpz5(0:2*(nd1+5)+1), mpz6(0:2*(nd1+5)+1)
+
+call mpinitwds (mpt1, nd1+5-5)
+call mpinitwds (mpt2, nd1+5-5)
+call mpinitwds (mpt3, nd1+5-5)
+call mpinitwds (mpt4, nd1+5-5)
+call mpinitwds (mpt5, nd1+5-5)
+call mpinitwds (mpt6, nd1+5-5)
+
+call mpcinitwds (mpz1, nd1+5-5)
+call mpcinitwds (mpz2, nd1+5-5)
+call mpcinitwds (mpz3, nd1+5-5)
+call mpcinitwds (mpz4, nd1+5-5)
+call mpcinitwds (mpz5, nd1+5-5)
+call mpcinitwds (mpz6, nd1+5-5)
+do mpi1 = 0,nq
+  call mpinitwds (polyd(0:nd1+5,mpi1), nd1+5-5)
+enddo
+call mpinitwds (eps(0:mpnw+5), mpnw+5-5)
+call mpinitwds (rooterr(0:mpnw+5), mpnw+5-5)
+call mpinitwds (r3(0:mpnw+5), mpnw+5-5)
+call mpinitwds (r4(0:mpnw+5), mpnw+5-5)
+call mpcinitwds (rootx(0:2*(mpnw+5)+1), 2*(mpnw+5)/2-5)
+call mpcinitwds (t1(0:2*(mpnw+5)+1), 2*(mpnw+5)/2-5)
+call mpcinitwds (t2(0:2*(mpnw+5)+1), 2*(mpnw+5)/2-5)
+call mpcinitwds (t3(0:2*(mpnw+5)+1), 2*(mpnw+5)/2-5)
+call mpcinitwds (t4(0:2*(mpnw+5)+1), 2*(mpnw+5)/2-5)
+
+!  End of initialization
+
+!mp prec="mpnw"
+
+!   Compute polyd = derivative of polyq.
+
+do j = 0, nq - 1
+  d1 = dble (j + 1)
+!   polyd(j) = d1 * polyq(j+1)
+  call mpmuld (polyq(0:nd1+5,j+1), d1, mpt1(0:nd1+5), mpnw)
+  call mpeq (mpt1(0:nd1+5), polyd(0:nd1+5,j), mpnw)
+enddo
+
+npx = mpnw
+nd = nq - 1
+itr = 0
+mpnw2 = mpnw0
+!mp prec="mpnw2"
+! eps = mprealdp (2.d0) ** (itol - mpnw2 * mpnbt)
+i4 = itol - mpnw2 * mpnbt
+! eps = mprealdp (2.d0) ** i4
+call mprealdp (2.d0, mpt1(0:nd1+5), mpnw2)
+call mpnpwr (mpt1(0:nd1+5), i4, mpt2(0:nd1+5), mpnw2)
+call mpeq (mpt2(0:nd1+5), eps(0:mpnw+5), mpnw2)
+
+if (idb > 0) then
+!   call mpdecmdr (eps, d1, i1)
+  call mpdecmdr(eps, d1, i1, mpnw2)
+  write (6, 1) mpnw2, d1, i1
+1 format ('CPolysolve: mpnw2 =',i5,'; eps =',f12.8,'e',i6)
+endif
+
+! rootx = mpcmplx (rootapp, mpnw2)
+! rootx = rootapp
+call mpceq (rootapp(0:2*(mpnw+5)+1), rootx(0:2*(mpnw+5)+1), mpnw2)
+
+if (idb > 0) then
+  write (6, 2)
+2 format ('CPolysolve: rootx =')
+!   call mpwrite (6, 80, 60, rootx)
+  call mpcout(6, 80, 60, rootx, mpnw2)
+endif
+
+!   Start of Newton iteration loop.
+
+100 continue
+
+itr = itr + 1
+
+if (idb > 0) write (6, 3) itr
+3 format ('CPolysolve: itr =',i4)
+
+if (itr > itrmax) then
+  write (6, 4)
+4 format ('*** CPolysolve: Iterations limit exceeded')
+  dc1 = dcmplx (0.d0, 0.d0)
+!   root = mpcmplxdcc (dc1)
+  call mpcmplxdcc (dc1, mpz1(0:2*(nd1+5)+1), mpnw2)
+  call mpceq (mpz1(0:2*(nd1+5)+1), root(0:2*(mpnw+5)+1), mpnw2)
+  goto 120
+endif
+
+! call mpcpolyevalx (nd1, nq, polyq, rootx, t1, mpnw2)
+call mpcpolyevalx (nd1, nq, polyq, rootx, t1, mpnw2)
+! call mpcpolyevalx (nd1, nd, polyd, rootx, t2, mpnw2)
+call mpcpolyevalx (nd1, nd, polyd, rootx, t2, mpnw2)
+! t3 = t1 / t2
+call mpcdiv (t1(0:2*(mpnw+5)+1), t2(0:2*(mpnw+5)+1), mpz1(0:2*(nd1+5)+1), mpnw2)
+call mpceq (mpz1(0:2*(nd1+5)+1), t3(0:2*(mpnw+5)+1), mpnw2)
+! rootx = rootx - t3
+call mpcsub (rootx(0:2*(mpnw+5)+1), t3(0:2*(mpnw+5)+1), mpz1(0:2*(nd1+5)+1), mpnw2)
+call mpceq (mpz1(0:2*(nd1+5)+1), rootx(0:2*(mpnw+5)+1), mpnw2)
+
+!   If convergence has been achieved at a given precision level, then
+!   double the working precision and continue, until full precision.
+
+! if (abs (t3) < eps * abs (rootx)) then
+! r4 = abs (t3) - eps * abs (rootx)
+call mpcabs (t3, mpt1(0:nd1+5), mpnw2)
+call mpcabs (rootx, mpt2(0:nd1+5), mpnw2)
+call mpmul (eps(0:mpnw+5), mpt2(0:nd1+5), mpt3(0:nd1+5), mpnw2)
+call mpsub (mpt1(0:nd1+5), mpt3(0:nd1+5), mpt4(0:nd1+5), mpnw2)
+call mpeq (mpt4(0:nd1+5), r4(0:mpnw+5), mpnw2)
+! i4 = mpsgn (r4)
+mpi1 = mpsgnr (r4)
+i4 = mpi1
+if (i4 < 0) then
+  if (mpnw == mpnw2) goto 110
+  mpnw2 = min (2 * mpnw2, mpnw)
+!mp prec="mpnw0"
+!  eps = mpreal (2.d0, mpnw0) ** (itol - mpnw2 * mpnbt)
+  i4 = itol - mpnw2 * mpnbt
+!   eps = mprealdp (2.d0) ** i4
+  call mprealdp (2.d0, mpt1(0:nd1+5), mpnw0)
+  call mpnpwr (mpt1(0:nd1+5), i4, mpt2(0:nd1+5), mpnw0)
+  call mpeq (mpt2(0:nd1+5), eps(0:mpnw+5), mpnw0)
+
+  if (idb > 0) then
+!     call mpdecmdr (eps, d1, i1)
+    call mpdecmdr(eps, d1, i1, mpnw0)
+    write (6, 1) mpnw2, d1, i1
+  endif
+
+!mp prec="mpnw2"
+!  rootx = mpcmplx (rootx, mpnw2)
+! t1 = rootx
+call mpceq (rootx(0:2*(mpnw+5)+1), t1(0:2*(mpnw+5)+1), mpnw2)
+! rootx = t1
+call mpceq (t1(0:2*(mpnw+5)+1), rootx(0:2*(mpnw+5)+1), mpnw2)
+
+  if (idb > 0) then
+    write (6, 2)
+!     call mpwrite (6, 80, 60, rootx)
+    call mpcout(6, 80, 60, rootx, mpnw2)
+  endif
+endif
+goto 100
+
+110 continue
+
+! root = rootx
+call mpceq (rootx(0:2*(mpnw+5)+1), root(0:2*(mpnw+5)+1), mpnw2)
+
+if (idb > 0) then
+! if (abs (rootx) == 0.d0) then
+!   r4 = abs (rootx)
+  call mpcabs (rootx, mpt1(0:nd1+5), mpnw2)
+  call mpeq (mpt1(0:nd1+5), r4(0:mpnw+5), mpnw2)
+!   i4 = mpsgn (r4)
+  mpi1 = mpsgnr (r4)
+  i4 = mpi1
+  if (i4 == 0) then
+!     rooterr = abs (t3)
+    call mpcabs (t3, mpt1(0:nd1+5), mpnw2)
+    call mpeq (mpt1(0:nd1+5), rooterr(0:mpnw+5), mpnw2)
+  else
+!     rooterr = abs (t3) / abs (rootx)
+    call mpcabs (t3, mpt1(0:nd1+5), mpnw2)
+    call mpcabs (rootx, mpt2(0:nd1+5), mpnw2)
+    call mpdiv (mpt1(0:nd1+5), mpt2(0:nd1+5), mpt3(0:nd1+5), mpnw2)
+    call mpeq (mpt3(0:nd1+5), rooterr(0:mpnw+5), mpnw2)
+  endif
+
+  write (6, 5)
+5 format ('CPolysolve: relative error =')
+!   call mpwrite (6, 80, 60, rooterr)
+  call mpout(6, 80, 60, rooterr, mpnw2)
+endif
+
+120 continue
+
+return
+end subroutine mpcpolysolvex
+
+subroutine mprpolygcdx (nd1, n1, poly1, n2, poly2, ng, polyg, mpnw)
+
+!   This returns the greatest common divisor of the polynomials poly1
+!   (degree n1) and poly2 (degree n2 < n1), returning result in polyg.
+!   (degree ng).
+
+!   Arguments:
+!     nd1      Input first dim parameter: first raw dim of poly1 is 0:nd1+5.
+!                same first raw dimension assumed for poly2.
+!     n1       Input degree of polynomial in poly1.
+!     poly1    Input vector of MPR polynomial #1 coefficients, poly1(0:n1).
+!     n2       Input degree of polynomial in poly2; n2 < n1.
+!     poly2    Input vector of MPR polynomial #2 coefficients, poly2(0:n2).
+!     ng       Output degree of polynomial in polyg.
+!     polyg    Output vector of MPR GCD polynomial coefficients, polyg(0:ng);
+!                polyg must be dimensioned (0:n1) in calling program).
+!     mpnw     Input working precision in words.
+
+!   Parameters:
+!     itol = "fuzz" in bits for computing eps; default = 80.
+!     dw = multiplier for additional precision; default = 1.125d0;
+!          must be an exact multiple of 1/16.
+
+implicit none
+integer, intent(in):: nd1, n1, n2, mpnw
+!mp dim1="0:nd1+5"
+! type (mp_real), intent(in):: poly1(0:n1), poly2(0:n2)
+integer (mpiknd), intent(in):: poly1(0:nd1+5,0:n1), poly2(0:nd1+5,0:n2)
+integer, intent(out):: ng
+! type (mp_real), intent(out):: polyg(0:n1)
+integer (mpiknd), intent(out):: polyg(0:nd1+5,0:n1)
+real (mpdknd), parameter:: dwrd = 1.0625d0
+integer, parameter:: itol = 60, idw = dwrd * 16.d0
+integer:: i, i4, itr, ix, j, k, nx1, nx2, nx3, nx4, nnx4, mpnw2
+!mp dim1="0:idw*mpnw/16+5"
+! type (mp_real):: eps, polyx1(0:n1), polyx2(0:n1)
+integer (mpiknd):: eps(0:idw*mpnw/16+5), polyx1(0:idw*mpnw/16+5,0:n1), polyx2(0:idw*mpnw/16+5,0:n1)
+! type (mp_real):: polyx3(0:n1), polyx4(0:n1)
+integer (mpiknd):: polyx3(0:idw*mpnw/16+5,0:n1), polyx4(0:idw*mpnw/16+5,0:n1)
+! type (mp_real):: t1, t2, t3
+integer (mpiknd):: t1(0:idw*mpnw/16+5), t2(0:idw*mpnw/16+5), t3(0:idw*mpnw/16+5)
+
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:idw*mpnw/16+5), mpt2(0:idw*mpnw/16+5), mpt3(0:idw*mpnw/16+5)
+integer (mpiknd) mpt4(0:idw*mpnw/16+5), mpt5(0:idw*mpnw/16+5), mpt6(0:idw*mpnw/16+5)
+
+call mpinitwds (mpt1, idw*mpnw/16+5-5)
+call mpinitwds (mpt2, idw*mpnw/16+5-5)
+call mpinitwds (mpt3, idw*mpnw/16+5-5)
+call mpinitwds (mpt4, idw*mpnw/16+5-5)
+call mpinitwds (mpt5, idw*mpnw/16+5-5)
+call mpinitwds (mpt6, idw*mpnw/16+5-5)
+call mpinitwds (eps(0:idw*mpnw/16+5), idw*mpnw/16+5-5)
+do mpi1 = 0,n1
+  call mpinitwds (polyx1(0:idw*mpnw/16+5,mpi1), idw*mpnw/16+5-5)
+enddo
+do mpi1 = 0,n1
+  call mpinitwds (polyx2(0:idw*mpnw/16+5,mpi1), idw*mpnw/16+5-5)
+enddo
+do mpi1 = 0,n1
+  call mpinitwds (polyx3(0:idw*mpnw/16+5,mpi1), idw*mpnw/16+5-5)
+enddo
+do mpi1 = 0,n1
+  call mpinitwds (polyx4(0:idw*mpnw/16+5,mpi1), idw*mpnw/16+5-5)
+enddo
+call mpinitwds (t1(0:idw*mpnw/16+5), idw*mpnw/16+5-5)
+call mpinitwds (t2(0:idw*mpnw/16+5), idw*mpnw/16+5-5)
+call mpinitwds (t3(0:idw*mpnw/16+5), idw*mpnw/16+5-5)
+
+!  End of initialization
+
+
+!   Copy poly1 to polyx1 and poly2 to polyx2, with extra precision (mpnw2 words).
+
+mpnw2 = int (dwrd * mpnw)
+!mp prec="mpnw2"
+do i = 0, n1
+!   polyx1(i) = poly1(i)
+  call mpeq (poly1(0:nd1+5,i), polyx1(0:idw*mpnw/16+5,i), mpnw2)
+enddo
+nx1 = n1
+do i = 0, n2
+!   polyx2(i) = poly2(i)
+  call mpeq (poly2(0:nd1+5,i), polyx2(0:idw*mpnw/16+5,i), mpnw2)
+enddo
+nx2 = n2
+
+!mp prec="mpnw"
+! eps = mpreal (2.d0, mpnw) ** (itol - mpnw * mpnbt)
+i4 = itol - mpnw * mpnbt
+! eps = mprealdp (2.d0) ** i4
+call mprealdp (2.d0, mpt1(0:idw*mpnw/16+5), mpnw)
+call mpnpwr (mpt1(0:idw*mpnw/16+5), i4, mpt2(0:idw*mpnw/16+5), mpnw)
+call mpeq (mpt2(0:idw*mpnw/16+5), eps(0:idw*mpnw/16+5), mpnw)
+itr = 0
+
+100 continue
+
+itr = itr + 1
+
+! call mprpolydivx (mpnw2, nx1, polyx1, nx2, polyx2, nx3, polyx3, nx4, polyx4, mpnw2)
+call mprpolydivx (mpnw2, nx1, polyx1, nx2, polyx2, nx3, polyx3, nx4, polyx4, mpnw2)
+
+ix = 0
+nnx4 = nx4
+do i = nnx4 - 1, 0, -1
+!   if (abs (polyx4(i)) < eps * abs (polyx2(0))) then
+!   t1 = abs (polyx4(i))
+  call mpabs (polyx4(0:idw*mpnw/16+5,i), mpt1(0:idw*mpnw/16+5), mpnw)
+  call mpeq (mpt1(0:idw*mpnw/16+5), t1(0:idw*mpnw/16+5), mpnw)
+!   t2 = eps * abs (polyx2(0))
+  call mpabs (polyx2(0:idw*mpnw/16+5,0), mpt1(0:idw*mpnw/16+5), mpnw)
+  call mpmul (eps(0:idw*mpnw/16+5), mpt1(0:idw*mpnw/16+5), mpt2(0:idw*mpnw/16+5), mpnw)
+  call mpeq (mpt2(0:idw*mpnw/16+5), t2(0:idw*mpnw/16+5), mpnw)
+!   t3 = t1 - t2
+  call mpsub (t1(0:idw*mpnw/16+5), t2(0:idw*mpnw/16+5), mpt1(0:idw*mpnw/16+5), mpnw)
+  call mpeq (mpt1(0:idw*mpnw/16+5), t3(0:idw*mpnw/16+5), mpnw)
+!   i4 = mpsgn (t3)
+  mpi1 = mpsgnr (t3)
+  i4 = mpi1
+  if (i4 < 0) then
+!     polyx4(i) = mprealdp (0.d0)
+    call mprealdp (0.d0, mpt1(0:idw*mpnw/16+5), mpnw)
+    call mpeq (mpt1(0:idw*mpnw/16+5), polyx4(0:idw*mpnw/16+5,i), mpnw)
+  else
+    if (ix == 0) nx4 = i
+    ix = 1
+  endif
+enddo
+
+!mp prec="mpnw2"
+if (ix == 0) nx4 = 0
+if (nx4 > 0) then
+  do i = 0, nx2
+!     polyx1(i) = polyx2(i)
+    call mpeq (polyx2(0:idw*mpnw/16+5,i), polyx1(0:idw*mpnw/16+5,i), mpnw2)
+  enddo
+  nx1 = nx2
+  do i = 0, nx4
+!     polyx2(i) = polyx4(i)
+    call mpeq (polyx4(0:idw*mpnw/16+5,i), polyx2(0:idw*mpnw/16+5,i), mpnw2)
+  enddo
+  nx2 = nx4
+  goto 100
+endif
+
+!   Copy polyx2, normalized by polyx2(0), to polyg with normal precision (mpnw words).
+
+!mp prec="mpnw"
+! if (abs (polyx4(0)) < eps * abs (polyx3(0))) then
+! t1 = abs (polyx4(0))
+call mpabs (polyx4(0:idw*mpnw/16+5,0), mpt1(0:idw*mpnw/16+5), mpnw)
+call mpeq (mpt1(0:idw*mpnw/16+5), t1(0:idw*mpnw/16+5), mpnw)
+! t2 = eps * abs (polyx3(0))
+call mpabs (polyx3(0:idw*mpnw/16+5,0), mpt1(0:idw*mpnw/16+5), mpnw)
+call mpmul (eps(0:idw*mpnw/16+5), mpt1(0:idw*mpnw/16+5), mpt2(0:idw*mpnw/16+5), mpnw)
+call mpeq (mpt2(0:idw*mpnw/16+5), t2(0:idw*mpnw/16+5), mpnw)
+! t3 = t1 - t2
+call mpsub (t1(0:idw*mpnw/16+5), t2(0:idw*mpnw/16+5), mpt1(0:idw*mpnw/16+5), mpnw)
+call mpeq (mpt1(0:idw*mpnw/16+5), t3(0:idw*mpnw/16+5), mpnw)
+! i4 = mpsgn (t3)
+mpi1 = mpsgnr (t3)
+i4 = mpi1
+if (i4 < 0) then
+  do i = 0, nx2
+!     polyg(i) = polyx2(i) / polyx2(0)
+    call mpdiv (polyx2(0:idw*mpnw/16+5,i), polyx2(0:idw*mpnw/16+5,0), mpt1(0:idw*mpnw/16+5), mpnw)
+    call mpeq (mpt1(0:idw*mpnw/16+5), polyg(0:nd1+5,i), mpnw)
+  enddo
+  ng = nx2
+else
+  ng = 0
+!   polyg(0) = mprealdp (1.d0)
+  call mprealdp (1.d0, mpt1(0:idw*mpnw/16+5), mpnw)
+  call mpeq (mpt1(0:idw*mpnw/16+5), polyg(0:nd1+5,0), mpnw)
+endif
+
+return
+end subroutine mprpolygcdx
+
+subroutine mprpolydivx (nd1, n1, poly1, n2, poly2, n3, poly3, n4, poly4, mpnw)
+
+!   This divides the polynomial poly1 (degree n1) by poly2 (degree n2 <= n1),
+!   returning the quotient in poly3 (degree n3) and the remainder in poly4
+!   (degree n4).
+
+!   Arguments:
+!     nd1      Input first dim parameter: first raw dim of poly1 is 0:nd1+5.
+!                same first raw dimension assumed for poly2, poly3, poly4.
+!     n1       Input degree of polynomial in poly1.
+!     poly1    Input vector of MPR dividend polynomial coefficients, poly1(0:n1).
+!     n2       Input degree of polynomial in poly2; n2 <= n1.
+!     poly2    Input vector of MPR divisor polynomial coefficients, poly2(0:n2).
+!     n3       Output degree of polynomial in poly3.
+!     poly3    Output vector of MPR quotient polynomial coefficients, poly3(0:n3);
+!                poly3 must be dimensioned (0:n1) in calling program).
+!     n4       Degree of polynomial in poly4.
+!     poly4    Input vector of MPR remainder polynomial coefficients, poly4(0:n4).
+!                poly4 must be dimensioned (0:n1) in calling program).
+!     mpnw     Input working precision in words.
+
+implicit none
+integer, intent(in):: nd1, n1, n2, mpnw
+!mp dim1="0:nd1+5"
+! type (mp_real), intent(in):: poly1(0:n1), poly2(0:n2)
+integer (mpiknd), intent(in):: poly1(0:nd1+5,0:n1), poly2(0:nd1+5,0:n2)
+integer, intent(out):: n3, n4
+! type (mp_real), intent(out):: poly3(0:n1-1), poly4(0:n1-1)
+integer (mpiknd), intent(out):: poly3(0:nd1+5,0:n1-1), poly4(0:nd1+5,0:n1-1)
+integer:: i, i4, ix, j, k, nx
+! type (mp_real):: polyx(0:n1)
+integer (mpiknd):: polyx(0:nd1+5,0:n1)
+! type (mp_real):: t1, t2, t3, t4
+integer (mpiknd):: t1(0:nd1+5), t2(0:nd1+5), t3(0:nd1+5), t4(0:nd1+5)
+
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:nd1+5), mpt2(0:nd1+5), mpt3(0:nd1+5)
+integer (mpiknd) mpt4(0:nd1+5), mpt5(0:nd1+5), mpt6(0:nd1+5)
+
+call mpinitwds (mpt1, nd1+5-5)
+call mpinitwds (mpt2, nd1+5-5)
+call mpinitwds (mpt3, nd1+5-5)
+call mpinitwds (mpt4, nd1+5-5)
+call mpinitwds (mpt5, nd1+5-5)
+call mpinitwds (mpt6, nd1+5-5)
+do mpi1 = 0,n1
+  call mpinitwds (polyx(0:nd1+5,mpi1), nd1+5-5)
+enddo
+call mpinitwds (t1(0:nd1+5), nd1+5-5)
+call mpinitwds (t2(0:nd1+5), nd1+5-5)
+call mpinitwds (t3(0:nd1+5), nd1+5-5)
+call mpinitwds (t4(0:nd1+5), nd1+5-5)
+
+!  End of initialization
+
+
+!   Copy poly1 to polyx.
+
+!mp prec="mpnw"
+do k = 0, n1
+!   polyx(k) = poly1(k)
+  call mpeq (poly1(0:nd1+5,k), polyx(0:nd1+5,k), mpnw)
+enddo
+
+nx = n1
+n3 = n1 - n2
+
+!   Outer loop of divide
+
+do k = n3, 0, -1
+!   t1 = polyx(k+n2) / poly2(n2)
+  call mpdiv (polyx(0:nd1+5,k+n2), poly2(0:nd1+5,n2), mpt1(0:nd1+5), mpnw)
+  call mpeq (mpt1(0:nd1+5), t1(0:nd1+5), mpnw)
+!   poly3(k) = t1
+  call mpeq (t1(0:nd1+5), poly3(0:nd1+5,k), mpnw)
+
+  do j = 0, n2
+!     polyx(j+k) = polyx(j+k) - t1 * poly2(j)
+    call mpmul (t1(0:nd1+5), poly2(0:nd1+5,j), mpt1(0:nd1+5), mpnw)
+    call mpsub (polyx(0:nd1+5,j+k), mpt1(0:nd1+5), mpt2(0:nd1+5), mpnw)
+    call mpeq (mpt2(0:nd1+5), polyx(0:nd1+5,j+k), mpnw)
+  enddo
+
+  nx = nx - 1
+enddo
+
+n4 = n2
+
+do i = n2 - 1, 0, -1
+!   poly4(i) = polyx(i)
+  call mpeq (polyx(0:nd1+5,i), poly4(0:nd1+5,i), mpnw)
+enddo
+
+return
+end subroutine mprpolydivx
+
+subroutine mprpolyevalx (nd1, np, poly, arg, result, mpnw)
+
+!   This evaluates the np-degree polynomial poly at the real argument
+!   arg, using Horner's rule, returning the result in result.
+
+!   Arguments:
+!     nd1      Input first dim parameter: first raw dim of poly is 0:nd1+5.
+!     np       Input degree of polynomial in poly.
+!     poly     Input vector of MPR dividend polynomial coefficients, poly(0:np).
+!     arg      Input MPR argument.
+!     result   Output MPR result.
+!     mpnw     Input working precision in words.
+
+implicit none
+integer:: i, j, k, n
+!mp dim1="0:nd1+5"
+integer, intent (in):: nd1, np, mpnw
+! type (mp_real), intent(in):: poly(0:np), arg
+integer (mpiknd), intent(in):: poly(0:nd1+5,0:np), arg(0:nd1+5)
+! type (mp_real), intent(out):: result
+integer (mpiknd), intent(out):: result(0:nd1+5)
+! type (mp_real):: t1
+integer (mpiknd):: t1(0:nd1+5)
+
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:nd1+5), mpt2(0:nd1+5), mpt3(0:nd1+5)
+integer (mpiknd) mpt4(0:nd1+5), mpt5(0:nd1+5), mpt6(0:nd1+5)
+
+call mpinitwds (mpt1, nd1+5-5)
+call mpinitwds (mpt2, nd1+5-5)
+call mpinitwds (mpt3, nd1+5-5)
+call mpinitwds (mpt4, nd1+5-5)
+call mpinitwds (mpt5, nd1+5-5)
+call mpinitwds (mpt6, nd1+5-5)
+call mpinitwds (t1(0:nd1+5), nd1+5-5)
+
+!  End of initialization
+
+!mp prec="mpnw"
+! t1 = poly(np)
+call mpeq (poly(0:nd1+5,np), t1(0:nd1+5), mpnw)
+
+do k = np - 1, 0, -1
+!   t1 = t1 * arg + poly(k)
+  call mpmul (t1(0:nd1+5), arg(0:nd1+5), mpt1(0:nd1+5), mpnw)
+  call mpadd (mpt1(0:nd1+5), poly(0:nd1+5,k), mpt2(0:nd1+5), mpnw)
+  call mpeq (mpt2(0:nd1+5), t1(0:nd1+5), mpnw)
+enddo
+
+! result = t1
+call mpeq (t1(0:nd1+5), result(0:nd1+5), mpnw)
+return
+end subroutine mprpolyevalx
+
+subroutine mpcpolyevalx (nd1, np, poly, arg, result, mpnw)
+
+!   This evaluates the np-degree polynomial poly at the complex argument
+!   arg, using Horner's rule, returning the result in result.
+
+!   Arguments:
+!     nd1      Input first dim parameter: first raw dim of poly is 0:nd1+5.
+!     np       Input degree of polynomial in poly.
+!     poly     Input vector of MPR dividend polynomial coefficients, poly(0:np).
+!     arg      Input MPC argument.
+!     result   Output MPC result.
+!     mpnw     Input working precision in words.
+
+implicit none
+integer:: i, j, k, n
+!mp dim1="0:nd1+5"
+integer, intent (in):: nd1, np, mpnw
+! type (mp_real), intent(in):: poly(0:np)
+integer (mpiknd), intent(in):: poly(0:nd1+5,0:np)
+! type (mp_complex), intent(in):: arg
+integer (mpiknd), intent(in):: arg(0:2*(nd1+5)+1)
+! type (mp_complex), intent(out):: result
+integer (mpiknd), intent(out):: result(0:2*(nd1+5)+1)
+! type (mp_complex):: t1
+integer (mpiknd):: t1(0:2*(nd1+5)+1)
+! type (mp_real):: r1
+integer (mpiknd):: r1(0:nd1+5)
+
+!mp enddec
+integer mpi1, mpi2, mpi3, mpi4, mpi5, mpi6
+real (mpdknd) mpd1, mpd2, mpd3, mpd4, mpd5, mpd6
+integer (mpiknd) mpt1(0:nd1+5), mpt2(0:nd1+5), mpt3(0:nd1+5)
+integer (mpiknd) mpt4(0:nd1+5), mpt5(0:nd1+5), mpt6(0:nd1+5)
+integer (mpiknd) mpz1(0:2*(nd1+5)+1), mpz2(0:2*(nd1+5)+1), mpz3(0:2*(nd1+5)+1)
+integer (mpiknd) mpz4(0:2*(nd1+5)+1), mpz5(0:2*(nd1+5)+1), mpz6(0:2*(nd1+5)+1)
+
+call mpinitwds (mpt1, nd1+5-5)
+call mpinitwds (mpt2, nd1+5-5)
+call mpinitwds (mpt3, nd1+5-5)
+call mpinitwds (mpt4, nd1+5-5)
+call mpinitwds (mpt5, nd1+5-5)
+call mpinitwds (mpt6, nd1+5-5)
+
+call mpcinitwds (mpz1, nd1+5-5)
+call mpcinitwds (mpz2, nd1+5-5)
+call mpcinitwds (mpz3, nd1+5-5)
+call mpcinitwds (mpz4, nd1+5-5)
+call mpcinitwds (mpz5, nd1+5-5)
+call mpcinitwds (mpz6, nd1+5-5)
+call mpcinitwds (t1(0:2*(nd1+5)+1), 2*(nd1+5)/2-5)
+call mpinitwds (r1(0:nd1+5), nd1+5-5)
+
+!  End of initialization
+
+!mp prec="mpnw"
+! r1 = mprealdp (0.d0))
+call mprealdp (0.d0, mpt1(0:nd1+5), mpnw)
+call mpeq (mpt1(0:nd1+5), r1(0:nd1+5), mpnw)
+! t1 = mpcmplxr (poly(np), r1)
+call mpcmplxr (poly(0:nd1+5,np), r1, mpz1(0:2*(nd1+5)+1), mpnw)
+call mpceq (mpz1(0:2*(nd1+5)+1), t1(0:2*(nd1+5)+1), mpnw)
+
+do k = np - 1, 0, -1
+!   t1 = t1 * arg + mpcmplxr (poly(k), r1)
+  call mpcmplxr (poly(0:nd1+5,k), r1, mpz1(0:2*(nd1+5)+1), mpnw)
+  call mpcmul (t1(0:2*(nd1+5)+1), arg(0:2*(nd1+5)+1), mpz2(0:2*(nd1+5)+1), mpnw)
+  call mpcadd (mpz2(0:2*(nd1+5)+1), mpz1(0:2*(nd1+5)+1), mpz3(0:2*(nd1+5)+1), mpnw)
+  call mpceq (mpz3(0:2*(nd1+5)+1), t1(0:2*(nd1+5)+1), mpnw)
+enddo
+
+! result = t1
+call mpceq (t1(0:2*(nd1+5)+1), result(0:2*(nd1+5)+1), mpnw)
+return
+end subroutine mpcpolyevalx
 
 end module mpfune

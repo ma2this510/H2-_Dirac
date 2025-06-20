@@ -1,17 +1,17 @@
 !*****************************************************************************
 
-!  MPFUN20-Fort: A thread-safe arbitrary precision computation package
+!  MPFUN20-Fort: A thread-safe arbitrary precision package with special functions
 !  Binary-decimal, decimal-binary and I/O functions (module MPFUNC)
 
-!  Revision date:  6 Feb 2022
+!  Updated: 28 Jun 2024
 
 !  AUTHOR:
 !    David H. Bailey
-!    Lawrence Berkeley National Lab (retired) and University of California, Davis
+!    Lawrence Berkeley National Lab (retired)
 !    Email: dhbailey@lbl.gov
 
 !  COPYRIGHT AND DISCLAIMER:
-!    All software in this package (c) 2022 David H. Bailey.
+!    All software in this package (c) 2024 David H. Bailey.
 !    By downloading or using this software you agree to the copyright, disclaimer
 !    and license agreement in the accompanying file DISCLAIMER.txt.
 
@@ -19,7 +19,7 @@
 !    This package permits one to perform floating-point computations (real and
 !    complex) to arbitrarily high numeric precision, by making only relatively
 !    minor changes to existing Fortran-90 programs.  All basic arithmetic
-!    operations and transcendental functions are supported, together with several
+!    operations and transcendental functions are supported, together with numerous
 !    special functions.
 
 !    In addition to fast execution times, one key feature of this package is a
@@ -47,6 +47,36 @@ use mpfunb
 
 contains
 
+subroutine mpcinp (iu, a, mpnw)
+
+!  This inputs the MPC variable A from Fortran unit iu.
+
+implicit none
+integer, intent(in):: iu, mpnw
+integer (mpiknd), intent(out):: a(0:)
+integer la
+
+la = a(0)
+call mpinp (iu, a(0:), mpnw)
+call mpinp (iu, a(la:), mpnw)
+return
+end subroutine mpcinp
+
+subroutine mpcout (iu, n1, n2, a, mpnw)
+
+!  This outputs the MPC variable A to Fortran unit iu, in En1.n2 format.
+
+implicit none
+integer, intent(in):: iu, n1, n2, mpnw
+integer (mpiknd), intent(in):: a(0:)
+integer la
+
+la = a(0)
+call mpout (iu, n1, n2, a(0:), mpnw)
+call mpout (iu, n1, n2, a(la:), mpnw)
+return
+end
+
 subroutine mpctomp (a, n, b, mpnw)
 
 !  Converts the character(1) array A of length N into the MPR number B.
@@ -55,20 +85,18 @@ subroutine mpctomp (a, n, b, mpnw)
 !  (with "d" or "e") may optionally follow the numeric value.
 
 implicit none
-integer, intent(in):: mpnw, n
-integer i, iexp, ix, j, kde, kend, kexpend, kexpst, kexpsgn, knumend1, &
-  knumend2, knumst1, knumst2, kper, ksgn, kstart, lexp, lexpmx, lnum, &
-  lnum1, lnum2, mpnw1, n1, n2
-real (mprknd) d10w, t1
 character(1), intent(in):: a(n)
-character(10) digits
-character(32) ca
-parameter (lexpmx = 9, digits = '0123456789', d10w = 10.d0**mpndpw)
+integer, intent(in):: n, mpnw
 integer (mpiknd), intent(out):: b(0:)
+integer, parameter:: lexpmx = 9
+character(10), parameter:: digits = '0123456789'
+real (mpdknd), parameter::  d10w = 10.d0**mpndpw
+integer i, iexp, ix, j, kde, kend, kexpend, kexpst, kexpsgn, knumend1, &
+  knumend2, knumst1, knumst2, kper, ksgn, kstart, lexp, lnum, &
+  lnum1, lnum2, mpnw1, n1, n2
+real (mpdknd) t1
+character(32) ca
 integer (mpiknd) f(0:8), s0(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6)
-
-! write (6, *) 'mpctomp: a, n, mpnw =', n, mpnw
-! write (6, '(100a1)') 'X',(a(i),i=1,n),'X'
 
 ! End of declaration
 
@@ -198,10 +226,6 @@ do i = kstart, kend
   endif
 enddo
 
-! write (6, *) 'kde, kend, kexpend, kexpst =', kde, kend, kexpend, kexpst
-! write (6, *) 'kexpsgn, numend1, knumend2, knumst1 =', kexpsgn, knumend1, knumend2, knumst1
-! write (6, *) 'knumst2, kper, ksgn, kstart =', knumst2, kper, ksgn, kstart
-
 !   Decode exponent.
 
 if (kexpst > 0) then
@@ -233,8 +257,6 @@ else
   lnum2 = 0
 endif
 lnum = lnum1 + lnum2
-
-! write (6, *) 'iexp, lnum1, lnum2 =', iexp, lnum1, lnum2
 
 !   Determine the number of chunks of digits and the left-over.
 
@@ -305,13 +327,10 @@ endif
 call mproun (s2, mpnw)
 call mpeq (s2, b, mpnw)
 
-! write (6, *) 'mpctomp: output ='
-! call mpout (6, 420, 400, b, mpnw)
-
 return
 end subroutine mpctomp
 
-real (mprknd) function mpdigin (ca, n)
+real (mpdknd) function mpdigin (ca, n)
 
 !   This converts the string CA of nonblank length N to double precision.
 !   CA may only be modest length and may only contain digits.  Blanks are ignored.
@@ -319,11 +338,10 @@ real (mprknd) function mpdigin (ca, n)
 
   implicit none
   integer, intent(in):: n
-  real (mprknd) d1
   character(*), intent(in):: ca
-  character(10) digits
+  character(10), parameter:: digits = '0123456789'
   integer i, k
-  parameter (digits = '0123456789')
+  real (mpdknd) d1
 
 ! End of declaration
 
@@ -353,12 +371,11 @@ character(32) function mpdigout (a, n)
 
   implicit none
   integer, intent(in):: n
-  real (mprknd), intent(in):: a
-  real (mprknd) d1, d2
-  character(32) ca
-  character(10) digits
-  parameter (digits = '0123456789')
+  real (mpdknd), intent(in):: a
+  character(10), parameter:: digits = '0123456789'
   integer i, k
+  real (mpdknd) d1, d2
+  character(32) ca
 
 ! End of declaration
 
@@ -386,16 +403,15 @@ subroutine mpeformat (a, nb, nd, b, mpnw)
 !   NB cells must be available in array B.
 
 implicit none
+integer (mpiknd), intent(in):: a(0:)
 integer, intent(in):: mpnw, nb, nd
 integer i, ia, ix, ixp, i1, i2, j, k, mpnw1, na, nexp, nl
 character(1), intent(out):: b(nb)
 character(1) b2(nb+50)
-character(10) digits
-parameter (digits = '0123456789')
+character(10), parameter:: digits = '0123456789'
 character(32) ca
-real (mprknd) aa, an, d10w, t1
-parameter (d10w = 10.d0**mpndpw)
-integer (mpiknd), intent(in):: a(0:)
+real (mpdknd) aa, an, t1
+real (mpdknd), parameter:: d10w = 10.d0**mpndpw
 integer (mpiknd) f(0:8), s0(0:mpnw+6), s1(0:mpnw+6)
 
 ! End of declaration
@@ -426,10 +442,10 @@ f(6) = 0
 
 if (na > 0) then
   aa = a(4)
-  if (na .ge. 2) aa = aa + dble (a(5)) / mpbdx
+  if (na >= 2) aa = aa + dble (a(5)) / mpbdx
   t1 = log10 (2.d0) * mpnbt * a(3) + log10 (aa)
 
-  if (t1 .ge. 0.d0) then
+  if (t1 >= 0.d0) then
     nexp = t1
   else
     nexp = t1 - 1.d0
@@ -539,11 +555,11 @@ if (ix >= nd + 1) then
   i1 = index (digits, b2(nd+1)) - 1
   if (i1 >= 5) then
 
-!   Perform rounding, beginning at the last digit (position ND).  If the rounded
+!   Perform rounding, beginning at the last digit (position IX).  If the rounded
 !   digit is 9, set to 0, then repeat at position one digit to left.  Continue
 !   rounding if necessary until the decimal point is reached.
 
-    do i = nd, ixp + 1, -1
+    do i = ix, ixp + 1, -1
       i2 = index (digits, b2(i)) - 1
       if (i2 <= 8) then
         b2(i) = digits(i2+2:i2+2)
@@ -571,7 +587,8 @@ endif
 
 !   Done with mantissa.  Insert exponent.
 
-ix = nd + 1
+ix = nd + 2
+if (ia < 0) ix = ix + 1
 b2(ix) = 'e'
 if (nexp < 0) then
   ix = ix + 1
@@ -617,14 +634,13 @@ subroutine mpfformat (a, nb, nd, b, mpnw)
 !   NB cells of type character(1) must be available in B.
 
 implicit none
+integer (mpiknd), intent(in):: a(0:)
 integer, intent(in):: mpnw, nb, nd
-integer i, ixp, i1, i2, j, k, nb2, nexp
 character(1), intent(out):: b(nb)
+integer i, ia, ixp, i1, i2, i3, j, k, na, nb2, nb3, nexp
 character(1) b2(nb+20)
 character(16) ca
-real (mprknd) t1
-integer (mpiknd), intent(in):: a(0:)
-! character(16) mpdigout
+real (mpdknd) aa, t1
 
 ! End of declaration
 
@@ -634,8 +650,20 @@ if (mpnw < 4 .or. a(0) < abs (a(2)) + 4 .or. nb < nd + 10) then
   call mpabrt ( 313)
 endif
 
-nb2 = nb + 20
-call mpeformat (a, nb2, nb, b2, mpnw+1)
+ia = sign (int (1, mpiknd), a(2))
+if (a(2) == 0) ia = 0
+na = min (int (abs (a(2))), mpnw)
+
+if (ia == 0) then
+  nb2 = nd + 13
+else
+  aa = a(4)
+  if (na >= 2) aa = aa + dble (a(5)) / mpbdx
+  nb2 = int (log10 (2.d0) * mpnbt * a(3) + log10 (aa)) + nd + 13
+endif
+
+nb3 = nb2 - 10
+call mpeformat (a, nb2, nb3, b2, mpnw+1)
 
 !   Trim off trailing blanks.
 
@@ -752,18 +780,21 @@ else
   b(i1) = '0'
   i1 = i1 + 1
   b(i1) = '.'
+  i3 = min (- nexp - 1, nd - 1)
 
-  do i = 1, nexp - 1
+  do i = 1, i3
     i1 = i1 + 1
     b(i1) = '0'
   enddo
 
-  i1 = i1 + 1
-  i2 = i2 + 1
-  b(i1) = b2(i2)
-  i2 = i2 + 1
+  if (- nexp - 1 < nd) then
+    i1 = i1 + 1
+    i2 = i2 + 1
+    b(i1) = b2(i2)
+    i2 = i2 + 1
+  endif
 
-  do i = nexp, nd
+  do i = i3 + 2, nd
     i1 = i1 + 1
     i2 = i2 + 1
     b(i1) = b2(i2)
@@ -805,12 +836,11 @@ subroutine mpinp (iu, a, mpnw)
 
 implicit none
 integer, intent(in):: iu, mpnw
+integer (mpiknd), intent(out):: a(0:)
 integer i, i1, lnc1, lncx, ln1
 character(mpnstr) line1
-character(18) validc
-parameter (validc = ' 0123456789+-.dDeE')
+character(18), parameter:: validc = ' 0123456789+-.dDeE'
 character(1) chr1(mpnw*int(mpdpw+1)+1000)
-integer (mpiknd), intent(out):: a(0:)
 
 ! End of declaration
 
@@ -850,7 +880,7 @@ do i = 1, ln1
       write (6, 2) line1(i:i)
 2     format ('*** MPINP: Invalid input character = ',a)
       call mpabrt ( 316)
-  elseif (line1(i:i) .ne. ' ') then
+  elseif (line1(i:i) /= ' ') then
     if (lnc1 < lncx) then
       lnc1 = lnc1 + 1
       chr1(lnc1) = line1(i:i)
@@ -878,10 +908,10 @@ subroutine mpout (iu, ln, nd, a, mpnw)
 
 implicit none
 integer, intent(in):: iu, ln, nd, mpnw
+integer (mpiknd), intent(in):: a(0:)
 integer i, ln1
 character(1) chr1(ln)
 character(32) cform1, cform2
-integer (mpiknd), intent(in):: a(0:)
 
 ! End of declaration
 
@@ -906,6 +936,28 @@ endif
 
 return
 end subroutine mpout
+
+subroutine mprealch (aa, b, mpnw)
+
+!   This converts the character string AA of arbitrary length to MPR.
+
+implicit none
+character (*), intent(in):: aa
+integer (mpiknd), intent(out):: b(0:)
+integer, intent(in):: mpnw
+character (1) chr1(len(aa))
+integer i, ln1
+
+ln1 = len (aa)
+
+do i = 1, ln1
+  chr1(i) = aa(i:i)
+enddo
+
+call mpctomp (chr1, ln1, b, mpnw)
+return
+end subroutine mprealch
+
 
 end module mpfunc
 

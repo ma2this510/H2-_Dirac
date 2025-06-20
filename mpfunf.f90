@@ -1,25 +1,25 @@
 !*****************************************************************************
 
-!  MPFUN20-Fort: A thread-safe arbitrary precision computation package
+!  MPFUN20-Fort: A thread-safe arbitrary precision package with special functions
 !  Precision level declaration module (module MPFUNF)
 
-!  Revision date:  9 Jan 2022
+!  Updated: 28 Jun 2024
 
 !  AUTHOR:
 !    David H. Bailey
-!    Lawrence Berkeley National Lab (retired) and University of California, Davis
+!    Lawrence Berkeley National Lab (retired)
 !    Email: dhbailey@lbl.gov
 
 !  COPYRIGHT AND DISCLAIMER:
-!    All software in this package (c) 2022 David H. Bailey.
+!    All software in this package (c) 2024 David H. Bailey.
 !    By downloading or using this software you agree to the copyright, disclaimer
 !    and license agreement in the accompanying file DISCLAIMER.txt.
 
 !  PURPOSE OF PACKAGE:
 !    This package permits one to perform floating-point computations (real and
 !    complex) to arbitrarily high numeric precision, by making only relatively
-!    minor changes to existing Fortran-90 programs.  All basic arithmetic
-!    operations and transcendental functions are supported, together with several
+!    minor changes to existing Fortran-90 programs. All basic arithmetic
+!    operations and transcendental functions are supported, together with numerous
 !    special functions.
 
 !    In addition to fast execution times, one key feature of this package is a
@@ -48,23 +48,18 @@
 
 module mpfunf
 use mpfuna
-use mpfunb
-use mpfunc
-use mpfund
-use mpfune
+
 implicit none
-integer, public:: mpipl, mpiplm
 
 !  *** Set the default standard and medium precision levels (in digits) here.
 
-parameter (mpipl = 30, mpiplm = 30)
+integer, public, parameter:: mpipl = 4000, mpiplm = 400
 
 !----------------------------------------------------------------------------
 
 !  *** Do not change the following code (in normal usage).
 
-integer, public:: mpwds, mpwds6, mpwdsm, mpwdsm6
-parameter (mpwds = int (mpipl / mpdpw + 2.d0), mpwds6 = mpwds + 6, &
-  mpwdsm = int (mpiplm / mpdpw + 2.d0), mpwdsm6 = mpwdsm + 6)
+integer, public, parameter:: mpwds = int (mpipl / mpdpw + 2.d0), mpwds6 = mpwds + 6, &
+  mpwdsm = int (mpiplm / mpdpw + 2.d0), mpwdsm6 = mpwdsm + 6
 
 end module mpfunf

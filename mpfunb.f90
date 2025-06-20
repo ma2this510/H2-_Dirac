@@ -1,25 +1,25 @@
 !*****************************************************************************
 
-!  MPFUN20-Fort: A thread-safe arbitrary precision computation package
+!  MPFUN20-Fort: A thread-safe arbitrary precision package with special functions
 !  Basic function module (module MPFUNB)
 
-!  Revision date:  6 Feb 2022
+!  Updated: 28 Jun 2024
 
 !  AUTHOR:
 !    David H. Bailey
-!    Lawrence Berkeley National Lab (retired) and University of California, Davis
+!    Lawrence Berkeley National Lab (retired)
 !    Email: dhbailey@lbl.gov
 
 !  COPYRIGHT AND DISCLAIMER:
-!    All software in this package (c) 2022 David H. Bailey.
+!    All software in this package (c) 2024 David H. Bailey.
 !    By downloading or using this software you agree to the copyright, disclaimer
 !    and license agreement in the accompanying file DISCLAIMER.txt.
 
 !  PURPOSE OF PACKAGE:
 !    This package permits one to perform floating-point computations (real and
 !    complex) to arbitrarily high numeric precision, by making only relatively
-!    minor changes to existing Fortran-90 programs.  All basic arithmetic
-!    operations and transcendental functions are supported, together with several
+!    minor changes to existing Fortran-90 programs. All basic arithmetic
+!    operations and transcendental functions are supported, together with numerous
 !    special functions.
 
 !    In addition to fast execution times, one key feature of this package is a
@@ -54,7 +54,7 @@ contains
 
 subroutine mpabrt (ier)
 
-!   This routine terminates execution.  Users may wish to replace the
+!   This routine terminates execution. Users may wish to replace the
 !   default STOP with a call to a system routine that provides a traceback.
 
 implicit none
@@ -72,8 +72,12 @@ subroutine mpabs (ra, rb, mpnw)
 !   This routine sets rb = absolute value of ra.
 
 implicit none
-integer (mpiknd) ra(0:), rb(0:)
+integer (mpiknd), intent(in):: ra(0:) 
+integer (mpiknd), intent(out):: rb(0:)
 integer mpnw
+
+! End of declaration
+
 call mpeq (ra, rb, mpnw)
 rb(2) = min (int (abs (ra(2))), mpnw)
 return
@@ -85,10 +89,10 @@ subroutine mpadd (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, ib, idb, ish, ixa, ixb, ixd, m1, m2, m3, m4, m5, na, nb, &
-  nd, nsh
 integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer i, ia, ib, idb, ish, ixa, ixb, ixd, m1, m2, m3, m4, m5, na, nb, &
+  nd, nsh
 integer (mpiknd) d(0:mpnw+6)
 
 ! End of declaration
@@ -237,6 +241,23 @@ call mpnorm (d, c, mpnw)
 return
 end subroutine mpadd
 
+subroutine mpaimagc (a, b, mpnw)
+
+!   This returns the imaginary part of MPC A.
+
+implicit none
+integer, intent(in):: mpnw
+integer (mpiknd), intent(in):: a(0:)
+integer (mpiknd), intent(out):: b(0:)
+integer la
+
+! End of declaration
+
+la = a(0)
+call mpeq (a(la:), b, mpnw)
+return
+end subroutine mpaimagc
+
 subroutine mpcabs (a, b, mpnw)
 
 !   This routine returns the absolute value of the MPC argument A (the
@@ -244,9 +265,9 @@ subroutine mpcabs (a, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer la, mpnw1
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
+integer la, mpnw1
 integer (mpiknd) s0(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6)
 
 ! End of declaration
@@ -279,9 +300,9 @@ subroutine mpcadd (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer la, lb, lc
 integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer la, lb, lc
 
 ! End of declaration
 
@@ -307,9 +328,9 @@ subroutine mpcdiv (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer la, lb, lc, mpnw1
 integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer la, lb, lc, mpnw1
 integer (mpiknd) s0(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6), s3(0:mpnw+6), &
   s4(0:mpnw+6)
 
@@ -362,67 +383,75 @@ subroutine mpceq (a, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, la, lb, na
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
-
-! End of declaration
+integer la, lb
 
 la = a(0)
 lb = b(0)
-if (mpnw < 4 .or. a(0) < abs (a(2)) + 4 .or. a(la) < abs (a(la+2)) + 4 &
-  .or. b(0) < mpnw + 6 .or. b(lb) < mpnw + 6) then
-  write (mpldb, 1)
-1 format ('*** MPCEQ: uninitialized or inadequately sized arrays')
-  call mpabrt ( 205)
-endif
+call mpeq (a, b, mpnw)
+call mpeq (a(la:), b(lb:), mpnw)
+return
+end
 
-ia = sign (int (1, mpiknd), a(2))
-na = min (int (abs (a(2))), mpnw)
-if (na == 0)  then
-  b(1) = mpnw
-  b(2) = 0
-  b(3) = 0
-  b(4) = 0
-  b(5) = 0
-  goto 110
-endif
-b(1) = mpnw
-b(2) = sign (na, ia)
+subroutine mpcinitwds (ca, mpnw)
 
-do i = 2, na + 2
-  b(i+1) = a(i+1)
-enddo
+!   This initializes the MPC variable CA with mpnw+6 space and mpnw
+!   working precision, in both its real and imaginary parts.
 
-b(na+4) = 0
-b(na+5) = 0
+implicit none
+integer (mpiknd), intent(out):: ca(0:)
+integer, intent(in):: mpnw
+integer lc
 
-110 continue
+lc = mpnw + 6
+ca(0) = mpnw + 6
+ca(1) = mpnw
+ca(2) = 0
+ca(3) = 0
+ca(4) = 0
+ca(lc) = mpnw + 6
+ca(lc+1) = mpnw
+ca(lc+2) = 0
+ca(lc+3) = 0
+ca(lc+4) = 0
+return
+end subroutine mpcinitwds
 
-ia = sign (int (1, mpiknd), a(la+2))
-na = min (int (abs (a(la+2))), mpnw)
-if (na == 0)  then
-  b(lb+1) = mpnw
-  b(lb+2) = 0
-  b(lb+3) = 0
-  b(lb+4) = 0
-  b(lb+5) = 0
-  goto 120
-endif
-b(lb+1) = mpnw
-b(lb+2) = sign (na, ia)
+subroutine mpcmplxr (a, b, c, mpnw)
 
-do i = 2, na + 2
-  b(i+lb+1) = a(i+la+1)
-enddo
+!   This sets MPC C = A + B*I, where A and B are MPR.
 
-b(na+lb+4) = 0
-b(na+lb+5) = 0
+implicit none
+integer, intent(in):: mpnw
+integer (mpiknd), intent(in):: a(0:), b(0:)
+integer (mpiknd), intent(out):: c(0:)
+integer lc
 
-120 continue
+!   End of declaration.
+
+lc = c(0)
+call mpeq (a, c(0:), mpnw)
+call mpeq (b, c(lc:), mpnw)
+return
+end subroutine mpcmplxr
+
+subroutine mpcmplxdcc (a, b, mpnw)
+
+!   This sets MPC B  = A, where A is DC.
+
+implicit none
+integer, intent(in):: mpnw
+complex (mpdknd), intent(in):: a
+integer (mpiknd), intent(out):: b(0:)
+integer lb, i
+
+lb = b(0)
+call mpdmc (real (a, mpdknd), 0, b, mpnw)
+call mpdmc (aimag (a), 0, b(lb:), mpnw)
 
 return
-end subroutine mpceq
+end subroutine mpcmplxdcc
 
 subroutine mpcmul (a, b, c, mpnw)
 
@@ -430,9 +459,9 @@ subroutine mpcmul (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer la, lb, lc, mpnw1
 integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer la, lb, lc, mpnw1
 integer (mpiknd) s0(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6), s3(0:mpnw+6)
 
 ! End of declaration
@@ -469,19 +498,43 @@ call mpeq (s3, c(lc:), mpnw)
 return
 end subroutine mpcmul
 
+subroutine mpcneg (ra, rb, mpnw)
+
+!   This routine sets RB = negation of RA for complex RA and complex RB.
+
+implicit none
+integer, intent(in):: mpnw
+integer (mpiknd), intent(in):: ra(0:) 
+integer (mpiknd), intent(out):: rb(0:)
+integer la, lb, na1, na2
+
+! End of declaration
+
+la = ra(0)
+lb = rb(0)
+call mpeq (ra, rb, mpnw)
+na1 = min (abs (int (ra(2))), mpnw)
+rb(2) = - sign (na1, int (ra(2)))
+call mpeq (ra(la:), rb(lb:), mpnw)
+na2 = min (abs (int (ra(la+2))), mpnw)
+rb(lb+2) = - sign (na2, int (ra(la+2)))
+
+return
+end subroutine mpcneg
+
 subroutine mpcnpwr (a, n, b, mpnw)
 
 !   This computes the N-th power of the MPC number A and returns the MPC result
-!   in B.  When N is zero, 1 is returned.  When N is negative, the reciprocal
+!   in B. When N is zero, 1 is returned. When N is negative, the reciprocal
 !   of A ^ |N| is returned.
 
 implicit none
 integer, intent(in):: mpnw, n
-integer j, kk, kn, la, lb, lc, mn, mpnw1, na, nn
-real (mprknd) cl2, t1
-parameter (cl2 = 1.4426950408889633d0)
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
+real (mpdknd), parameter:: cl2 = 1.4426950408889633d0
+integer j, kk, kn, la, lb, lc, mn, mpnw1, na, nn
+real (mpdknd) t1
 integer (mpiknd) s0(0:2*mpnw+13), s1(0:2*mpnw+13), s2(0:2*mpnw+13)
 
 ! End of declaration
@@ -533,7 +586,7 @@ elseif (nn == 2) then
   goto 110
 endif
 
-!   Determine the least integer MN such that 2 ^ MN .GT. NN.
+!   Determine the least integer MN such that 2 ^ MN > NN.
 
 t1 = nn
 mn = cl2 * log (t1) + 1.d0 + mprdfz
@@ -584,9 +637,9 @@ subroutine mpconjg (a, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer la, lb
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
+integer la, lb
 
 ! End of declaration
 
@@ -617,9 +670,9 @@ subroutine mpcsqrt (a, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer la, lb, mpnw1
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
+integer la, lb, mpnw1
 integer (mpiknd) s0(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6), s3(0:mpnw+6), &
   s4(0:mpnw+6)
 
@@ -677,9 +730,9 @@ subroutine mpcsub (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer la, lb, lc
 integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer la, lb, lc
 
 ! End of declaration
 
@@ -707,9 +760,9 @@ subroutine mpcpr (a, b, ic, mpnw)
 !   result to be "equal".
 
 implicit none
+integer (mpiknd), intent(in):: a(0:), b(0:)
 integer, intent(in):: mpnw
 integer, intent(out):: ic
-integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd) s0(0:mpnw+5)
 
 ! End of declaration
@@ -733,6 +786,51 @@ endif
 return
 end subroutine mpcpr
 
+subroutine mpdcmplx (a, b, mpnw)
+
+!   This returns B = double complex approximation to MPC A.
+
+implicit none
+integer, intent(in):: mpnw
+integer (mpiknd), intent(in):: a(0:)
+complex (mpdknd), intent(out):: b
+integer i1, i2, la
+real (mpdknd) d1, d2
+
+!   End of declaration
+
+la = a(0)
+call mpmdc (a, d1, i1, mpnw)
+call mpmdc (a(la:), d2, i2, mpnw)
+b = cmplx (d1 * 2.d0**i1, d2 * 2.d0**i2, mpdknd)
+return
+end subroutine mpdcmplx
+
+subroutine mpdecmdr (ra, db, ib, mpnw)
+implicit none
+integer, intent(in):: mpnw
+integer (mpiknd), intent (in):: ra(0:)
+real (mpdknd), intent (out):: db
+integer, intent (out):: ib
+real (mpdknd), parameter:: alg102 = 0.301029995663981195d0
+real (mpdknd) dt1, dt2
+integer i1
+
+call mpmdc (ra, dt1, i1, mpnw)
+
+if (dt1 /= 0.d0) then
+  dt2 = alg102 * i1 + log10 (abs (dt1))
+  ib = dt2
+  if (dt2 < 0.d0) ib = ib - 1
+  db = sign (10.d0 ** (dt2 - ib), dt1)
+else
+  db = 0.d0
+  ib = 0
+endif
+
+return
+end subroutine mpdecmdr
+
 subroutine mpdiv (a, b, c, mpnw)
 
 !   This divides A by B and returns the result in C.
@@ -743,11 +841,11 @@ subroutine mpdiv (a, b, c, mpnw)
 !    X_{k+1} = X_k + (1 - X_k * B) * X_k
 
 !   where the multiplication () * X_k is performed with only half of the
-!   normal level of precision.  These iterations are performed with a
+!   normal level of precision. These iterations are performed with a
 !   working precision level MPNW that is dynamically changed, approximately
 !   doubling with each iteration (except that at iteration NIT before the
 !   final iteration, the iteration is repeated without doubling the
-!   precision, in order to enhance accuracy).  The final iteration is
+!   precision, in order to enhance accuracy). The final iteration is
 !   performed as follows (this is due to A. Karp):
 
 !    A / B = (A * X_n) + [A - (A * X_n) * B] * X_n  (approx.)
@@ -757,12 +855,12 @@ subroutine mpdiv (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer iq, k, mpnw1, mq, n, na, nb, &
-  nit, nw1, nw2
-real (mprknd) cl2, t1, t2
-parameter (cl2 = 1.4426950408889633d0, nit = 3)
 integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer, parameter:: nit = 3
+real (mpdknd), parameter:: cl2 = 1.4426950408889633d0
+integer iq, k, mpnw1, mq, n, na, nb, nw1, nw2
+real (mpdknd) t1, t2
 integer (mpiknd) s0(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6), s3(0:mpnw+6)
 
 ! End of declaration
@@ -797,7 +895,7 @@ s1(0) = mpnw + 7
 s2(0) = mpnw + 7
 s3(0) = mpnw + 7
 
-!   Determine the least integer MQ such that 2 ^ MQ .GE. MPNW.
+!   Determine the least integer MQ such that 2 ^ MQ >= MPNW.
 
 t1 = mpnw
 mq = cl2 * log (t1) + 1.d0 - mprdfz
@@ -869,13 +967,13 @@ subroutine mpdivd (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, ib, j, k, na, nbth, n1
-parameter (nbth = mpnbt / 2)
-real (mprknd), intent(in):: b
-real (mprknd) bb, bdh, bdvd, rdh
-parameter (bdh = 2.d0**nbth, rdh = 0.5d0**nbth)
+real (mpdknd), intent(in):: b
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer, parameter:: nbth = mpnbt / 2
+real (mpdknd), parameter:: bdh = 2.d0**nbth, rdh = 0.5d0**nbth
+real (mpdknd) bb, bdvd
+integer i, ia, ib, j, k, na, n1
 integer (mpiknd) cc(0:2*mpnw+10), d(0:2*mpnw+10), ibb, &
   b1, b2, c11, c12, c21, c22, d1, d2, td, t1, t2, t3
 
@@ -1029,7 +1127,7 @@ subroutine mpdivd40 (a, b, c, mpnw)
 
 !   This routine divides the MPR number A by the DP number B to yield C.
 !   In contrast to mpdivd, this routine only allows 40 significant bits
-!   (approximately 12 significant decimal digits) in B.  If more nonzero bits
+!   (approximately 12 significant decimal digits) in B. If more nonzero bits
 !   are present in B (likely due to inexact binary value), an error is flagged.
 
 !   Examples of exact binary values (good): 123456789.d0, 0.25d0, -5.3125d0.
@@ -1038,12 +1136,11 @@ subroutine mpdivd40 (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-real (mprknd), intent(in):: b
-real (mprknd) t2
+real (mpdknd), intent(in):: b
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: c(0:)
-real (mprknd) mpmask13
-external mpmask13
+real (mpdknd), external:: mpmask13
+real (mpdknd) t2
 
 ! End of declaration
 
@@ -1071,6 +1168,24 @@ endif
 return
 end subroutine mpdivd40
 
+subroutine mpdpreal (a, b, mpnw)
+
+!   This returns B = double precision approximation to MPR A.
+
+implicit none
+integer, intent(in):: mpnw
+integer (mpiknd), intent(in):: a(0:)
+real (mpdknd), intent(out):: b
+integer i1
+real (mpdknd) d1
+
+!   End of declaration
+
+call mpmdc (a, d1, i1, mpnw)
+b = d1 * 2.d0**i1
+return
+end subroutine mpdpreal
+
 subroutine mpdmc (a, n, b, mpnw)
 
 !   This routine converts the DP number A * 2^N to MPR form in B.
@@ -1082,10 +1197,10 @@ subroutine mpdmc (a, n, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw, n
-integer i, k, n1, n2
-real (mprknd), intent(in):: a
-real (mprknd) aa
+real (mpdknd), intent(in):: a
 integer (mpiknd), intent(out):: b(0:)
+integer i, k, n1, n2
+real (mpdknd) aa
 
 ! End of declaration
 
@@ -1164,7 +1279,7 @@ subroutine mpdmc40 (a, n, b, mpnw)
 
 !   This routine converts the DP number A * 2^N to MPR form in B.
 !   In contrast to mpdmc, this routine only allows 40 significant bits
-!   (approximately 12 significant decimal digits) in A.  If more nonzero bits
+!   (approximately 12 significant decimal digits) in A. If more nonzero bits
 !   are present in A (likely due to inexact binary value), an error is flagged.
 
 !   Examples of exact binary values (good): 123456789.d0, 0.25d0, -5.3125d0.
@@ -1173,11 +1288,10 @@ subroutine mpdmc40 (a, n, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw, n
-real (mprknd), intent(in):: a
-real (mprknd) t2
+real (mpdknd), intent(in):: a
 integer (mpiknd), intent(out):: b(0:)
-real (mprknd) mpmask13
-external mpmask13
+real (mpdknd), external:: mpmask13
+real (mpdknd) t2
 
 ! End of declaration
 
@@ -1211,9 +1325,9 @@ subroutine mpeq (a, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, na
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
+integer i, ia, na
 
 ! End of declaration
 
@@ -1252,16 +1366,16 @@ end subroutine mpeq
 subroutine mpinfr (a, b, c, mpnw)
 
 !   Sets B to the integer part of the MPR number A and sets C equal to the
-!   fractional part of A.  Note this is NOT the quite same as the greatest
+!   fractional part of A. Note this is NOT the quite same as the greatest
 !   integer function as often defined in some mathematical books and papers.
 !   Examples:  If A = 1.75, then B = 1., C = 0.75.
 !     If A = -3.25, then B = -3., C = -0.25.
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, ma, na, nb, nc
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:), c(0:)
+integer i, ia, ma, na, nb, nc
 
 ! End of declaration
 
@@ -1339,7 +1453,7 @@ else
   enddo
 endif
 
-!   Fix up results.  B may have trailing zeros and C may have leading zeros.
+!   Fix up results. B may have trailing zeros and C may have leading zeros.
 
 call mproun (b, mpnw)
 call mproun (c, mpnw)
@@ -1348,17 +1462,33 @@ call mproun (c, mpnw)
 return
 end subroutine mpinfr
 
+subroutine mpinitwds (ra, mpnw)
+
+!   This initializes ra with mpnw+6 space and mpnw working precision.
+
+implicit none
+integer (mpiknd), intent(out):: ra(0:)
+integer, intent(in):: mpnw
+
+ra(0) = mpnw + 6
+ra(1) = mpnw
+ra(2) = 0
+ra(3) = 0
+ra(4) = 0
+return
+end subroutine mpinitwds
+
 subroutine mpmdc (a, b, n, mpnw)
 
 !   This returns a DP approximation the MPR number A in the form B * 2^n.
 
 implicit none
+integer (mpiknd), intent(in):: a(0:)
 integer, intent(in):: mpnw
 integer, intent(out):: n
+real (mpdknd), intent(out):: b
 integer na
-real (mprknd) aa
-real (mprknd), intent(out):: b
-integer (mpiknd), intent(in):: a(0:)
+real (mpdknd) aa
 
 ! End of declaration
 
@@ -1401,19 +1531,19 @@ subroutine mpmul (a, b, c, mpnw)
 
 !   This routine multiplies MPR numbers A and B to yield C.
 
-!   This routine returns up to MPNW mantissa words of the product.  If the
+!   This routine returns up to MPNW mantissa words of the product. If the
 !   complete double-long product of A and B is desired (for example in large
 !   integer applications), then MPNW must be at least as large as the sum of
-!   the mantissa lengths of A and B.  In other words, if the precision levels
+!   the mantissa lengths of A and B. In other words, if the precision levels
 !   of A and B are both 64 words, then MPNW must be at least 128 words to
 !   produce the complete double-long product in C.
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, ib, j, j3, n2, na, nb, nbth, nc
-parameter (nbth = mpnbt / 2)
 integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer, parameter:: nbth = mpnbt / 2
+integer i, ia, ib, j, j3, n2, na, nb, nc
 integer (mpiknd) d(0:mpnw+6), a1, a2, b1, b2, c1, c2, c3, dd, t1, t3
 
 ! End of declaration
@@ -1571,12 +1701,12 @@ subroutine mpmuld (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, ib, j, k, na, nbth, n1
-parameter (nbth = mpnbt / 2)
-real (mprknd), intent(in):: b
-real (mprknd) bb
+real (mpdknd), intent(in):: b
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer, parameter:: nbth = mpnbt / 2
+integer i, ia, ib, j, k, na, n1
+real (mpdknd) bb
 integer (mpiknd) d(0:mpnw+6), ibb, a1, a2, b1, b2, c1, c2, c3, t1, t3
 
 ! End of declaration
@@ -1705,7 +1835,7 @@ subroutine mpmuld40 (a, b, c, mpnw)
 
 !   This routine multiples the MP number A by the DP number B to yield C.
 !   In contrast to mpmuld, this routine only allows 40 significant bits
-!   (approximately 12 significant decimal digits) in B.  If more nonzero bits
+!   (approximately 12 significant decimal digits) in B. If more nonzero bits
 !   are present in B (likely due to inexact binary value), an error is flagged.
 
 !   Examples of exact binary values (good): 123456789.d0, 0.25d0, -5.3125d0.
@@ -1713,12 +1843,11 @@ subroutine mpmuld40 (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-real (mprknd), intent(in):: b
-real (mprknd) t2
 integer (mpiknd), intent(in):: a(0:)
+real (mpdknd), intent(in):: b
 integer (mpiknd), intent(out):: c(0:)
-real (mprknd) mpmask13
-external mpmask13
+real (mpdknd), external:: mpmask13
+real (mpdknd) t2
 
 ! End of declaration
 
@@ -1748,11 +1877,15 @@ end subroutine mpmuld40
 
 subroutine mpneg (ra, rb, mpnw)
 
-!   This routine sets rb = negation of ra.
+!   This routine sets RB = negation of RA.
 
 implicit none
-integer (mpiknd) ra(0:), rb(0:)
+integer (mpiknd), intent(in):: ra(0:) 
+integer (mpiknd), intent(out):: rb(0:)
 integer mpnw, na
+
+! End of declaration
+
 call mpeq (ra, rb, mpnw)
 na = min (abs (int (ra(2))), mpnw)
 rb(2) = - sign (na, int (ra(2)))
@@ -1766,9 +1899,9 @@ subroutine mpnint (a, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer ia, ma, na
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
+integer ia, ma, na
 integer (mpiknd) s0(0:mpnw+5), s1(0:mpnw+5)
 
 ! End of declaration
@@ -1832,11 +1965,10 @@ subroutine mpnorm (d, a, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, na, n4
-integer (mpiknd) a2
 integer (mpiknd), intent(out):: a(0:)
 integer (mpiknd), intent(inout):: d(0:)
-integer (mpiknd) t1, t3
+integer i, ia, na, n4
+integer (mpiknd) a2, t1, t3
 
 ! End of declaration
 
@@ -1887,8 +2019,8 @@ if (d(3) < 0) then
   goto 110
 elseif (d(3) > 0) then
 
-!   The fixup loops above "spilled" a nonzero number into D(3).  Shift the
-!   entire number right one cell.  The exponent and length of the result
+!   The fixup loops above "spilled" a nonzero number into D(3). Shift the
+!   entire number right one cell. The exponent and length of the result
 !   are increased by one.
 
   do i = n4, 3, -1
@@ -1919,16 +2051,16 @@ end subroutine mpnorm
 subroutine mpnpwr (a, n, b, mpnw)
 
 !   This computes the N-th power of the MPR number A and returns the result
-!   in B.  When N is zero, 1 is returned.  When N is negative, the reciprocal
+!   in B. When N is zero, 1 is returned. When N is negative, the reciprocal
 !   of A ^ |N| is returned.
 
 implicit none
 integer, intent(in):: mpnw
-integer j, kk, kn, mn, mpnw1, n, na, nn
-real (mprknd) cl2, t1
-parameter (cl2 = 1.4426950408889633d0)
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
+real (mpdknd), parameter:: cl2 = 1.4426950408889633d0
+integer j, kk, kn, mn, mpnw1, n, na, nn
+real (mpdknd) t1
 integer (mpiknd) s0(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6)
 
 ! End of declaration
@@ -1973,7 +2105,7 @@ elseif (nn == 2) then
   goto 110
 endif
 
-!   Determine the least integer MN such that 2 ^ MN .GT. NN.
+!   Determine the least integer MN such that 2 ^ MN > NN.
 
 t1 = nn
 mn = cl2 * log (t1) + 1.d0 + mprdfz
@@ -2039,13 +2171,12 @@ subroutine mpnrtr (a, n, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw, n
-integer ia, iq, k, mpnw1, mq, na, nit, &
-  n1, n2, n3, n30
-real (mprknd) alt, cl2, t1, t2, tn
-parameter (alt = 0.693147180559945309d0, cl2 = 1.4426950408889633d0, &
-  nit = 3, n30 = 2 ** 30)
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
+integer, parameter:: nit = 3, n30 = 2 ** 30
+real (mpdknd), parameter:: alt = 0.693147180559945309d0, cl2 = 1.4426950408889633d0
+integer ia, iq, k, mpnw1, mq, na, n1, n2, n3
+real (mpdknd) t1, t2, tn
 integer (mpiknd) f1(0:8), s0(0:mpnw+7), s1(0:mpnw+7), s2(0:mpnw+7), s3(0:mpnw+7)
 
 ! End of declaration
@@ -2105,7 +2236,7 @@ f1(4) = 1
 f1(5) = 0
 f1(6) = 0
 
-!   Determine the least integer MQ such that 2 ^ MQ .GE. MPNW.
+!   Determine the least integer MQ such that 2 ^ MQ >= MPNW.
 
 t1 = mpnw
 mq = cl2 * log (t1) + 1.d0 - mprdfz
@@ -2229,18 +2360,59 @@ call mpeq (ia3, b, mpnw)
 return
 end subroutine mprandr
 
+subroutine mprealc (a, b, mpnw)
+
+!   This returns the real part of MPC A.
+
+implicit none
+integer, intent(in):: mpnw
+integer (mpiknd), intent(in):: a(0:)
+integer (mpiknd), intent(out):: b(0:)
+
+! End of declaration
+
+call mpeq (a, b, mpnw)
+return
+end subroutine mprealc
+
+subroutine mprealdp (a, b, mpnw)
+
+!   This converts DP argument A to MPR.
+
+implicit none
+real (mpdknd), intent(in):: a
+integer (mpiknd), intent(out):: b(0:)
+integer, intent(in):: mpnw
+
+call mpdmc (a, 0, b, mpnw)
+return
+end subroutine mprealdp
+
+subroutine mprealin (ia, b, mpnw)
+
+!   This converts integer argument IA to MPR.
+
+implicit none
+integer, intent(in):: ia
+integer (mpiknd), intent(out):: b(0:)
+integer, intent(in):: mpnw
+
+call mpdmc (dble (ia), 0, b, mpnw)
+return
+end subroutine mprealin
+
 subroutine mproun (a, mpnw)
 
-!   This performs rounding and truncation of the MPR number A.  It is called
+!   This performs rounding and truncation of the MPR number A. It is called
 !   by MPNORM, and also by other subroutines when the precision level is
-!   modified.  It is not intended to be directly called by the user.
+!   modified. It is not intended to be directly called by the user.
 !   The parameter MPEXPMX is the absolute value of the largest exponent word
 !   allowed for MP numbers (see system parameters at start of this module).
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, k, na, n4
 integer (mpiknd), intent(inout):: a(0:)
+integer i, ia, k, na, n4
 integer (mpiknd) a2
 
 ! End of declaration
@@ -2261,7 +2433,7 @@ n4 = na + 4
 
 if (a(4) == 0) then
 
-!   Find the first nonzero word and shift the entire number left.  The length
+!   Find the first nonzero word and shift the entire number left. The length
 !   of the result is reduced by the length of the shift.
 
   do i = 4, n4
@@ -2312,7 +2484,7 @@ endif
 
   if (a(na+3) == 0) then
 
-!   At least the last mantissa word is zero.  Find the last nonzero word
+!   At least the last mantissa word is zero. Find the last nonzero word
 !   and adjust the length of the result accordingly.
 
   do i = na + 2, 3, -1
@@ -2364,23 +2536,36 @@ endif
 return
 end subroutine mproun
 
-function mpsgn (ra)
+integer function mpspacer (ra)
+
+!   This returns the total array space of ra.
+
+implicit none
+integer (mpiknd), intent(in):: ra(0:)
+mpspacer = ra(0)
+return
+end function mpspacer
+
+integer function mpsgnr (ra)
 
 !   This function returns 1, 0 or -1, depending on whether ra > 0, ra = 0 or ra < 0.
 
 implicit none
-integer (mpiknd) ra(0:)
-integer ia, mpsgn
+integer (mpiknd), intent(in):: ra(0:)
+integer ia
+
+! End of declaration
+
 ia = ra(2)
 if (ia == 0) then
-  mpsgn = 0
+  mpsgnr = 0
 elseif (ia > 0) then
-  mpsgn = 1
+  mpsgnr = 1
 else
-  mpsgn = -1
+  mpsgnr = -1
 endif
 return
-end function mpsgn
+end function mpsgnr
 
 subroutine mpsqrt (a, b, mpnw)
 
@@ -2392,11 +2577,11 @@ subroutine mpsqrt (a, b, mpnw)
 !    X_{k+1} = X_k + 0.5 * (1 - X_k^2 * A) * X_k
 
 !   where the multiplication () * X_k is performed with only half of the
-!   normal level of precision.  These iterations are performed with a
+!   normal level of precision. These iterations are performed with a
 !   working precision level MPNW that is dynamically changed, approximately
 !   doubling with each iteration (except that at iteration NIT before the final
 !   iteration, the iteration is repeated without doubling the precision, in order
-!   to enhance accuracy) .  The final iteration is performed as follows
+!   to enhance accuracy) . The final iteration is performed as follows
 !   (this is due to A. Karp):
 
 !    Sqrt(A) = (A * X_n) + 0.5 * [A - (A * X_n)^2] * X_n  (approx.)
@@ -2406,11 +2591,12 @@ subroutine mpsqrt (a, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer ia, iq, k, mpnw1, mq, n, na, nit, nw1, nw2, n2
-real (mprknd) cl2, t1, t2
-parameter (cl2 = 1.4426950408889633d0, nit = 3)
 integer (mpiknd), intent(in):: a(0:)
 integer (mpiknd), intent(out):: b(0:)
+integer, parameter:: nit = 3
+real (mpdknd), parameter:: cl2 = 1.4426950408889633d0
+integer ia, iq, k, mpnw1, mq, n, na, nw1, nw2, n2
+real (mpdknd) t1, t2
 integer (mpiknd) s0(0:mpnw+6), s1(0:mpnw+6), s2(0:mpnw+6), s3(0:mpnw+6)
 
 ! End of declaration
@@ -2444,7 +2630,7 @@ s1(0) = mpnw + 7
 s2(0) = mpnw + 7
 s3(0) = mpnw + 7
 
-!   Determine the least integer MQ such that 2 ^ MQ .GE. MPNW.
+!   Determine the least integer MQ such that 2 ^ MQ >= MPNW.
 
 t1 = mpnw
 mq = cl2 * log (t1) + 1.d0 - mprdfz
@@ -2518,9 +2704,9 @@ subroutine mpsub (a, b, c, mpnw)
 
 implicit none
 integer, intent(in):: mpnw
-integer i, nb
 integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer i, nb
 integer (mpiknd) s(0:mpnw+5)
 
 ! End of declaration
@@ -2552,6 +2738,16 @@ call mpadd (a, s, c, mpnw)
 return
 end subroutine mpsub
 
+integer function mpwprecr (ra)
+
+!   This returns the working precision of ra.
+
+implicit none
+integer (mpiknd), intent(in):: ra(0:)
+mpwprecr = ra(1)
+return
+end function mpwprecr
+
 !   These three subroutines are for real(16) (quad) support:
 
 subroutine mpmqc (a, b, n, mpnw)
@@ -2561,13 +2757,13 @@ subroutine mpmqc (a, b, n, mpnw)
 !   message is output.
 
 implicit none
+integer (mpiknd), intent(in):: a(0:)
 integer, intent(in):: mpnw
 integer, intent(out):: n
-integer knd, na
-parameter (knd = max (mprknd2, kind(1.0)))
-real (knd) aa
+integer, parameter:: knd = max (mpqknd, kind(1.0))
 real (knd), intent(out):: b
-integer (mpiknd), intent(in):: a(0:)
+integer na
+real (knd) aa
 
 ! End of declaration
 
@@ -2577,7 +2773,7 @@ if (mpnw < 4 .or. a(0) < abs (a(2)) + 4) then
   call mpabrt ( 245)
 endif
 
-if (mprknd2 < 0) then
+if (mpqknd < 0) then
   write (mpldb, 2)
 2 format ('*** MPMQC: IEEE quad precision is not supported on this processor')
   call mpabrt ( 246)
@@ -2599,7 +2795,7 @@ b = sign (aa, real (a(2), knd))
 
 !   Reduce b to within 1 and 2.
 
-na = log (abs (b)) / log (2.d0) + mprdfz
+na = log (abs (dble (b))) / log (2.d0) + mprdfz
 b = b / 2.d0**na
 n = n + na
 if (abs (b) < 1.d0) then
@@ -2627,11 +2823,11 @@ subroutine mpqmc (a, n, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw, n
-integer i, k, knd, n1, n2
-parameter (knd = max (mprknd2, kind (1.0)))
+integer, parameter:: knd = max (mpqknd, kind (1.0))
 real (knd), intent(in):: a
-real (knd) aa
 integer (mpiknd), intent(out):: b(0:*)
+real (knd) aa
+integer i, k, n1, n2
 
 ! End of declaration
 
@@ -2641,7 +2837,7 @@ if (mpnw < 4 .or. b(0) < mpnw + 6) then
   call mpabrt ( 247)
 endif
 
-if (mprknd2 < 0) then
+if (mpqknd < 0) then
   write (mpldb, 2)
 2 format ('*** MPQMC: IEEE quad precision is not supported on this processor')
   call mpabrt ( 248)
@@ -2716,7 +2912,7 @@ subroutine mpqmc90 (a, n, b, mpnw)
 
 !   This routine converts the DP number A * 2^N to MPR form in B.
 !   In contrast to mpqmc, this routine only allows 90 significant bits
-!   (approximately 27 significant decimal digits) in A.  If more nonzero bits
+!   (approximately 27 significant decimal digits) in A. If more nonzero bits
 !   are present in A (likely due to inexact binary value), an error is flagged.
 
 !   Examples of exact binary values (good): 123456789.q0, 0.25q0, -5.3125q0.
@@ -2724,11 +2920,10 @@ subroutine mpqmc90 (a, n, b, mpnw)
 
 implicit none
 integer, intent(in):: mpnw, n
-integer knd
-parameter (knd = max (mprknd2, kind (1.0)))
+integer, parameter:: knd = max (mpqknd, kind (1.0))
 real (knd), intent(in):: a
-real (knd) t2
 integer (mpiknd), intent(out):: b(0:)
+real (knd) t2
 real (knd) mpmask23
 external mpmask23
 
@@ -2762,25 +2957,25 @@ end subroutine mpqmc90
 
 subroutine mpfftcr (is, m, n, nsq, x, y)
 
-!   This performs an N-point complex-to-real FFT, where N = 2^M.  X is the
+!   This performs an N-point complex-to-real FFT, where N = 2^M. X is the
 !   double complex input array, and Y is the double precision output array.
 !   The array X is used as a scratch array in MPFFT1, and so is overwritten.
-!   X and Y must be dimensioned as shown below.  IS is the sign of the FFT.
+!   X and Y must be dimensioned as shown below. IS is the sign of the FFT.
 !   The arrays MPUU1 and MPUU2 must have been initialized by calling MPINIFFT.
 !   This routine is not intended to be called directly by the user.
 
 implicit none
 integer, intent(in):: is, m, n, nsq
+real (mpdknd), intent(out):: y(n)
+complex (mpdknd), intent(inout):: x(n/2+nsq*mpnsp1+1)
 integer k, ku, mx, n1, n2, n4
-real (mprknd), intent(out):: y(n)
-complex (mprknd), intent(inout):: x(n/2+nsq*mpnsp1+1)
-complex (mprknd) dc1(n/2), ai, a1, a2, x1, x2
+complex (mpdknd) dc1(n/2), ai, a1, a2, x1, x2
 
 mx = mpuu1(1)
 
 !   Check if input parameters are invalid.
 
-if ((is .ne. 1 .and. is .ne. -1) .or. m .lt. 3 .or. m .gt. mx) then
+if ((is /= 1 .and. is /= -1) .or. m < 3 .or. m > mx) then
   write (mpldb, 1)  is, m, mx
 1 format ('*** MPFFTCR: Either the UU arrays have not been initialized'/ &
   'or else one of the input parameters is invalid', 3i5)
@@ -2790,20 +2985,20 @@ endif
 n1 = 2 ** (m / 2)
 n2 = n / 2
 n4 = n / 4
-ai = cmplx (0.d0, 1.d0, mprknd)
+ai = cmplx (0.d0, 1.d0, mpdknd)
 
 !   Construct the input to MPFFT1.
 
-dc1(1) = 0.5d0 * cmplx (real (x(1) + x(n2+1), mprknd), &
-  real (x(1) - x(n2+1), mprknd), mprknd)
-if (is .eq. 1) then
+dc1(1) = 0.5d0 * cmplx (real (x(1) + x(n2+1), mpdknd), &
+  real (x(1) - x(n2+1), mpdknd), mpdknd)
+if (is == 1) then
   dc1(n4+1) = conjg (x(n4+1))
 else
   dc1(n4+1) = x(n4+1)
 endif
 ku = n2
 
-if (is .eq. 1) then
+if (is == 1) then
   do k = 2, n4
     x1 = x(k)
     x2 = conjg (x(n2+2-k))
@@ -2830,7 +3025,7 @@ call mpfft1 (is, m - 1, n1, n2 / n1, dc1, x)
 !   Copy DC1 to Y such that DC1(k) = Y(2k-1) + i Y(2k).
 
 do k = 1, n / 2
-  y(2*k-1) = real (dc1(k), mprknd)
+  y(2*k-1) = real (dc1(k), mpdknd)
   y(2*k) = aimag (dc1(k))
 enddo
 
@@ -2839,23 +3034,23 @@ end subroutine mpfftcr
 
 subroutine mpfftrc (is, m, n, nsq, x, y)
 
-!   This performs an N-point real-to-complex FFT, where N = 2^M.  X is the
+!   This performs an N-point real-to-complex FFT, where N = 2^M. X is the
 !   double precision input array, and Y is the double complex output array.
 !   The arrays MPUU1 and MPUU2 must have been initialized by calling MPINIFFT.
 !   This routine is not intended to be called directly by the user.
 
 implicit none
 integer, intent(in):: is, m, n, nsq
+real (mpdknd), intent(in):: x(n)
+complex (mpdknd), intent(out):: y(n/2+nsq*mpnsp1+1)
 integer k, ku, mx, n1, n2, n4
-real (mprknd), intent(in):: x(n)
-complex (mprknd), intent(out):: y(n/2+nsq*mpnsp1+1)
-complex (mprknd) dc1(n/2), ai, a1, a2, z1, z2
+complex (mpdknd) dc1(n/2), ai, a1, a2, z1, z2
 
 mx = mpuu1(1)
 
 !   Check if input parameters are invalid.
 
-if ((is .ne. 1 .and. is .ne. -1) .or. m .lt. 3 .or. m .gt. mx) then
+if ((is /= 1 .and. is /= -1) .or. m < 3 .or. m > mx) then
   write (mpldb, 1)  is, m, mx
 1 format ('*** MPFFTRC: either the UU arrays have not been initialized'/ &
   'or else one of the input parameters is invalid',3i5)
@@ -2865,12 +3060,12 @@ endif
 n1 = 2 ** (m / 2)
 n2 = n / 2
 n4 = n / 4
-ai = cmplx (0.d0, -1.d0, mprknd)
+ai = cmplx (0.d0, -1.d0, mpdknd)
 
 !   Copy X to DC1 such that DC1(k) = X(2k-1) + i X(2k).
 
 do k = 1, n2
-  dc1(k) = cmplx (x(2*k-1), x(2*k), mprknd)
+  dc1(k) = cmplx (x(2*k-1), x(2*k), mpdknd)
 enddo
 
 !   Perform a normal N/2-point FFT on DC1.
@@ -2879,18 +3074,18 @@ call mpfft1 (is, m - 1, n1, n2 / n1, dc1, y)
 
 !   Reconstruct the FFT of X.
 
-y(1) = cmplx (2.d0 * (real (dc1(1), mprknd) + aimag (dc1(1))), &
-  0.d0, mprknd)
-if (is .eq. 1) then
+y(1) = cmplx (2.d0 * (real (dc1(1), mpdknd) + aimag (dc1(1))), &
+  0.d0, mpdknd)
+if (is == 1) then
   y(n4+1) = 2.d0 * dc1(n4+1)
 else
   y(n4+1) = 2.d0 * conjg (dc1(n4+1))
 endif
-y(n2+1) = cmplx (2.d0 * (real (dc1(1), mprknd) - aimag (dc1(1))), &
-  0.d0, mprknd)
+y(n2+1) = cmplx (2.d0 * (real (dc1(1), mpdknd) - aimag (dc1(1))), &
+  0.d0, mpdknd)
 ku = n2
 
-if (is .eq. 1) then
+if (is == 1) then
   do k = 2, n4
     z1 = dc1(k)
     z2 = conjg (dc1(n2+2-k))
@@ -2915,23 +3110,23 @@ end subroutine mpfftrc
 
 subroutine mpfft1 (is, m, n1, n2, x, y)
 
-!   This routine performs a complex-to-complex FFT.  IS is the sign of the
-!   transform, N = 2^M is the size of the transform.  N1 = 2^M1 and N2 = 2^M2,
-!   where M1 and M2 are defined as below.  X is the input and output array,
-!   and Y is a scratch array.  X must have at N, and Y at least N + N1*MPNSP1,
-!   double complex cells.  The arrays MPUU1 and MPUU2 must have been
-!   initialized by calling MPINIFFT.  This routine is not intended to be called
+!   This routine performs a complex-to-complex FFT. IS is the sign of the
+!   transform, N = 2^M is the size of the transform. N1 = 2^M1 and N2 = 2^M2,
+!   where M1 and M2 are defined as below. X is the input and output array,
+!   and Y is a scratch array. X must have at N, and Y at least N + N1*MPNSP1,
+!   double complex cells. The arrays MPUU1 and MPUU2 must have been
+!   initialized by calling MPINIFFT. This routine is not intended to be called
 !   directly by the user.
 
-!   This employs the two-pass variant of the "four-step" FFT.  See the
+!   This employs the two-pass variant of the "four-step" FFT. See the
 !   article by David H. Bailey in J. of Supercomputing, March 1990, p. 23-35.
 
 implicit none
 integer, intent(in):: is, m, n1, n2
+complex (mpdknd), intent(inout):: x(n1,n2)
+complex (mpdknd), intent(out):: y(n2+mpnsp1,n1)
 integer i, iu, j, j2, k, ku, m1, m2, nr1, nr2
-complex (mprknd), intent(inout):: x(n1,n2)
-complex (mprknd), intent(out):: y(n2+mpnsp1,n1)
-complex (mprknd) z1(mpnrow+mpnsp1,n1), z2(mpnrow+mpnsp1,n1)
+complex (mpdknd) z1(mpnrow+mpnsp1,n1), z2(mpnrow+mpnsp1,n1)
 
 m1 = (m + 1) / 2
 m2 = m - m1
@@ -2957,7 +3152,7 @@ do i = 0, n1 - 1, nr1
 !   store transposed into the appropriate section of Y.
 
   iu = i + ku - n1 - 1
-  if (is .eq. 1) then
+  if (is == 1) then
     do j = 1, n2
       do k = 1, nr1
         y(j,i+k) = mpuu2(iu+k+j*n1) * z1(k,j)
@@ -2986,10 +3181,10 @@ do i = 0, n2 - 1, nr2
 
   call mpfft2 (is, nr2, m1, n1, z2, z1)
 
-!   Copy NR2 x N1 complex block back into X array.  It's a little more
+!   Copy NR2 x N1 complex block back into X array. It's a little more
 !   complicated if M is odd.
 
-  if (mod (m, 2) .eq. 0) then
+  if (mod (m, 2) == 0) then
     do j = 1, n1
       do k = 1, nr2
         x(i+k,j) = z2(k,j)
@@ -3013,21 +3208,21 @@ end subroutine mpfft1
 subroutine mpfft2 (is, ns, m, n, x, y)
 
 !   This performs NS simultaneous N-point complex-to-complex FFTs, where
-!   N = 2^M.  X is the input and output array, and Y is a scratch array.
+!   N = 2^M. X is the input and output array, and Y is a scratch array.
 !   The arrays MPUU1 and MPUU2 must have been initialized by calling MPINIFFT.
 !   This routine is not intended to be called directly by the user.
 
 implicit none
 integer, intent(in):: is, ns, m, n
+complex (mpdknd), intent(inout):: x(mpnrow+mpnsp1,n)
+complex (mpdknd), intent(out):: y(mpnrow+mpnsp1,n)
 integer i, j, l
-complex (mprknd), intent(inout):: x(mpnrow+mpnsp1,n)
-complex (mprknd), intent(out):: y(mpnrow+mpnsp1,n)
 
 !   Perform the second variant of the Stockham FFT.
 
 do l = 1, m, 2
   call mpfft3 (is, l, ns, m, n, x, y)
-  if (l .eq. m) goto 100
+  if (l == m) goto 100
   call mpfft3 (is, l + 1, ns, m, n, y, x)
 enddo
 
@@ -3051,16 +3246,16 @@ end subroutine mpfft2
 subroutine mpfft3 (is, l, ns, m, n, x, y)
 
 !   This performs the L-th iteration of the second variant of the Stockham FFT
-!   on the NS vectors in X.  X is input/output, and Y is a scratch array.
+!   on the NS vectors in X. X is input/output, and Y is a scratch array.
 !   The arrays MPUU1 and MPUU2 must have been initialized by calling MPINIFFT.
 !   This routine is not intended to be called directly by the user.
 
 implicit none
 integer, intent(in):: is, l, ns, m, n
+complex (mpdknd), intent(inout):: x(mpnrow+mpnsp1,n)
+complex (mpdknd), intent(out):: y(mpnrow+mpnsp1,n)
 integer i, i11, i12, i21, i22, j, k, li, lj, lk, ku, n1
-complex (mprknd), intent(inout):: x(mpnrow+mpnsp1,n)
-complex (mprknd), intent(out):: y(mpnrow+mpnsp1,n)
-complex (mprknd) u1, x1, x2
+complex (mpdknd) u1, x1, x2
 
 !   Set initial parameters.
 
@@ -3075,7 +3270,7 @@ do i = 0, li - 1
   i12 = i11 + n1
   i21 = i * lj + 1
   i22 = i21 + lk
-  if (is .eq. 1) then
+  if (is == 1) then
     u1 = mpuu1(i+ku)
   else
     u1 = conjg (mpuu1(i+ku))
@@ -3098,17 +3293,17 @@ subroutine mpinifft (mpnw)
 
 !   This computes the root of unity arrays UU1 and UU2, which are required by
 !   the FFT routines, and places this data in the proper arrays defined in
-!   module MPFUNA.  MPNW is the largest precision level (in words) that will be
+!   module MPFUNA. MPNW is the largest precision level (in words) that will be
 !   subsequently used for this run.
 
 implicit none
 integer, intent(in):: mpnw
+real (mpdknd), parameter:: cl2 = 1.4426950408889633d0
 integer i, iu, j, k, ku, ln, m, mm, mm1, mm2, mq, nn, nn1, nn2, nq, nwds
-real (mprknd) cl2, d1
-parameter (cl2 = 1.4426950408889633d0)
-real (mprknd) pi, t1, ti, tpn
+real (mpdknd) d1
+real (mpdknd) pi, t1, ti, tpn
 
-!  Determine sizes for FFT arrays.  Three words are added to mpnw, since many
+!  Determine sizes for FFT arrays. Three words are added to mpnw, since many
 !  routines in MPFUND in particular increase the working precision upon entry.
 
 nwds = mpnw + 3
@@ -3135,7 +3330,7 @@ do j = 1, mq
 
   do i = 0, ln - 1
     ti = i * t1
-    mpuu1(i+ku) = cmplx (cos (ti), sin (ti), mprknd)
+    mpuu1(i+ku) = cmplx (cos (ti), sin (ti), mpdknd)
   enddo
 
   ku = ku + ln
@@ -3149,7 +3344,7 @@ ku = mq + 1
 mpuu2(1) = mq
 
 do k = 2, mq
-  mpuu2(k) = cmplx (0.d0, 0.d0, mprknd)
+  mpuu2(k) = cmplx (0.d0, 0.d0, mpdknd)
 enddo
 
 do k = 2, mq - 1
@@ -3166,7 +3361,7 @@ do k = 2, mq - 1
     do i = 0, nn1 - 1
       iu = ku + i + j * nn1
       t1 = tpn * i * j
-      mpuu2(iu) = cmplx (cos (t1), sin (t1), mprknd)
+      mpuu2(iu) = cmplx (cos (t1), sin (t1), mpdknd)
     enddo
   enddo
 
@@ -3182,18 +3377,18 @@ end subroutine mpinifft
 subroutine mplconv (iq, n, nsq, a, b, c)
 
 !   This computes the linear convolution of A and B, returning the result
-!   in C.  If IQ is 1, then it is presumed B = A; if IQ = 2, then A /= B.
+!   in C. If IQ is 1, then it is presumed B = A; if IQ = 2, then A /= B.
 !   NSQ is a spacing parameter, which should be set to more than sqrt (3*n).
 
 implicit none
 integer, intent(in):: iq, n, nsq
+real (mpdknd), intent(in):: a(n), b(n)
+real (mpdknd), intent(out):: c(2*n)
+real (mpdknd), parameter:: cl2 = 1.4426950408889633d0, ffterrmx = 0.375d0
 integer i, m1, m2, n1, n2, n4, nm
-real (mprknd) cl2, c0, ffterrmx
-parameter (cl2 = 1.4426950408889633d0, ffterrmx = 0.375d0)
-real (mprknd), intent(in):: a(n), b(n)
-real (mprknd), intent(out):: c(2*n)
-real (mprknd) an, d1(8*n+2), d2(8*n+2), d3(8*n+2), t1, t2
-complex (mprknd) dc1(4*n+nsq*mpnsp1+3), dc2(4*n+nsq*mpnsp1+3)
+real (mpdknd) c0
+real (mpdknd) an, d1(8*n+2), d2(8*n+2), d3(8*n+2), t1, t2
+complex (mpdknd) dc1(4*n+nsq*mpnsp1+3), dc2(4*n+nsq*mpnsp1+3)
 
 t1 = n
 m1 = cl2 * log (t1) + 1.d0 - mprdfz
@@ -3203,7 +3398,7 @@ n2 = 2 * n1
 n4 = 2 * n2
 nm = min (2 * n, n2)
 
-if (abs (iq) .eq. 1) then
+if (abs (iq) == 1) then
 
 !   Compute the square of A -- only one forward FFT is needed.
 
@@ -3278,17 +3473,17 @@ end subroutine mplconv
 subroutine mpmulx (a, b, c, mpnw)
 
 !   This routine multiplies MP numbers A and B to yield the MP product C,
-!   using a FFT-convolution technique.  Before calling MPMULX, the arrays
-!   UU1 and UU2 must be initialized by calling MPINIFFT.  For modest levels
+!   using a FFT-convolution technique. Before calling MPMULX, the arrays
+!   UU1 and UU2 must be initialized by calling MPINIFFT. For modest levels
 !   of precision, use MPMUL.
 
 implicit none
 integer, intent(in):: mpnw
-integer i, ia, ib, na, nb, nc, nn, nx
 integer (mpiknd), intent(in):: a(0:), b(0:)
 integer (mpiknd), intent(out):: c(0:)
+integer i, ia, ib, na, nb, nc, nn, nx
 integer (mpiknd) d(0:mpnw+8), i0, i1, i2
-real (mprknd) d1(0:4*mpnw+20), d2(0:4*mpnw+20), d3(0:8*mpnw+40)
+real (mpdknd) d1(0:4*mpnw+20), d2(0:4*mpnw+20), d3(0:8*mpnw+40)
 
 ! End of declaration
 

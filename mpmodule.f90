@@ -1,17 +1,17 @@
 !*****************************************************************************
 
-!  MPFUN20: A thread-safe Fortran arbitrary precision computation package
+!  MPFUN20-Fort: A thread-safe arbitrary precision package with special functions
 !  Main module (module MPMODULE) -- references all other modules for user.
 
-!  Revision date:  19 May 2022
+!  Updated: 28 Jun 2024
 
 !  AUTHOR:
 !     David H. Bailey
-!     Lawrence Berkeley National Lab (retired) and University of California, Davis
+!     Lawrence Berkeley National Lab (retired)
 !     Email: dhbailey@lbl.gov
 
 !  COPYRIGHT AND DISCLAIMER:
-!    All software in this package (c) 2022 David H. Bailey.
+!    All software in this package (c) 2024 David H. Bailey.
 !    By downloading or using this software you agree to the copyright, disclaimer
 !    and license agreement in the accompanying file DISCLAIMER.txt.
 
@@ -19,7 +19,7 @@
 !    This package permits one to perform floating-point computations (real and
 !    complex) to arbitrarily high numeric precision, by making only relatively
 !    minor changes to existing Fortran-90 programs.  All basic arithmetic
-!    operations and transcendental functions are supported, together with several
+!    operations and transcendental functions are supported, together with numerous
 !    special functions.
 
 !    In addition to fast execution times, one key feature of this package is a
@@ -56,32 +56,37 @@ use mpfunh
 !   Private subroutine names in module MPFUNB:
 
 private &
-  mpabs, mpadd, mpcabs, mpcadd, mpcdiv, mpceq, mpcmul, mpcnpwr, mpconjg, &
-  mpcsqrt, mpcsub, mpcpr, mpdiv, mpdivd, mpdivd40, mpdmc, mpdmc40, mpeq, &
-  mpinfr, mpmdc, mpmul, mpmuld, mpmuld40, mpneg, mpnint, mpnorm, mpnpwr, &
-  mpnrtr, mprandr, mproun, mpsgn, mpsqrt, mpsub, mpmqc,  mpqmc, mpqmc90, &
-  mpfftcr, mpfftrc, mpfft1, mpfft2, mpfft3, mpinifft, mplconv, mpmulx
+  mpabrt, mpabs, mpadd, mpaimagc, mpcabs, mpcadd, mpcdiv, mpceq, mpcinitwds, &
+  mpcmplxr, mpcmplxdcc, mpcmul, mpcneg, mpcnpwr, mpconjg, mpcsqrt, mpcsub, mpcpr, &
+  mpdcmplx, mpdecmdr, mpdiv, mpdivd, mpdivd40, mpdpreal, mpdmc, mpdmc40, mpeq, &
+  mpinfr, mpinitwds, mpmdc, mpmul, mpmuld, mpmuld40, mpneg, mpnint, mpnorm, &
+  mpnpwr, mpnrtr, mprandr, mprealdp, mprealin, mproun, mpspacer, mpsgnr, mpsqrt, &
+  mpsub, mpwprecr, mpmqc, mpqmc, mpqmc90, mpfftcr, mpfftrc, mpfft1, mpfft2, &
+  mpfft3, mpinifft, mplconv, mpmulx
 
 !   Private subroutine names in module MPFUNC:
 
 private &
-  mpctomp, mpeformat, mpfformat, mpinp, mpout
+  mpcinp, mpcout, mpctomp, mpdigin, mpdigout, mpeformat, mpfformat, mpinp, &
+  mpout, mprealch
 
 !   Private subroutine names in module MPFUND:
 
 private &
-  mpagmr, mpang, mpcagm, mpcexp,  mpclog, mpcpowcc, mpcpowcr, mpcpowrc, &
-  mpcsshr, mpcssnr, mpegammaq, mpexp, mpinitran, mplog, mplog2q, mppiq, mppower
+  mpagmr, mpang, mpcagm, mpccos, mpcexp, mpclog, mpcpowcc, mpcpowcr, mpcsin, &
+  mpcpowrc, mpcsshr, mpcssnr, mpegammaq, mpexp, mpinitran, mplog, mplog2q, &
+  mppiq, mppower
 
 !   Private subroutine names in module MPFUNE:
 
 private &
-  mpinitwds, mpwprecr, mpspacer, mpberner, mppolyadd, mppolysub, mppolymul, &
-  mpbesselinr, mpbesselir, mpbesseljnr, mpbesseljr, mpbesselknr, mpbesselkr, &
-  mpbesselynr, mpbesselyr, mpdigammabe, mperfr, mperfcr, mpexpint, mpgammar, &
-  mphurwitzzetan, mphurwitzzetanbe, mphypergeompfq, mpincgammar, mppolygamma, &
-  mppolygammabe, mppolylogini, mppolylogneg, mppolylogpos, mpstruvehn, mpzetar, &
-  mpzetaintr, mpzetabe
+  mpberner, mppolyadd, mppolysub, mppolymul, mpbesselinr, mpbesselir, &
+  mpbesseljnr, mpbesseljr, mpbesselknr, mpbesselkr, mpbesselynr, mpbesselyr, &
+  mpdigammabe, mperfr, mperfcr, mpexpint, mpgammar, mphurwitzzetan, &
+  mphurwitzzetanbe, mphypergeompfq, mpincgammar, mppolygamma, mppolygammabe, &
+  mppolylogini, mppolylogneg, mppolylogpos, mpstruvehn, mpzetar, mpzetaintr, &
+  mpzetabe, mprpolysolvex, mpcpolysolvex, mprpolygcdx, mprpolydivx, &
+  mprpolyevalx, mpcpolyevalx
 
 end module mpmodule
 
