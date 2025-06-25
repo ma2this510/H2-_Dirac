@@ -881,7 +881,7 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
 
       double precision :: tm0, tm1
 
-      type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps
+      type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps, knotxi_tmp
       type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three, C22three,C12three, C21three, C_mat, S_mat, vect
       type(mp_real), dimension(:), allocatable :: w, fv1, fv2
       type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_eta
@@ -899,9 +899,10 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       print *, "Generating B-spline knots..."
       tm0 = second()
       ! Generate the knot vectors for xi and eta
-      allocate (knotxi(ntot), knoteta(ntot))
+      allocate (knotxi_tmp(ntot+1), knotxi(ntot), knoteta(ntot))
 
-      knotxi = knot_xi(d, n, n_remove, ximin, ximax)
+      knotxi_tmp = knot_xi(d, n+1, n_remove, ximin, ximax)
+      knotxi = knotxi_tmp(1:ntot) ! Remove the last knot to avoid singularities
       knoteta = knot_eta(d, n, n_remove, eta_slp)
 
       tm1 = second()
@@ -1391,6 +1392,8 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       call write_lists(knotxi, 1, 35, 15)
       write (1, '(a)') "Non-adjusted Eta knot vector: "
       call write_lists(knoteta, 1, 35, 15)
+      write (1, '(a)') "Internuclear distance: "
+      call mpwrite(1, 35, 15, R)
       write (1, '(a)') "B-Spline basis function Order: "
       do i = 1, n**2
          i2 = indexToPair(i, n)
@@ -1475,6 +1478,8 @@ s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha 
       call mpwrite(12, 35, 15, m)
       write (12, '(a)') "Slope for eta: "
       call mpwrite(12, 35, 15, eta_slp)
+      write (1, '(a)') "Internuclear distance: "
+      call mpwrite(1, 35, 15, R)
       write (12, '(a)') "Non-adjusted Xi knot vector: "
       call write_lists(knotxi, 12, 35, 15)
       write (12, '(a)') "Non-adjusted Eta knot vector: "

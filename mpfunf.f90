@@ -53,7 +53,7 @@ implicit none
 
 !  *** Set the default standard and medium precision levels (in digits) here.
 
-integer, public, parameter:: mpipl = 4000, mpiplm = 400
+integer, public, parameter:: mpipl = 30, mpiplm = 30
 
 !----------------------------------------------------------------------------
 
