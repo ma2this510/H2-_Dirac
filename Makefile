@@ -1,6 +1,7 @@
 FC = gfortran
 FFLAGS = -O3 -fopenmp -march=native -ffast-math -ffree-line-length-none -ffree-line-length-0
-DEBUG_FLAGS = -fopenmp -g -Wall -Wextra -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=-99999 -ffree-line-length-0 -Wunused-dummy-argument
+# FFLAGS = -fopenmp -g -Wall -Wextra -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=-99999 -ffree-line-length-0
+DEBUG_FLAGS = -fopenmp -g -Wall -Wextra -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=-99999 -ffree-line-length-0
 MARG = Makefile
 
 # MPfun part
@@ -108,3 +109,5 @@ clean :
 build : clean main.out
 
 debug : debug.out
+	./debug.out
+	@bash -c 'source ~/.bashrc && push "Finished NKB H2+ Debug calculation"'

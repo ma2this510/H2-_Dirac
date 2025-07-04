@@ -31,7 +31,7 @@ contains
       zero = '0.0d0'
       one = '1.0d0'
 
-s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha + 1)*(beta + 3)) + (xi**2)/((alpha + 3)*(beta + 1)))
+      s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha + 1)*(beta + 3)) + (xi**2)/((alpha + 3)*(beta + 1)))
    end function fun_s11one
 
    subroutine int_s11one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
