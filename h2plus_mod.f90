@@ -6,11 +6,46 @@ module h2plus
 
    type(mp_real), save :: one, zero
 
+   type(mp_real), dimension(:, :), allocatable, save :: pwr_knot_xi, pwr_knot_eta
+
    private
 
    public :: init_h2plus
 
 contains
+
+   function get_pw_xi(i, k) result(result)
+      !> @brief This function returns the power of the xi knot vector.
+      !> @param i : integer : the index of the knot vector
+      !> @param k : integer : the power of the knot vector
+      !> @return result : real : the value of the power of the xi knot vector
+      integer, intent(in) :: i, k
+      type(mp_real) :: result
+
+      if (allocated(pwr_knot_xi)) then
+         result = pwr_knot_xi(i, k)
+      else
+         print *, 'Error: pwr_knot_xi is not allocated.'
+         result = zero
+      end if
+   end function get_pw_xi
+
+   function get_pw_eta(i, k) result(result)
+      !> @brief This function returns the power of the eta knot vector.
+      !> @param i : integer : the index of the knot vector
+      !> @param k : integer : the power of the knot vector
+      !> @return result : real : the value of the power of the eta knot vector
+      integer, intent(in) :: i, k
+      type(mp_real) :: result
+
+      if (allocated(pwr_knot_eta)) then
+         result = pwr_knot_eta(i, k)
+      else
+         print *, 'Error: pwr_knot_eta is not allocated.'
+         result = zero
+      end if
+   end function get_pw_eta
+
    function fun_s11one(xi, eta, Z1, Z2, m, C, R, alpha, beta) result(s11one)
       !> @brief This subroutine calculates the S11one function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
@@ -908,6 +943,28 @@ contains
       tm1 = second()
       print *, "Time taken to generate knots: ", tm1 - tm0, " seconds"
 
+      print *, "Pre-Computing the powers of the knots..."
+      tm0 = second()
+      ! Pre-compute the powers of the knots for xi and eta
+      allocate (pwr_knot_xi(ntot, 2*d), pwr_knot_eta(ntot, 2*d))
+
+      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j) SHARED(d, knotxi, knoteta, pwr_knot_xi, pwr_knot_eta, ntot)
+      do i = 1, ntot ! Loop over the number of knots
+         do j = 1, 2*d ! Loop over the powers
+            if (j == 1) then
+               pwr_knot_xi(i, j) = knotxi(i)
+               pwr_knot_eta(i, j) = knoteta(i)
+            else
+               pwr_knot_xi(i, j) = pwr_knot_xi(i, j-1) * knotxi(i)
+               pwr_knot_eta(i, j) = pwr_knot_eta(i, j-1) * knoteta(i)
+            end if
+         end do
+      end do
+      !$OMP END PARALLEL DO
+
+      tm1 = second()
+      print *, "Time taken to pre-compute powers of knots: ", tm1 - tm0, " seconds"
+
       print *, "Generating B-spline coefficients..."
       tm0 = second()
       ! Generate the B-spline coefficients for xi and eta
@@ -949,14 +1006,14 @@ contains
       ! Calculate the S11 integral
       allocate (S11one(n**2, n**2))
 
+      S11one(:, :) = zero
+
       !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, S11one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = i, n**2
+         do j = i, min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            S11one(i, j) = zero
-            S11one(j, i) = zero
             call int_s11one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, S11one(i, j))
@@ -984,14 +1041,14 @@ contains
       ! Calculate the S22 integral
       allocate (S22one(n**2, n**2))
 
+      S22one(:, :) = zero
+
       !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, S22one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = i, n**2
+         do j = i, min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            S22one(i, j) = zero
-            S22one(j, i) = zero
             call int_s22one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, S22one(i, j))
@@ -1019,14 +1076,14 @@ contains
       ! Calculate the C11one integral
       allocate (C11one(n**2, n**2))
 
+      C11one(:, :) = zero
+
       !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C11one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = i, n**2
+         do j = i, min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            C11one(i, j) = zero
-            C11one(j, i) = zero
             call int_C11one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, C11one(i, j))
@@ -1054,14 +1111,14 @@ contains
       ! Calculate the C11two integral
       allocate (C11two(n**2, n**2))
 
+      C11two(:, :) = zero
+
       !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C11two, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = i, n**2
+         do j = i, min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            C11two(i, j) = zero
-            C11two(j, i) = zero
             call int_C11two(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi, knoteta, Z1, Z2, m, C, R, C11two(i, j))
@@ -1089,14 +1146,14 @@ contains
       ! Calculate the C22one integral
       allocate (C22one(n**2, n**2))
 
+      C22one(:, :) = zero
+
       !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22one, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = i, n**2
+         do j = i, min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            C22one(i, j) = zero
-            C22one(j, i) = zero
             call int_C22one(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22one(i, j))
@@ -1124,14 +1181,14 @@ contains
       ! Calculate the C22two integral
       allocate (C22two(n**2, n**2))
 
+      C22two(:, :) = zero
+
       !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22two, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = i, n**2
+         do j = i, min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            C22two(i, j) = zero
-            C22two(j, i) = zero
             call int_C22two(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                             bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                             knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22two(i, j))
@@ -1159,13 +1216,14 @@ contains
       ! Calculate the C11three integral
       allocate (C11three(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C11three, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      C11three(:, :) = zero
+
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C11three, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = max(1, i-d*n), min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            C11three(i, j) = zero
             call int_C11three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                               bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                               knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C11three(i, j))
@@ -1190,13 +1248,14 @@ contains
       ! Calculate the C22three integral
       allocate (C22three(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22three, n, d, knotxi_eps, knoteta_eps, Z1, Z2, m, C, R)
+      C22three(:, :) = zero
+
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C22three, n, d, knotxi_eps, knoteta_eps, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = max(1, i-d*n), min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            C22three(i, j) = zero
             call int_C22three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                               bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                               knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C22three(i, j))
@@ -1221,13 +1280,14 @@ contains
       ! Calculate the C12three integral
       allocate (C12three(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C12three, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      C12three(:, :) = zero
+
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C12three, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = max(1, i-d*n), min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            C12three(i, j) = zero
             call int_C12three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                               bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                               knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C12three(i, j))
@@ -1252,13 +1312,14 @@ contains
       ! Calculate the C21three integral
       allocate (C21three(n**2, n**2))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C21three, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
+      C21three(:, :) = zero
+
+      !$OMP PARALLEL DO PRIVATE(i, j, i2, j2) SHARED(bspline_xi, bspline_eta, C21three, n, d, knotxi, knoteta, Z1, Z2, m, C, R)
       do i = 1, n**2 ! Loop over the number of B-splines
-         do j = 1, n**2
+         do j = max(1, i-d*n), min(i+d*n, n**2) ! Band of width kn
             i2 = indexToPair(i, n)
             j2 = indexToPair(j, n)
 
-            C21three(i, j) = zero
             call int_C21three(bspline_xi(i2(1), :, :), bspline_eta(i2(2), :, :), &
                               bspline_xi(j2(1), :, :), bspline_eta(j2(2), :, :), &
                               knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C21three(i, j))
