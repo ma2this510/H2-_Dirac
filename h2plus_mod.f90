@@ -23,7 +23,13 @@ contains
       type(mp_real) :: result
 
       if (allocated(pwr_knot_xi)) then
-         result = pwr_knot_xi(i, k)
+         if (k > size(pwr_knot_xi, 2)) then
+            print *, 'Warning: k exceeds the size of pwr_knot_xi.'
+            print *, 'k = ', k
+            result = zero
+         else
+            result = pwr_knot_xi(i, k)
+         end if
       else
          print *, 'Error: pwr_knot_xi is not allocated.'
          result = zero
@@ -39,17 +45,23 @@ contains
       type(mp_real) :: result
 
       if (allocated(pwr_knot_eta)) then
-         result = pwr_knot_eta(i, k)
+         if (k > size(pwr_knot_eta, 2)) then
+            print *, 'Warning: k exceeds the size of pwr_knot_eta.'
+            print *, 'k = ', k
+            result = zero
+         else
+            result = pwr_knot_eta(i, k)
+         end if
       else
          print *, 'Error: pwr_knot_eta is not allocated.'
          result = zero
       end if
    end function get_pw_eta
 
-   function fun_s11one(xi, eta, Z1, Z2, m, C, R, alpha, beta) result(s11one)
+   function fun_s11one(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta) result(s11one)
       !> @brief This subroutine calculates the S11one function for the H2+ molecule.
-      !> @param xi : real : the xi coordinate
-      !> @param eta : real : the eta coordinate
+      !> @param xi_i : integer : th i-th xi knot
+      !> @param eta_i : integer : the i-th eta knot
       !> @param Z1 : real : the number of protons for the first atom
       !> @param Z2 : real : the number of protons for the second atom
       !> @param m : real : the mass of the electron
@@ -58,15 +70,15 @@ contains
 
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta
+      type(mp_real) ::  m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta
       type(mp_real) :: s11one
 
       type(mp_real) :: zero, one
       zero = '0.0d0'
       one = '1.0d0'
 
-      s11one = 2*mppi()*(R**3)*(xi**(alpha + 1))*(eta**(beta + 1))*(-(eta**2)/((alpha + 1)*(beta + 3)) + (xi**2)/((alpha + 3)*(beta + 1)))
+      s11one = 2*mppi()*(R**3)*(get_pw_xi(xi_i, alpha + 1))*(get_pw_eta(eta_i,beta + 1))*(-(get_pw_eta(eta_i,2))/((alpha + 1)*(beta + 3)) + (get_pw_xi(xi_i,2))/((alpha + 3)*(beta + 1)))
    end function fun_s11one
 
    subroutine int_s11one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -122,10 +134,10 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*(knotxi(i1)**(alpha+1)) * (knoteta(i2)**(beta+1)) *(-(knoteta(i2)**2)/((alpha+1)*(beta+3))+(knotxi(i1)**2)/((alpha+3)*(beta+1)))
-                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*((knotxi(i1+1))**(alpha+1))* ((knoteta(i2+1))**(beta+1)) *(-(knoteta(i2+1)**2)/((alpha+1)*(beta+3))+(knotxi(i1+1)**2)/((alpha+3)*(beta+1)))
-                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*((knotxi(i1))**(alpha+1))* ((knoteta(i2+1))**(beta+1)) *(-(knoteta(i2+1)**2)/((alpha+1)*(beta+3))+(knotxi(i1)**2)/((alpha+3)*(beta+1)))
-                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*2*mppi()*(R**3)*((knotxi(i1+1))**(alpha+1))* ((knoteta(i2))**(beta+1)) *(-(knoteta(i2)**2)/((alpha+1)*(beta+3))+(knotxi(i1+1)**2)/((alpha+3)*(beta+1)))
+                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_s11one(i1, i2, Z1, Z2, m, C, R, alpha, beta)
+                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_s11one(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_s11one(i1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_s11one(i1+1, i2, Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
@@ -135,7 +147,7 @@ contains
 
    end subroutine int_s11one
 
-   function fun_s22one(xi, eta, Z1, Z2, m, C, R, alpha, beta) result(s22one)
+   function fun_s22one(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta) result(s22one)
       !> @brief This subroutine calculates the S22one function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
       !> @param eta : real : the eta coordinate
@@ -147,15 +159,15 @@ contains
 
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta
+      type(mp_real) :: m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta
       type(mp_real) :: s22one
 
       type(mp_real) :: zero, one
       zero = '0.0d0'
       one = '1.0d0'
 
-      s22one = (2*mppi()*R**3*eta**(1 + beta)*xi**(1 + alpha)*(((1 + beta)*eta**2*(5 + beta - (3 + beta)*eta**2))/(1 + alpha) + ((3 + beta)*(-5 + eta**4 + beta*(-1 + eta**4))*xi**2)/(3 + alpha) - ((5 + beta)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
+      s22one = (2*mppi()*R**3*get_pw_eta(eta_i, 1 + beta)*get_pw_xi(xi_i, 1 + alpha)*(((1 + beta)*get_pw_eta(eta_i, 2)*(5 + beta - (3 + beta)*get_pw_eta(eta_i, 2)))/(1 + alpha) + ((3 + beta)*(-5 + get_pw_eta(eta_i, 4) + beta*(-1 + get_pw_eta(eta_i, 4)))*get_pw_xi(xi_i, 2))/(3 + alpha) - ((5 + beta)*(-3 + get_pw_eta(eta_i, 2) + beta*(-1 + get_pw_eta(eta_i, 2)))*get_pw_xi(xi_i, 4))/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
    end function fun_s22one
 
    subroutine int_s22one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -211,10 +223,10 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knoteta(i2)**(1 + beta)*knotxi(i1)**(1 + alpha)*(((1 + beta)*knoteta(i2)**2*(5 + beta - (3 + beta)*knoteta(i2)**2))/(1 + alpha) + ((3 + beta)*(-5 + knoteta(i2)**4 + beta*(-1 + knoteta(i2)**4))*knotxi(i1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knoteta(i2)**2 + beta*(-1 + knoteta(i2)**2))*knotxi(i1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
-                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knoteta(i2+1)**(1 + beta)*knotxi(i1+1)**(1 + alpha)*(((1 + beta)*knoteta(i2+1)**2*(5 + beta - (3 + beta)*knoteta(i2+1)**2))/(1 + alpha) + ((3 + beta)*(-5 + knoteta(i2+1)**4 + beta*(-1 + knoteta(i2+1)**4))*knotxi(i1+1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knoteta(i2+1)**2 + beta*(-1 + knoteta(i2+1)**2))*knotxi(i1+1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
-                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knoteta(i2+1)**(1 + beta)*knotxi(i1)**(1 + alpha)*(((1 + beta)*knoteta(i2+1)**2*(5 + beta - (3 + beta)*knoteta(i2+1)**2))/(1 + alpha) + ((3 + beta)*(-5 + knoteta(i2+1)**4 + beta*(-1 + knoteta(i2+1)**4))*knotxi(i1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knoteta(i2+1)**2 + beta*(-1 + knoteta(i2+1)**2))*knotxi(i1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
-                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*(2*mppi()*R**3*knoteta(i2)**(1 + beta)*knotxi(i1+1)**(1 + alpha)*(((1 + beta)*knoteta(i2)**2*(5 + beta - (3 + beta)*knoteta(i2)**2))/(1 + alpha) + ((3 + beta)*(-5 + knoteta(i2)**4 + beta*(-1 + knoteta(i2)**4))*knotxi(i1+1)**2)/(3 + alpha) - ((5 + beta)*(-3 + knoteta(i2)**2 + beta*(-1 + knoteta(i2)**2))*knotxi(i1+1)**4)/(5 + alpha)))/((1 + beta)*(3 + beta)*(5 + beta))
+                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_s22one(i1, i2, Z1, Z2, m, C, R, alpha, beta)
+                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_s22one(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_s22one(i1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_s22one(i1+1, i2, Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
@@ -224,7 +236,7 @@ contains
 
    end subroutine int_s22one
 
-   function fun_c11one(xi, eta, Z1, Z2, m, C, R, alpha, beta) result(c11one)
+   function fun_c11one(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta) result(c11one)
       !> @brief This subroutine calculates the c11one function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
       !> @param eta : real : the eta coordinate
@@ -236,15 +248,15 @@ contains
 
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta
+      type(mp_real) :: m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta
       type(mp_real) :: c11one
 
       type(mp_real) :: zero, one
       zero = '0.0d0'
       one = '1.0d0'
 
-      c11one = (-2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*(((1 + beta)*eta*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*eta))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*xi)/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*xi**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+      c11one = (-2*mppi()*R**2*get_pw_eta(eta_i, 1 + beta)*get_pw_xi(xi_i, 1 + alpha)*(((1 + beta)*eta_i*(-(Z1*(3 + beta)) + Z2*(3 + beta) + c**2*m*R*(2 + beta)*eta_i))/(1 + alpha) + ((Z1 + Z2)*(2 + beta)*(3 + beta)*xi_i)/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*get_pw_xi(xi_i, 2))/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
    end function fun_c11one
 
    subroutine int_C11one(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -300,10 +312,10 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
-                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(i1, i2, Z1, Z2, m, C, R, alpha, beta)
+                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(i1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11one(i1+1, i2, Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             diff(i1, i2) = val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
@@ -313,7 +325,7 @@ contains
 
    end subroutine int_C11one
 
-   function fun_c11two(xi, eta, Z1, Z2, m, C, R, alpha, beta) result(c11two)
+   function fun_c11two(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta) result(c11two)
       !> @brief This subroutine calculates the c11two function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
       !> @param eta : real : the eta coordinate
@@ -325,15 +337,15 @@ contains
 
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta
+      type(mp_real) :: m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta
       type(mp_real) :: c11two
 
       type(mp_real) :: zero, one
       zero = '0.0d0'
       one = '1.0d0'
 
-      c11two = (2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*(((1 + beta)*eta*((Z1 - Z2)*(3 + beta) + c**2*m*R*(2 + beta)*eta))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*xi)/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*xi**2)/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
+      c11two = (2*mppi()*R**2*get_pw_eta(eta_i, 1 + beta)*get_pw_xi(xi_i, 1 + alpha)*(((1 + beta)*eta_i*((Z1 - Z2)*(3 + beta) + c**2*m*R*(2 + beta)*eta_i))/(1 + alpha) - ((Z1 + Z2)*(2 + beta)*(3 + beta)*xi_i)/(2 + alpha) - (c**2*m*R*(2 + beta)*(3 + beta)*get_pw_xi(xi_i, 2))/(3 + alpha)))/((1 + beta)*(2 + beta)*(3 + beta))
    end function fun_c11two
 
    subroutine int_C11two(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -387,10 +399,10 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11two(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
-                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11two(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11two(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11two(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+                  val_min_min(i1, i2) = val_min_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11two(i1, i2, Z1, Z2, m, C, R, alpha, beta)
+                  val_max_max(i1, i2) = val_max_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11two(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+                  val_min_max(i1, i2) = val_min_max(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11two(i1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+                  val_max_min(i1, i2) = val_max_min(i1, i2) + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c11two(i1+1, i2, Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             result = result + val_max_max(i1, i2) + val_min_min(i1, i2) - val_max_min(i1, i2) - val_min_max(i1, i2)
@@ -399,7 +411,7 @@ contains
 
    end subroutine int_C11two
 
-   function fun_c22one(xi, eta, Z1, Z2, m, C, R, alpha, beta) result(c22one)
+   function fun_c22one(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta) result(c22one)
       !> @brief This subroutine calculates the C22one function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
       !> @param eta : real : the eta coordinate
@@ -411,8 +423,8 @@ contains
 
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta
+      type(mp_real) :: m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta
       type(mp_real) :: c22one
 
       type(mp_real) :: zero, one
@@ -420,7 +432,7 @@ contains
       one = '1.0d0'
 
       ! c22one = 2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*((eta*((-Z1 + Z2)/(2 + beta) + (c**2*m*R*eta)/(3 + beta) + ((Z1 - Z2)*eta**2)/(4 + beta) - (c**2*m*R*eta**3)/(5 + beta)))/(1 + alpha) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) + (((Z1 - Z2)*eta*(1/(2 + beta) - eta**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + eta**4/(5 + beta)))*xi**2)/(3 + alpha) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*eta**2)*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
-      c22one = 2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*((eta*(-(c**2*m*R*(8 + 6*beta + beta**2)*eta*(-5 + 3*eta**2 + beta*(-1 + eta**2))) + Z1*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2)) - Z2*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2))))/((1 + alpha)*(2 + beta)*(3 + beta)*(4 + beta)*(5 + beta)) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) + ((-((Z1 - Z2)*(5 + 6*beta + beta**2)*eta*(2*(-2 + eta**2) + beta*(-1 + eta**2))) + c**2*m*R*(8 + 6*beta + beta**2)*(-5 + eta**4 + beta*(-1 + eta**4)))*xi**2)/((3 + alpha)*(1 + beta)*(2 + beta)*(4 + beta)*(5 + beta)) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) - (c**2*m*R*(-3 + eta**2 + beta*(-1 + eta**2))*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
+      c22one = 2*mppi()*R**2*get_pw_eta(eta_i, 1 + beta)*get_pw_xi(xi_i, 1 + alpha)*((eta_i*(-(c**2*m*R*(8 + 6*beta + beta**2)*eta_i*(-5 + 3*get_pw_eta(eta_i, 2) + beta*(-1 + get_pw_eta(eta_i, 2)))) + Z1*(15 + 8*beta + beta**2)*(2*(-2 + get_pw_eta(eta_i, 2)) + beta*(-1 + get_pw_eta(eta_i, 2))) - Z2*(15 + 8*beta + beta**2)*(2*(-2 + get_pw_eta(eta_i, 2)) + beta*(-1 + get_pw_eta(eta_i, 2)))))/((1 + alpha)*(2 + beta)*(3 + beta)*(4 + beta)*(5 + beta)) - ((Z1 + Z2)*(-3 + get_pw_eta(eta_i, 2) + beta*(-1 + get_pw_eta(eta_i, 2)))*xi_i)/((2 + alpha)*(1 + beta)*(3 + beta)) + ((-((Z1 - Z2)*(5 + 6*beta + beta**2)*eta_i*(2*(-2 + get_pw_eta(eta_i, 2)) + beta*(-1 + get_pw_eta(eta_i, 2)))) + c**2*m*R*(8 + 6*beta + beta**2)*(-5 + get_pw_eta(eta_i, 4) + beta*(-1 + get_pw_eta(eta_i, 4))))*get_pw_xi(xi_i, 2))/((3 + alpha)*(1 + beta)*(2 + beta)*(4 + beta)*(5 + beta)) + ((Z1 + Z2)*(-3 + get_pw_eta(eta_i, 2) + beta*(-1 + get_pw_eta(eta_i, 2)))*get_pw_xi(xi_i, 3))/((4 + alpha)*(1 + beta)*(3 + beta)) - (c**2*m*R*(-3 + get_pw_eta(eta_i, 2) + beta*(-1 + get_pw_eta(eta_i, 2)))*get_pw_xi(xi_i, 4))/((5 + alpha)*(1 + beta)*(3 + beta)))
 
    end function fun_c22one
 
@@ -471,10 +483,10 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-      val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
-  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1), knoteta(i2 + 1), Z1, Z2, m, C, R, alpha, beta)
-  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(knotxi(i1 + 1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+      val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(i1, i2, Z1, Z2, m, C, R, alpha, beta)
+  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(i1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22one(i1+1, i2, Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             result = result + val_max_max + val_min_min - val_max_min - val_min_max
@@ -483,7 +495,7 @@ contains
 
    end subroutine int_C22one
 
-   function fun_c22two(xi, eta, Z1, Z2, m, C, R, alpha, beta) result(c22two)
+   function fun_c22two(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta) result(c22two)
       !> @brief This subroutine calculates the C22two function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
       !> @param eta : real : the eta coordinate
@@ -495,8 +507,8 @@ contains
 
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta
+      type(mp_real) :: m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta
       type(mp_real) :: c22two
 
       type(mp_real) :: zero, one
@@ -504,7 +516,7 @@ contains
       one = '1.0d0'
 
       ! c22two = (-2)*mppi()*R*eta**(1 + beta)*xi**(1 + alpha)*((eta*((Z1 - Z2)/(2 + beta) + (c**2*m*R*eta)/(3 + beta) + ((-Z1 + Z2)*eta**2)/(4 + beta) - (c**2*m*R*eta**3)/(5 + beta)))/(1 + alpha) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) - (((Z1 - Z2)*eta*(-(1/(2 + beta)) + eta**2/(4 + beta)) + c**2*m*R*(-(1/(1 + beta)) + eta**4/(5 + beta)))*xi**2)/(3 + alpha) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) + (c**2*m*R*(3 + beta - (1 + beta)*eta**2)*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
-      c22two = -2*mppi()*R**2*eta**(1 + beta)*xi**(1 + alpha)*((eta*(-(c**2*m*R*(8 + 6*beta + beta**2)*eta*(-5 + 3*eta**2 + beta*(-1 + eta**2))) - Z1*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2)) + Z2*(15 + 8*beta + beta**2)*(2*(-2 + eta**2) + beta*(-1 + eta**2))))/((1 + alpha)*(2 + beta)*(3 + beta)*(4 + beta)*(5 + beta)) + ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi)/((2 + alpha)*(1 + beta)*(3 + beta)) + (((Z1 - Z2)*(5 + 6*beta + beta**2)*eta*(2*(-2 + eta**2) + beta*(-1 + eta**2)) + c**2*m*R*(8 + 6*beta + beta**2)*(-5 + eta**4 + beta*(-1 + eta**4)))*xi**2)/((3 + alpha)*(1 + beta)*(2 + beta)*(4 + beta)*(5 + beta)) - ((Z1 + Z2)*(-3 + eta**2 + beta*(-1 + eta**2))*xi**3)/((4 + alpha)*(1 + beta)*(3 + beta)) - (c**2*m*R*(-3 + eta**2 + beta*(-1 + eta**2))*xi**4)/((5 + alpha)*(1 + beta)*(3 + beta)))
+      c22two = -2*mppi()*R**2*get_pw_eta(eta_i, 1 + beta)*get_pw_xi(xi_i, 1 + alpha)*((eta_i*(-(c**2*m*R*(8 + 6*beta + beta**2)*eta_i*(-5 + 3*get_pw_eta(eta_i, 2) + beta*(-1 + get_pw_eta(eta_i, 2)))) - Z1*(15 + 8*beta + beta**2)*(2*(-2 + get_pw_eta(eta_i, 2)) + beta*(-1 + get_pw_eta(eta_i, 2))) + Z2*(15 + 8*beta + beta**2)*(2*(-2 + get_pw_eta(eta_i, 2)) + beta*(-1 + get_pw_eta(eta_i, 2)))))/((1 + alpha)*(2 + beta)*(3 + beta)*(4 + beta)*(5 + beta)) + ((Z1 + Z2)*(-3 + get_pw_eta(eta_i, 2) + beta*(-1 + get_pw_eta(eta_i, 2)))*xi_i)/((2 + alpha)*(1 + beta)*(3 + beta)) + (((Z1 - Z2)*(5 + 6*beta + beta**2)*eta_i*(2*(-2 + get_pw_eta(eta_i, 2)) + beta*(-1 + get_pw_eta(eta_i, 2))) + c**2*m*R*(8 + 6*beta + beta**2)*(-5 + get_pw_eta(eta_i, 4) + beta*(-1 + get_pw_eta(eta_i, 4))))*get_pw_xi(xi_i, 2))/((3 + alpha)*(1 + beta)*(2 + beta)*(4 + beta)*(5 + beta)) - ((Z1 + Z2)*(-3 + get_pw_eta(eta_i, 2) + beta*(-1 + get_pw_eta(eta_i, 2)))*get_pw_xi(xi_i, 3))/((4 + alpha)*(1 + beta)*(3 + beta)) - (c**2*m*R*(-3 + get_pw_eta(eta_i, 2) + beta*(-1 + get_pw_eta(eta_i, 2)))*get_pw_xi(xi_i, 4))/((5 + alpha)*(1 + beta)*(3 + beta)))
    end function fun_c22two
 
    subroutine int_C22two(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -554,10 +566,10 @@ contains
                do j2 = 1, size(prod_eta, 2) ! Loop over the order of eta
                   alpha = size(prod_xi, 2) - j1
                   beta = size(prod_eta, 2) - j2
-      val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
-  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta)
-  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1), knoteta(i2 + 1), Z1, Z2, m, C, R, alpha, beta)
-  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(knotxi(i1 + 1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta)
+      val_min_min = val_min_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(i1, i2, Z1, Z2, m, C, R, alpha, beta)
+  val_max_max = val_max_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+  val_min_max = val_min_max + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(i1, i2+1, Z1, Z2, m, C, R, alpha, beta)
+  val_max_min = val_max_min + prod_xi(i1, j1)*prod_eta(i2, j2)*fun_c22two(i1+1, i2, Z1, Z2, m, C, R, alpha, beta)
                end do
             end do
             result = result + val_max_max + val_min_min - val_max_min - val_min_max
@@ -566,7 +578,7 @@ contains
 
    end subroutine int_C22two
 
-   function fun_c11three(xi, eta, Z1, Z2, m, C, R, alpha, beta, chi, delta) result(c11three)
+   function fun_c11three(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta, chi, delta) result(c11three)
       !> @brief This subroutine calculates the C11three function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
       !> @param eta : real : the eta coordinate
@@ -577,8 +589,8 @@ contains
       !> @param R : real : the distance between the two nuclei
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta, chi, delta
+      type(mp_real) :: m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta, chi, delta
       type(mp_real) :: c11three
 
       type(mp_real) :: zero, one
@@ -588,11 +600,11 @@ contains
       if (beta == 0 .and. delta == 0 .and. alpha == 0 .and. chi == 0) then
          c11three = zero ! doesn't affect result
       else if (alpha == 0 .and. chi == 0) then ! No idea why this case break everything
-         c11three = c*mppi()*R**2*delta*eta**(beta + delta)*(one/(beta + delta) - eta**2/(2 + beta + delta))*xi**2
+         c11three = c*mppi()*R**2*delta*get_pw_eta(eta_i, beta + delta)*(one/(beta + delta) - get_pw_eta(eta_i, 2)/(2 + beta + delta))*get_pw_xi(xi_i, 2)
       else if (beta == 0 .and. delta == 0) then
-         c11three = c*mppi()*R**2*eta**2*chi*(-one*(xi**(alpha + chi)/(alpha + chi)) + xi**(2 + alpha + chi)/(2 + alpha + chi))
+         c11three = c*mppi()*R**2*get_pw_eta(eta_i, 2)*chi*(-one*(get_pw_xi(xi_i, alpha + chi)/(alpha + chi)) + get_pw_xi(xi_i, 2 + alpha + chi)/(2 + alpha + chi))
       else
-         c11three = c*(-2*mppi()*R**2*eta**(beta + delta)*xi**(alpha + chi)*(((beta + delta)*eta**2*chi)/(alpha + chi) - (xi**2*(-one*(delta**2*(eta**2-one)) + one*beta*eta**2*chi + delta*(2 + beta - beta*eta**2 + eta**2*chi)))/(2 + alpha + chi)))/(one*(beta + delta)*(2 + beta + delta))
+         c11three = c*(-2*mppi()*R**2*get_pw_eta(eta_i, beta + delta)*get_pw_xi(xi_i, alpha + chi)*(((beta + delta)*get_pw_eta(eta_i, 2)*chi)/(alpha + chi) - (get_pw_xi(xi_i, 2)*(-one*(delta**2*(get_pw_eta(eta_i, 2) - one)) + one*beta*get_pw_eta(eta_i, 2)*chi + delta*(2 + beta - beta*get_pw_eta(eta_i, 2) + get_pw_eta(eta_i, 2)*chi)))/(2 + alpha + chi)))/(one*(beta + delta)*(2 + beta + delta))
       end if
    end function fun_c11three
 
@@ -637,10 +649,10 @@ contains
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
                         delta = size(b_j_eta, 2) - j4
                         prefactor = b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)
-                        val_min_min = val_min_min + prefactor*fun_c11three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_max = val_max_max + prefactor*fun_c11three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_min_max = val_min_max + prefactor*fun_c11three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_min = val_max_min + prefactor*fun_c11three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_min = val_min_min + prefactor*fun_c11three(i1, i2, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + prefactor*fun_c11three(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + prefactor*fun_c11three(i1, i2+1, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + prefactor*fun_c11three(i1+1, i2, Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -651,7 +663,7 @@ contains
 
    end subroutine int_C11three
 
-   function fun_c22three(xi, eta, Z1, Z2, m, C, R, alpha, beta, chi, delta) result(c22three)
+   function fun_c22three(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta, chi, delta) result(c22three)
       !> @brief This subroutine calculates the C22three function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
       !> @param eta : real : the eta coordinate
@@ -663,8 +675,8 @@ contains
 
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta, chi, delta
+      type(mp_real) :: m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta, chi, delta
       type(mp_real) :: c22three
 
       type(mp_real) :: zero, one
@@ -674,11 +686,11 @@ contains
       if (delta == 0 .and. chi == 0) then
          c22three = zero ! doesn't affect result
       else if (chi == 0) then
-         c22three = -c*2*mppi()*(R**2)*delta*(eta**(beta + delta))*(one/(beta + delta) - (2*(eta**2))/(2 + beta + delta) + (eta**4)/(4 + beta + delta))*(-one*((xi**(2 + alpha))/(2 + alpha)) + (xi**(4 + alpha))/(4 + alpha))
+         c22three = -c*2*mppi()*R**2*delta*get_pw_eta(eta_i, beta + delta)*(one/(beta + delta) - (2*get_pw_eta(eta_i, 2))/(2 + beta + delta) + get_pw_eta(eta_i, 4)/(4 + beta + delta))*(-one*(get_pw_xi(xi_i, 2 + alpha)/(2 + alpha)) + get_pw_xi(xi_i, 4 + alpha)/(4 + alpha))
       else if (delta == 0) then
-         c22three = c*2*mppi()*(R**2)*(-one*((eta**(2 + beta))/(2 + beta)) + (eta**(4 + beta))/(4 + beta))*(xi**(alpha + chi))*chi*(one/(alpha + chi) - (2*(xi**2))/(2 + alpha + chi) + (xi**4)/(4 + alpha + chi))
+         c22three = c*2*mppi()*R**2*(-one*(get_pw_eta(eta_i, 2 + beta)/(2 + beta)) + get_pw_eta(eta_i, 4 + beta)/(4 + beta))*get_pw_xi(xi_i, alpha + chi)*chi*(one/(alpha + chi) - (2*get_pw_xi(xi_i, 2))/(2 + alpha + chi) + get_pw_xi(xi_i, 4)/(4 + alpha + chi))
       else
-         c22three = c*2*mppi()*(R**2)*(((-eta**(2+beta+delta))/(2+beta+delta)+(eta**(4+beta+delta))/(4+beta+delta))*(xi**(alpha+chi))*chi*(one/(alpha+chi)-2*(xi**2)/(2+alpha+chi)+(xi**4)/(4+alpha+chi))-delta*(eta**(beta+delta))*(one/(beta+delta)-2*(eta**2)/(2+beta+delta)+(eta**4)/(4+beta+delta))*((xi**(4+alpha+chi))/(4+alpha+chi)-(xi**(2+alpha+chi))/(2+alpha+chi)))
+         c22three = c*2*mppi()*R**2*((-get_pw_eta(eta_i, 2 + beta + delta)/(2 + beta + delta) + get_pw_eta(eta_i, 4 + beta + delta)/(4 + beta + delta))*get_pw_xi(xi_i, alpha + chi)*chi*(one/(alpha + chi) - 2*get_pw_xi(xi_i, 2)/(2 + alpha + chi) + get_pw_xi(xi_i, 4)/(4 + alpha + chi)) - delta*get_pw_eta(eta_i, beta + delta)*(one/(beta + delta) - 2*get_pw_eta(eta_i, 2)/(2 + beta + delta) + get_pw_eta(eta_i, 4)/(4 + beta + delta))*(get_pw_xi(xi_i, 4 + alpha + chi)/(4 + alpha + chi) - get_pw_xi(xi_i, 2 + alpha + chi)/(2 + alpha + chi)))
       end if
    end function fun_c22three
 
@@ -724,10 +736,10 @@ contains
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
                         delta = size(b_j_eta, 2) - j4
                         prefactor = b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)
-                        val_min_min = val_min_min + prefactor*fun_c22three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_max = val_max_max + prefactor*fun_c22three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_min_max = val_min_max + prefactor*fun_c22three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_min = val_max_min + prefactor*fun_c22three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_min = val_min_min + prefactor*fun_c22three(i1, i2, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + prefactor*fun_c22three(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + prefactor*fun_c22three(i1, i2+1, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + prefactor*fun_c22three(i1+1, i2, Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -737,7 +749,7 @@ contains
       end do
    end subroutine int_C22three
 
-   function fun_c12three(xi, eta, Z1, Z2, m, C, R, alpha, beta, chi, delta) result(c12three)
+   function fun_c12three(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta, chi, delta) result(c12three)
       !> @brief This subroutine calculates the C12three function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
       !> @param eta : real : the eta coordinate
@@ -749,15 +761,15 @@ contains
 
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta, chi, delta
+      type(mp_real) :: m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta, chi, delta
       type(mp_real) :: c12three
 
       type(mp_real) :: zero, one
       zero = '0.0d0'
       one = '1.0d0'
 
-      c12three = (2*c*mppi()*R**2*eta**(1 + beta + delta)*xi**(1 + alpha + chi)*((3 + alpha + chi)*(delta*(3 + beta + delta - (1 + beta + delta)*eta**2) + (1 + beta + delta)*eta**2*(-2 + chi) - (3 + beta + delta)*chi) + xi**2*(1 + alpha + chi)*(2*(3 + beta + delta) - delta*(3 + beta + delta) + delta*(1 + beta + delta)*eta**2 + (3 + beta + delta)*chi - (1 + beta + delta)*eta**2*chi)))/((1 + beta + delta)*(3 + beta + delta)*(1 + alpha + chi)*(3 + alpha + chi))
+      c12three = (2*c*mppi()*R**2*get_pw_eta(eta_i, 1 + beta + delta)*get_pw_xi(xi_i, 1 + alpha + chi)*((3 + alpha + chi)*(delta*(3 + beta + delta - (1 + beta + delta)*get_pw_eta(eta_i, 2)) + (1 + beta + delta)*get_pw_eta(eta_i, 2)*(-2 + chi) - (3 + beta + delta)*chi) + get_pw_xi(xi_i, 2)*(1 + alpha + chi)*(2*(3 + beta + delta) - delta*(3 + beta + delta) + delta*(1 + beta + delta)*get_pw_eta(eta_i, 2) + (3 + beta + delta)*chi - (1 + beta + delta)*get_pw_eta(eta_i, 2)*chi)))/((1 + beta + delta)*(3 + beta + delta)*(1 + alpha + chi)*(3 + alpha + chi))
    end function fun_c12three
 
    subroutine int_C12three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -802,10 +814,10 @@ contains
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
                         delta = size(b_j_eta, 2) - j4
                         prefactor = b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)
-                        val_min_min = val_min_min + prefactor*fun_c12three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_max = val_max_max + prefactor*fun_c12three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_min_max = val_min_max + prefactor*fun_c12three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_min = val_max_min + prefactor*fun_c12three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_min = val_min_min + prefactor*fun_c12three(i1, i2, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + prefactor*fun_c12three(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + prefactor*fun_c12three(i1, i2+1, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + prefactor*fun_c12three(i1+1, i2, Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -816,7 +828,7 @@ contains
 
    end subroutine int_C12three
 
-   function fun_c21three(xi, eta, Z1, Z2, m, C, R, alpha, beta, chi, delta) result(c21three)
+   function fun_c21three(xi_i, eta_i, Z1, Z2, m, C, R, alpha, beta, chi, delta) result(c21three)
       !> @brief This subroutine calculates the C21three function for the H2+ molecule.
       !> @param xi : real : the xi coordinate
       !> @param eta : real : the eta coordinate
@@ -828,14 +840,14 @@ contains
 
       !> @param alpha : real : the alpha parameter
       !> @param beta : real : the beta parameter
-      type(mp_real) :: xi, eta, m, C, R, Z1, Z2
-      integer :: alpha, beta, chi, delta
+      type(mp_real) :: m, C, R, Z1, Z2
+      integer :: xi_i, eta_i, alpha, beta, chi, delta
       type(mp_real) :: c21three
 
       zero = '0.0d0'
       one = '1.0d0'
 
-      c21three = c*2*mppi()*(R**2)*(eta**(1 + beta + delta))*(-one*(one/(one + beta + delta)) + (eta**2)/(3 + beta + delta))*(xi**(1 + alpha + chi))*(delta - chi)*(-one*(one/(one + alpha + chi)) + (xi**2)/(3 + alpha + chi))
+      c21three = c*2*mppi()*R**2*get_pw_eta(eta_i, 1 + beta + delta)*(-one*(one/(one + beta + delta)) + get_pw_eta(eta_i, 2)/(3 + beta + delta))*get_pw_xi(xi_i, 1 + alpha + chi)*(delta - chi)*(-one*(one/(one + alpha + chi)) + get_pw_xi(xi_i, 2)/(3 + alpha + chi))
    end function fun_c21three
 
    subroutine int_C21three(b_i_xi, b_i_eta, b_j_xi, b_j_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
@@ -880,10 +892,10 @@ contains
                      do j4 = 1, size(b_j_eta, 2) ! Loop over the order of eta j
                         delta = size(b_j_eta, 2) - j4
                         prefactor = b_i_xi(i1, j1)*b_i_eta(i2, j2)*b_j_xi(i1, j3)*b_j_eta(i2, j4)
-                        val_min_min = val_min_min + prefactor*fun_c21three(knotxi(i1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_max = val_max_max + prefactor*fun_c21three(knotxi(i1+1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_min_max = val_min_max + prefactor*fun_c21three(knotxi(i1), knoteta(i2+1), Z1, Z2, m, C, R, alpha, beta, chi, delta)
-                        val_max_min = val_max_min + prefactor*fun_c21three(knotxi(i1+1), knoteta(i2), Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_min = val_min_min + prefactor*fun_c21three(i1, i2, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_max = val_max_max + prefactor*fun_c21three(i1+1, i2+1, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_min_max = val_min_max + prefactor*fun_c21three(i1, i2+1, Z1, Z2, m, C, R, alpha, beta, chi, delta)
+                        val_max_min = val_max_min + prefactor*fun_c21three(i1+1, i2, Z1, Z2, m, C, R, alpha, beta, chi, delta)
                      end do
                   end do
                end do
@@ -946,11 +958,11 @@ contains
       print *, "Pre-Computing the powers of the knots..."
       tm0 = second()
       ! Pre-compute the powers of the knots for xi and eta
-      allocate (pwr_knot_xi(ntot, 2*d), pwr_knot_eta(ntot, 2*d))
+      allocate (pwr_knot_xi(ntot, 3*d), pwr_knot_eta(ntot, 3*d))
 
-      !$OMP PARALLEL DO COLLAPSE(2) PRIVATE(i, j) SHARED(d, knotxi, knoteta, pwr_knot_xi, pwr_knot_eta, ntot)
+      !$OMP PARALLEL DO default(shared) private(i, j)
       do i = 1, ntot ! Loop over the number of knots
-         do j = 1, 2*d ! Loop over the powers
+         do j = 1, 3*d ! Loop over the powers
             if (j == 1) then
                pwr_knot_xi(i, j) = knotxi(i)
                pwr_knot_eta(i, j) = knoteta(i)
@@ -974,7 +986,7 @@ contains
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on xi-axis..."
          end if
-         call init_bspine(d, i, knotxi, bspline_xi(i - n_remove, :, :), debug_bool)
+         call init_bspine(d, i, knotxi_tmp, bspline_xi(i - n_remove, :, :), debug_bool)
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on eta-axis..."
          end if
@@ -1531,6 +1543,9 @@ contains
       end do
       close (1)
 
+      print *, "Logs saved to log_file."
+      print *, "Saving eigenvalues to file..."
+
       open (unit=12, file='eigenvalues.txt', status='replace')
       write (12, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
       write (12, '(a)') "Speed of light: "
@@ -1556,6 +1571,9 @@ contains
             write (12, '(a)') " "
          end if
       end do
+      close (12)
+
+      print *, "Eigenvalues saved to eigenvalues.txt."
 
    end subroutine init_h2plus
 

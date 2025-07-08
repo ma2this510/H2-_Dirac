@@ -175,7 +175,7 @@ contains
       implicit none
       integer, intent(in) :: d, i
       type(mp_real), intent(in) :: knot(:)
-      type(mp_real), intent(inout), dimension(size(knot), d) :: result
+      type(mp_real), intent(inout), dimension(:, :) :: result
       logical, intent(in) :: display
 
       type(mp_real), dimension(1) :: table
