@@ -164,16 +164,17 @@ contains
 
    end function calcul_double
 
-   subroutine init_bspine(d, i, knot, result, display)
+   subroutine init_bspine(d, i, knot, ntot, result, display)
       !> @brief Main function to calculate the B-spline coefficients.
       !> @warning The degree and the index are the Mathematica values + 1
       !> @param d : integer : the degree of the B-spline
       !> @param i : integer : the index of the B-spline
       !> @param knot : mp_real(:) : the knot vector
+      !> @param ntot : integer : the number of usable knots
       !> @param result : mp_real(:,:) : the final coef of the B-spline
       !> @param display : logical : display the result
       implicit none
-      integer, intent(in) :: d, i
+      integer, intent(in) :: d, i, ntot
       type(mp_real), intent(in) :: knot(:)
       type(mp_real), intent(inout), dimension(:, :) :: result
       logical, intent(in) :: display
@@ -202,7 +203,7 @@ contains
 
       call rec_coef(d, i, knot, table, sol_int, tot, index)
 
-      result = calcul_double(tot, index, size(knot))
+      result = calcul_double(tot, index, ntot)
 
       if (display) then
          call print_table(d, knot, result)

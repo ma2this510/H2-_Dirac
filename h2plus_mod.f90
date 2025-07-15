@@ -962,7 +962,7 @@ contains
 
       !$OMP PARALLEL DO default(shared) private(i, j)
       do i = 1, ntot ! Loop over the number of knots
-         do j = 1, 3*d ! Loop over the powers
+         do j = 1, 3*d ! Loop over the powers WARNING MEMORY LEAK ?
             if (j == 1) then
                pwr_knot_xi(i, j) = knotxi(i)
                pwr_knot_eta(i, j) = knoteta(i)
@@ -986,11 +986,11 @@ contains
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on xi-axis..."
          end if
-         call init_bspine(d, i, knotxi_tmp, bspline_xi(i - n_remove, :, :), debug_bool)
+         call init_bspine(d, i, knotxi_tmp, ntot, bspline_xi(i - n_remove, :, :), debug_bool)
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on eta-axis..."
          end if
-         call init_bspine(d, i, knoteta, bspline_eta(i - n_remove, :, :), debug_bool)
+         call init_bspine(d, i, knoteta, ntot, bspline_eta(i - n_remove, :, :), debug_bool)
       end do
 
       ! Modify the knots to avoid singularities.
@@ -1442,7 +1442,7 @@ contains
       print *, "Calculating the eigenvalues..."
       tm0 = second()
       ! Calculate the eigenvalues and eigenvectors
-      allocate (w(4*n**2), fv1(4*n**2), fv2(4*n**2))
+      allocate (w(4*n**2), fv1(4*n**2), fv2(4*n**2), vect(4*n**2, 4*n**2))
 
       call rsg(4*n**2, 4*n**2, C_mat, S_mat, w, 0, vect, fv1, fv2, ierr)
 
@@ -1554,8 +1554,8 @@ contains
       call mpwrite(12, 35, 15, m)
       write (12, '(a)') "Slope for eta: "
       call mpwrite(12, 35, 15, eta_slp)
-      write (1, '(a)') "Internuclear distance: "
-      call mpwrite(1, 35, 15, R)
+      write (12, '(a)') "Internuclear distance: "
+      call mpwrite(12, 35, 15, R)
       write (12, '(a)') "Non-adjusted Xi knot vector: "
       call write_lists(knotxi, 12, 35, 15)
       write (12, '(a)') "Non-adjusted Eta knot vector: "
