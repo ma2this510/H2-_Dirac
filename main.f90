@@ -1,7 +1,7 @@
 program main
    use mpmodule
    use bspline_gen
-   use h2plus
+   use h2plus_sep
    implicit none
 
    integer :: d, n, n_remove, jz2
@@ -35,7 +35,7 @@ program main
 
    ! Start the timer
    tm_init = second()
-   call init_h2plus(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
+   call init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
    tm_fin = second()
    print *, "Elapsed time for global execution: ", tm_fin - tm_init, " seconds"
 end program main
