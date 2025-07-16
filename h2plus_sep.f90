@@ -860,7 +860,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps, knotxi_tmp
       type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three, C22three,C12three, C21three, C_mat, S_mat, vect
       type(mp_real), dimension(:), allocatable :: w, fv1, fv2
-      type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_eta
+      type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_xi_tmp, bspline_eta
       logical :: debug_bool = .false.
 
       integer :: ntot, i, j, ierr
@@ -887,18 +887,20 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Generating B-spline coefficients..."
       tm0 = second()
       ! Generate the B-spline coefficients for xi and eta
-      allocate (bspline_xi(n, ntot, d), bspline_eta(n, ntot, d))
+      allocate (bspline_xi(n, ntot, d), bspline_xi_tmp(n, ntot+1, d), bspline_eta(n, ntot, d))
 
       do i = 1 + n_remove, n + n_remove ! Loop over the number of B-splines
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on xi-axis..."
          end if
-         call init_bspine(d, i, knotxi_tmp, ntot+1, bspline_xi(i - n_remove, :, :), debug_bool)
+         call init_bspine(d, i, knotxi_tmp, ntot+1, bspline_xi_tmp(i - n_remove, :, :), debug_bool)
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on eta-axis..."
          end if
          call init_bspine(d, i, knoteta, ntot, bspline_eta(i - n_remove, :, :), debug_bool)
       end do
+
+      bspline_xi(:, :, :) = bspline_xi_tmp(:, 1:ntot, :)
 
       ! Modify the knots to avoid singularities.
       allocate (knotxi_eps(ntot), knoteta_eps(ntot))
@@ -1207,12 +1209,12 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       call write_lists(knoteta, 1, 35, 15)
       write (1, '(a)') "Internuclear distance: "
       call mpwrite(1, 35, 15, R)
-      write (1, '(a)') "B-Spline basis function Order: "
-      do i = 1, n**2
-         i2 = indexToPair(i, n)
-         write (1, '(i4, a, i4, a, i4)', advance='no') i, " ", i2(1), " ", i2(2)
-         write (1, '(a)') " "
-      end do
+      ! write (1, '(a)') "B-Spline basis function Order: "
+      ! do i = 1, n**2
+      !    i2 = indexToPair(i, n)
+      !    write (1, '(i4, a, i4, a, i4)', advance='no') i, " ", i2(1), " ", i2(2)
+      !    write (1, '(a)') " "
+      ! end do
       write (1, '(a)') "Adjusted Xi knot vector: "
       call write_lists(knotxi_eps, 1, 35, 15)
       write (1, '(a)') "Adjusted Eta knot vector: "

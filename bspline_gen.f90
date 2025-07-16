@@ -243,7 +243,11 @@ contains
 
       do i = 1, n - d + 2 + 2*n_remove
          itot = itot + 1
-         result(itot) = ximin*(ximax/ximin)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
+         if (i == 1) then
+            result(itot) = ximin
+         else
+            result(itot) = ximin*(ximax/ximin)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
+         end if
       end do
 
       do i = 1, d - 1
