@@ -15,9 +15,9 @@ program main
 
    !-------------------------------------------------
    ! Define Important Constants
-   d = 4 ! Order of the B-Spline (order Mathematica + 1)
-   n = 4 ! Number of Usable B-spline
-   n_remove = 1 ! Number of knots to remove from each end
+   d = 8 ! Order of the B-Spline (order Mathematica + 1)
+   n = 12 ! Number of Usable B-spline
+   n_remove = 0 ! Number of knots to remove from each end
    Z1 = '1.0d0' ! number of protons for the first atom
    Z2 = '1.0d0' ! number of protons for the second atom
    m = '1.0d0' ! mass of the electron
@@ -30,7 +30,7 @@ program main
    epsilon = zero ! machine epsilon
    eta_slp = '4.0d-2' ! paramet for the generation of the knot vector on eta
    !-------------------------------------------------
-   save_step = .true. ! Save matrices at each step
+   save_step = .false. ! Save matrices at each step
    !-------------------------------------------------
 
    ! Start the timer

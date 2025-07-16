@@ -1,6 +1,6 @@
 FC = gfortran
-# FFLAGS = -O3 -fopenmp -march=native -ffast-math -ffree-line-length-none -ffree-line-length-0
-FFLAGS = -fopenmp -g -Wall -Wextra -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=-99999 -ffree-line-length-0
+FFLAGS = -O3 -fopenmp -march=native -ffast-math -ffree-line-length-none -ffree-line-length-0
+# FFLAGS = -fopenmp -g -Wall -Wextra -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=-99999 -ffree-line-length-0
 DEBUG_FLAGS = -fopenmp -g -Wall -Wextra -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=-99999 -ffree-line-length-0 -fcheck=all
 MARG = Makefile
 
