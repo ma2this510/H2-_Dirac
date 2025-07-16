@@ -6,58 +6,11 @@ module h2plus_sep
 
    type(mp_real), save :: one, zero
 
-   type(mp_real), dimension(:, :), allocatable, save :: pwr_knot_xi, pwr_knot_eta
-
    private
 
    public :: init_h2plus_sep
 
 contains
-
-   function get_pw_xi(i, k) result(result)
-      !> @brief This function returns the power of the xi knot vector.
-      !> @param i : integer : the index of the knot vector
-      !> @param k : integer : the power of the knot vector
-      !> @return result : real : the value of the power of the xi knot vector
-      integer, intent(in) :: i, k
-      type(mp_real) :: result
-
-      if (allocated(pwr_knot_xi)) then
-         if (k > size(pwr_knot_xi, 2)) then
-            print *, 'Warning: k exceeds the size of pwr_knot_xi.'
-            print *, 'k = ', k
-            result = zero
-         else
-            result = pwr_knot_xi(i, k)
-         end if
-      else
-         print *, 'Error: pwr_knot_xi is not allocated.'
-         result = zero
-      end if
-   end function get_pw_xi
-
-   function get_pw_eta(i, k) result(result)
-      !> @brief This function returns the power of the eta knot vector.
-      !> @param i : integer : the index of the knot vector
-      !> @param k : integer : the power of the knot vector
-      !> @return result : real : the value of the power of the eta knot vector
-      integer, intent(in) :: i, k
-      type(mp_real) :: result
-
-      if (allocated(pwr_knot_eta)) then
-         if (k > size(pwr_knot_eta, 2)) then
-            print *, 'Warning: k exceeds the size of pwr_knot_eta.'
-            print *, 'k = ', k
-            result = zero
-         else
-            result = pwr_knot_eta(i, k)
-         end if
-      else
-         print *, 'Error: pwr_knot_eta is not allocated.'
-         result = zero
-      end if
-   end function get_pw_eta
-
    subroutine int_C11one(b_xi, b_eta, knotxi, knoteta, Z1, Z2, m, C, R, result)
       !> @brief This subroutine calculates the C11one integral for the H2+ molecule.
       !> @param b_xi : real(:, :, :) : the B-spline coefficients for the xi direction
@@ -931,28 +884,6 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       tm1 = second()
       print *, "Time taken to generate knots: ", tm1 - tm0, " seconds"
 
-      print *, "Pre-Computing the powers of the knots..."
-      tm0 = second()
-      ! Pre-compute the powers of the knots for xi and eta
-      allocate (pwr_knot_xi(ntot, 3*d), pwr_knot_eta(ntot, 3*d))
-
-      !$OMP PARALLEL DO default(shared) private(i, j)
-      do i = 1, ntot ! Loop over the number of knots
-         do j = 1, 3*d ! Loop over the powers WARNING MEMORY LEAK ?
-            if (j == 1) then
-               pwr_knot_xi(i, j) = knotxi(i)
-               pwr_knot_eta(i, j) = knoteta(i)
-            else
-               pwr_knot_xi(i, j) = pwr_knot_xi(i, j - 1)*knotxi(i)
-               pwr_knot_eta(i, j) = pwr_knot_eta(i, j - 1)*knoteta(i)
-            end if
-         end do
-      end do
-      !$OMP END PARALLEL DO
-
-      tm1 = second()
-      print *, "Time taken to pre-compute powers of knots: ", tm1 - tm0, " seconds"
-
       print *, "Generating B-spline coefficients..."
       tm0 = second()
       ! Generate the B-spline coefficients for xi and eta
@@ -962,7 +893,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on xi-axis..."
          end if
-         call init_bspine(d, i, knotxi_tmp, ntot, bspline_xi(i - n_remove, :, :), debug_bool)
+         call init_bspine(d, i, knotxi_tmp, ntot+1, bspline_xi(i - n_remove, :, :), debug_bool)
          if (debug_bool) then
             print *, "Generating B-spline coefficients for B-spline ", i, "on eta-axis..."
          end if
