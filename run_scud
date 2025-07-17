@@ -7,8 +7,8 @@
 
 hostname
 export OMP_NUM_THREADS=$SLURM_TASKS_PER_NODE
-make main.out
+make debug.out
 #time valgrind --leak-check=yes ./main.out
-time ./main.out
+time ./debug.out
 source ~/.bashrc
 push "Computation Finish"
