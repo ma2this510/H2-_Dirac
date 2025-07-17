@@ -42,3 +42,4 @@ html/
 latex/
 fort.11
 log_file
+.vscode/tasks.json
