@@ -167,7 +167,7 @@ xi_1(i, j) = xi_1(i, j) - prod_xi(i, j, k, l)*(knotxi(k)**(2 + alpha)*((Z1 + Z2)
             i2 = indexToPair(i, size(b_xi, 1))
             j2 = indexToPair(j, size(b_eta, 1))
 
-            result(i, j) = -2*mppi()*(R**3)*(xi_1(i2(1), j2(1))*eta_1(i2(2), j2(2)) - xi_2(i2(1), j2(1))*eta_2(i2(2), j2(2)))
+            result(i, j) = -2*mppi()*(R**3)*(xi_1(i2(1), j2(1))*eta_1(i2(2), j2(2)) + xi_2(i2(1), j2(1))*eta_2(i2(2), j2(2)))
          end do
       end do
 
@@ -329,7 +329,7 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
             i2 = indexToPair(i, size(b_xi, 1))
             j2 = indexToPair(j, size(b_eta, 1))
 
-            result(i, j) = -2*mppi()*(R**3)*(xi_1(i2(1), j2(1))*eta_1(i2(2), j2(2)) - xi_2(i2(1), j2(1))*eta_2(i2(2), j2(2)))
+            result(i, j) = -2*mppi()*(R**3)*(xi_1(i2(1), j2(1))*eta_1(i2(2), j2(2)) + xi_2(i2(1), j2(1))*eta_2(i2(2), j2(2)))
          end do
       end do
 
