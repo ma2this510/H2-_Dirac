@@ -7,10 +7,40 @@ MARG = Makefile
 
 # MPfun part
 
-mpfun : 
-	$(FC) -Ofast -c mpfuna.f90 mpfunb.f90 mpfunc.f90 mpfund.f90 mpfune.f90 mpfunf.f90 mpfung1.f90 mpfunh1.f90 mpmodule.f90 
-	$(FC) -O3 -c mpmask13.f90 second.f90
+mpfuna.o : mpfuna.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpfuna.f90
 
+mpfunb.o : mpfunb.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpfunb.f90
+
+mpfunc.o : mpfunc.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpfunc.f90
+
+mpfund.o : mpfund.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpfund.f90
+
+mpfune.o : mpfune.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpfune.f90
+
+mpfunf.o : mpfunf.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpfunf.f90
+
+mpfung1.o : mpfung1.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpfung1.f90
+
+mpfunh1.o : mpfunh1.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpfunh1.f90
+
+mpmodule.o : mpmodule.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpmodule.f90
+
+mpmask13.o : mpmask13.f90
+	$(FC) $(FFLAGS) -ffast-math -c mpmask13.f90
+
+second.o : second.f90
+	$(FC) $(FFLAGS) -ffast-math -c second.f90
+
+mpfun : mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o
 
 # EigenSolver part old
 
@@ -67,9 +97,11 @@ main.o : main.f90
 main.out : mpfun eigen tools_mp.o bspline_gen.o h2plus_mod.o h2plus_sep.o main.o $(MARG)
 	$(FC) $(FFLAGS) -fmax-stack-var-size=0 -o main.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o tools_mp.o bspline_gen.o h2plus_mod.o h2plus_sep.o main.o
 
-debug.out : mpfun eigen tools_mp.o bspline_gen.o h2plus_mod.o h2plus_sep.o main.o $(MARG)
+debug.out : mpfun eigen $(MARG)
+	$(FC) $(DEBUG_FLAGS) -c tools_mp.f90
 	$(FC) $(DEBUG_FLAGS) -c bspline_gen.f90
 	$(FC) $(DEBUG_FLAGS) -c h2plus_mod.f90
+	$(FC) $(DEBUG_FLAGS) -c h2plus_sep.f90
 	$(FC) $(DEBUG_FLAGS) -c main.f90
 	$(FC) $(DEBUG_FLAGS) -o debug.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o tools_mp.o bspline_gen.o h2plus_mod.o h2plus_sep.o main.o
 
