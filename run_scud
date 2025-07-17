@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH --job-name=dkb_conv
+#SBATCH -t 3-00:00:00
+#SBATCH -p max_120_hours
+#SBATCH -n 24
+#SBATCH -w scud
+
+hostname
+export OMP_NUM_THREADS=$SLURM_TASKS_PER_NODE
+make main.out
+time valgrind --leak-check=yes ./main.out
+source ~/.bashrc
+push "Computation Finish"

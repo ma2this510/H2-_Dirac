@@ -927,6 +927,8 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       ! Calculate the C11one integral
       allocate (C11one(n**2, n**2))
 
+      C11one = zero
+
       call int_C11one(bspline_xi, bspline_eta, knotxi_eps, knoteta_eps, Z1, Z2, m, C, R, C11one)
 
       tm1 = second()
