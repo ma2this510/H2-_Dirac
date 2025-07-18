@@ -6,9 +6,10 @@
 #SBATCH -w scud
 
 hostname
+echo $(date -u)
 export OMP_NUM_THREADS=$SLURM_TASKS_PER_NODE
-make debug.out
+make main.out
 #time valgrind --leak-check=yes ./main.out
-time ./debug.out
+time ./main.out
 source ~/.bashrc
 push "Computation Finish"
