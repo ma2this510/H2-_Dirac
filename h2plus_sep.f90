@@ -561,10 +561,10 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
                      eta_1(i, j) = eta_1(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta)) ! Finale
                      eta_1(i, j) = eta_1(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k)**(3 + beta + delta)/(3 + beta + delta)) ! Initial
 
-          eta_2(i, j) = eta_2(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) ! Finale
+                     eta_2(i, j) = eta_2(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) ! Finale
                      eta_2(i, j) = eta_2(i, j) - b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k)**(1 + beta + delta)/(1 + beta + delta) ! Initial
 
-          eta_3(i, j) = eta_3(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta) ! Finale
+                     eta_3(i, j) = eta_3(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta) ! Finale
                      eta_3(i, j) = eta_3(i, j) - b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k)**(3 + beta + delta)/(3 + beta + delta) ! Initial
 
                      eta_4(i, j) = eta_4(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta)) ! Finale
@@ -587,9 +587,12 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
             i2 = indexToPair(i, size(b_xi, 1))
             j2 = indexToPair(j, size(b_eta, 1))
 
-            result(i, j) = 2*c*mppi()*(R**2)*(one*xi_1(i2(1), j2(1))*(eta_1(i2(2), j2(2)) + eta_2(i2(2), j2(2))) + &
-                                              one*eta_3(i2(2), j2(2))*(xi_2(i2(1), j2(1)) - xi_3(i2(1), j2(1))) + &
-                                              xi_4(i2(1), j2(1))*eta_4(i2(2), j2(2)) - xi_5(i2(1), j2(1))*eta_5(i2(2), j2(2)))
+            ! result(i, j) = 2*c*mppi()*(R**2)*(one*xi_1(i2(1), j2(1))*(eta_1(i2(2), j2(2)) + eta_2(i2(2), j2(2))) + &
+            !                                   one*eta_3(i2(2), j2(2))*(xi_2(i2(1), j2(1)) - xi_3(i2(1), j2(1))) + &
+            !                                   xi_4(i2(1), j2(1))*eta_4(i2(2), j2(2)) - xi_5(i2(1), j2(1))*eta_5(i2(2), j2(2)))
+            result(i, j) = 2*c*mppi()*(R**2)*((one*xi_1(i2(1), j2(1)) + xi_4(i2(1), j2(1)))*(eta_1(i2(2), j2(2))) + &
+                                                xi_2(i2(1), j2(1))*(eta_3(i2(2), j2(2)) - eta_5(i2(2), j2(2))) + &
+                                                xi_1(i2(1), j2(1))*eta_2(i2(2), j2(2)) - xi_3(i2(1), j2(1))*eta_3(i2(2), j2(2)))
          end do
       end do
 
