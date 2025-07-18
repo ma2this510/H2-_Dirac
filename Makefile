@@ -8,37 +8,37 @@ MARG = Makefile
 # MPfun part
 
 mpfuna.o : mpfuna.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpfuna.f90
+	$(FC) $(FFLAGS) -c mpfuna.f90
 
 mpfunb.o : mpfunb.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpfunb.f90
+	$(FC) $(FFLAGS) -c mpfunb.f90
 
 mpfunc.o : mpfunc.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpfunc.f90
+	$(FC) $(FFLAGS) -c mpfunc.f90
 
 mpfund.o : mpfund.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpfund.f90
+	$(FC) $(FFLAGS) -c mpfund.f90
 
 mpfune.o : mpfune.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpfune.f90
+	$(FC) $(FFLAGS) -c mpfune.f90
 
 mpfunf.o : mpfunf.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpfunf.f90
+	$(FC) $(FFLAGS) -c mpfunf.f90
 
 mpfung1.o : mpfung1.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpfung1.f90
+	$(FC) $(FFLAGS) -c mpfung1.f90
 
 mpfunh1.o : mpfunh1.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpfunh1.f90
+	$(FC) $(FFLAGS) -c mpfunh1.f90
 
 mpmodule.o : mpmodule.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpmodule.f90
+	$(FC) $(FFLAGS) -c mpmodule.f90
 
 mpmask13.o : mpmask13.f90
-	$(FC) $(FFLAGS) -ffast-math -c mpmask13.f90
+	$(FC) $(FFLAGS) -c mpmask13.f90
 
 second.o : second.f90
-	$(FC) $(FFLAGS) -ffast-math -c second.f90
+	$(FC) $(FFLAGS) -c second.f90
 
 mpfun : mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o
 

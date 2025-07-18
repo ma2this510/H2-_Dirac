@@ -15,7 +15,7 @@ program main
 
    !-------------------------------------------------
    ! Define Important Constants
-   d = 6 ! Order of the B-Spline (order Mathematica + 1)
+   d = 8 ! Order of the B-Spline (order Mathematica + 1)
    n = 16 ! Number of Usable B-spline
    n_remove = 0 ! Number of knots to remove from each end
    Z1 = '1.0d0' ! number of protons for the first atom
