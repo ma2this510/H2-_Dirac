@@ -28,7 +28,7 @@ program main
    jz2 = one ! Quantum number will be divided by 2
    ! epsilon = '1.0d-5' ! machine epsilon
    epsilon = zero ! machine epsilon
-   eta_slp = '4.0d-2' ! paramet for the generation of the knot vector on eta
+   eta_slp = '6.0d-2' ! paramet for the generation of the knot vector on eta
    !-------------------------------------------------
    save_step = .false. ! Save matrices at each step
    !-------------------------------------------------
