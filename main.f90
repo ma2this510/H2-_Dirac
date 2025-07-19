@@ -23,12 +23,12 @@ program main
    m = '1.0d0' ! mass of the electron
    C = '137.035999679d0' ! check CODATA 1986
    R = '1.0d0' ! distance between the two nuclei
-   ximax = '50.0d0' ! maximum position of the B-spline on z-axis
+   ximax = '30.0d0' ! maximum position of the B-spline on z-axis
    ximin = '1.0d0' ! minimum position of the B-spline on z-axis
    jz2 = one ! Quantum number will be divided by 2
    ! epsilon = '1.0d-5' ! machine epsilon
    epsilon = zero ! machine epsilon
-   eta_slp = '4.0d-2' ! paramet for the generation of the knot vector on eta
+   eta_slp = '2.0d-2' ! paramet for the generation of the knot vector on eta
    !-------------------------------------------------
    save_step = .false. ! Save matrices at each step
    !-------------------------------------------------
