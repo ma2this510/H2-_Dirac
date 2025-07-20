@@ -43,3 +43,6 @@ latex/
 fort.11
 log_file
 .vscode/tasks.json
+
+# Sumatra
+.smt
