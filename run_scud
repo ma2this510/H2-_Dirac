@@ -7,9 +7,11 @@
 
 hostname
 echo $(date -u)
+branch=$(git rev-parse --abbrev-ref HEAD)
+echo "Current branch is: \"$branch\""
 export OMP_NUM_THREADS=$SLURM_TASKS_PER_NODE
 make main.out
 #time valgrind --leak-check=yes ./main.out
-time ./main.out
+time ./main.out < input.dat
 source ~/.bashrc
-push "Computation Finish"
+push "Computation Finish on branch \"$branch\" in directory \"$(pwd)\""

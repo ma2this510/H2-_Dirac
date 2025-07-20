@@ -5,6 +5,7 @@ program main
    implicit none
 
    integer :: d, n, n_remove, jz2
+   character(len=20) :: Z1read, Z2read, mread, Cread, Rread, ximaxread, ximinread, jz2read, epsilonread, eta_slpread
    type(mp_real) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, zero, one
    logical :: save_step
 
@@ -15,23 +16,49 @@ program main
 
    !-------------------------------------------------
    ! Define Important Constants
-   d = 8 ! Order of the B-Spline (order Mathematica + 1)
-   n = 30 ! Number of Usable B-spline
-   n_remove = 0 ! Number of knots to remove from each end
-   Z1 = '1.0d0' ! number of protons for the first atom
-   Z2 = '1.0d0' ! number of protons for the second atom
-   m = '1.0d0' ! mass of the electron
-   C = '137.035999679d0' ! check CODATA 1986
-   R = '1.0d0' ! distance between the two nuclei
-   ximax = '30.0d0' ! maximum position of the B-spline on z-axis
-   ximin = '1.0d0' ! minimum position of the B-spline on z-axis
    jz2 = one ! Quantum number will be divided by 2
-   ! epsilon = '1.0d-5' ! machine epsilon
-   epsilon = zero ! machine epsilon
-   eta_slp = '4.0d-2' ! paramet for the generation of the knot vector on eta
    !-------------------------------------------------
    save_step = .false. ! Save matrices at each step
    !-------------------------------------------------
+
+   !-------------------------------------------------
+   ! Read Input Parameters
+   !-------------------------------------------------
+
+   read(*,*) d
+
+   read(*,*) n
+
+   read(*,*) n_remove
+
+   read(*,*) Z1read
+   Z1 = mpreal(Z1read)
+
+   read(*,*) Z2read
+   Z2 = mpreal(Z2read)
+
+   read(*,*) mread
+   m = mpreal(mread)
+
+   read(*,*) Cread
+   C = mpreal(Cread)
+
+   read(*,*) Rread
+   R = mpreal(Rread)
+
+   read(*,*) ximaxread
+   ximax = mpreal(ximaxread)
+
+   read(*,*) ximinread
+   ximin = mpreal(ximinread)
+
+   read(*,*) epsilonread
+   epsilon = mpreal(epsilonread)
+
+   read(*,*) eta_slpread
+   eta_slp = mpreal(eta_slpread)
+
+   read(*,*) save_step
 
    ! Start the timer
    tm_init = second()
