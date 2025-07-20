@@ -106,7 +106,7 @@ debug.out : mpfun eigen $(MARG)
 	$(FC) $(DEBUG_FLAGS) -o debug.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o tools_mp.o bspline_gen.o h2plus_mod.o h2plus_sep.o main.o
 
 run : main.out
-	./main.out < input.dat
+	./main.out < input.txt
 	@bash -c 'source ~/.bashrc && push "Finished NKB H2+ calculation"'
 
 clean :
@@ -115,5 +115,5 @@ clean :
 build : clean main.out
 
 debug : debug.out
-	./debug.out < input.dat
+	./debug.out < input.txt
 	@bash -c 'source ~/.bashrc && push "Finished NKB H2+ Debug calculation"'
