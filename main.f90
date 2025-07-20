@@ -18,12 +18,12 @@ program main
    d = 8 ! Order of the B-Spline (order Mathematica + 1)
    n = 30 ! Number of Usable B-spline
    n_remove = 0 ! Number of knots to remove from each end
-   Z1 = '1.0d0' ! number of protons for the first atom
-   Z2 = '1.0d0' ! number of protons for the second atom
+   Z1 = '90.0d0' ! number of protons for the first atom
+   Z2 = '90.0d0' ! number of protons for the second atom
    m = '1.0d0' ! mass of the electron
    C = '137.035999679d0' ! check CODATA 1986
-   R = '1.0d0' ! distance between the two nuclei
-   ximax = '30.0d0' ! maximum position of the B-spline on z-axis
+   R = '1.111d-2' ! distance between the two nuclei
+   ximax = '15.0d0' ! maximum position of the B-spline on z-axis
    ximin = '1.0d0' ! minimum position of the B-spline on z-axis
    jz2 = one ! Quantum number will be divided by 2
    ! epsilon = '1.0d-5' ! machine epsilon

@@ -5,6 +5,8 @@ FFLAGS = -fopenmp -ffree-line-length-0
 DEBUG_FLAGS = -fopenmp -g -Wall -Wextra -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=-99999 -ffree-line-length-0 -fcheck=all
 MARG = Makefile
 
+BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+
 # MPfun part
 
 mpfuna.o : mpfuna.f90
@@ -107,7 +109,7 @@ debug.out : mpfun eigen $(MARG)
 
 run : main.out
 	./main.out
-	@bash -c 'source ~/.bashrc && push "Finished NKB H2+ calculation"'
+	@bash -c 'source ~/.bashrc && push "Finished NKB H2+ calculation on branch $(BRANCH)"'
 
 clean :
 	rm -f *.o *.mod *.out
@@ -116,4 +118,4 @@ build : clean main.out
 
 debug : debug.out
 	./debug.out
-	@bash -c 'source ~/.bashrc && push "Finished NKB H2+ Debug calculation"'
+	@bash -c 'source ~/.bashrc && push "Finished NKB H2+ Debug calculation on branch $(BRANCH)"'
