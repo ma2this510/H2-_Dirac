@@ -938,7 +938,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate C11one integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/C11one_sep.csv", status='replace')
+         open (10, file="C11one_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(C11one(i, :), 10, 30, 10)
          end do
@@ -955,7 +955,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate C11two integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/C11two_sep.csv", status='replace')
+         open (10, file="C11two_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(C11two(i, :), 10, 30, 10)
          end do
@@ -972,7 +972,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate C22one integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/C22one_sep.csv", status='replace')
+         open (10, file="C22one_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(C22one(i, :), 10, 30, 10)
          end do
@@ -989,7 +989,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate C22two integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/C22two_sep.csv", status='replace')
+         open (10, file="C22two_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(C22two(i, :), 10, 30, 10)
          end do
@@ -1006,7 +1006,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate C11three integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/C11three_sep.csv", status='replace')
+         open (10, file="C11three_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(C11three(i, :), 10, 30, 10)
          end do
@@ -1023,7 +1023,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate C22three integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/C22three_sep.csv", status='replace')
+         open (10, file="C22three_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(C22three(i, :), 10, 30, 10)
          end do
@@ -1040,7 +1040,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate C12three integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/C12three_sep.csv", status='replace')
+         open (10, file="C12three_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(C12three(i, :), 10, 30, 10)
          end do
@@ -1057,7 +1057,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate C21three integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/C21three_sep.csv", status='replace')
+         open (10, file="C21three_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(C21three(i, :), 10, 30, 10)
          end do
@@ -1074,7 +1074,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate S11one integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/S11one_sep.csv", status='replace')
+         open (10, file="S11one_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(S11one(i, :), 10, 30, 10)
          end do
@@ -1091,7 +1091,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Time taken to calculate S22one integral: ", tm1 - tm0
 
       if (save_step) then
-         open (10, file="result/S22one_sep.csv", status='replace')
+         open (10, file="S22one_sep.csv", status='replace')
          do i = 1, n**2
             call write_csv(S22one(i, :), 10, 30, 10)
          end do
@@ -1125,7 +1125,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
 
       if (save_step) then
          print *, "Saving C_mat matrix to file..."
-         open (unit=13, file='result/C_mat.csv', status='replace')
+         open (unit=13, file='C_mat.csv', status='replace')
          do i = 1, 4*n**2
             call write_csv(C_mat(i, :), 13, 50, 30)
          end do
@@ -1153,7 +1153,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
 
       if (save_step) then
          print *, "Saving S_mat matrix to file..."
-         open (unit=14, file='result/S_mat.csv', status='replace')
+         open (unit=14, file='S_mat.csv', status='replace')
          do i = 1, 4*n**2
             call write_csv(S_mat(i, :), 14, 50, 30)
          end do
@@ -1200,7 +1200,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
 
       print *, "Saving logs to file..."
       ! Save logs
-      open (unit=1, file='result/log_file', status='replace')
+      open (unit=1, file='log_file', status='replace')
       write (1, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
       write (1, '(a)') "Speed of light: "
       call mpwrite(1, 35, 15, C)
@@ -1293,7 +1293,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Logs saved to log_file."
       print *, "Saving eigenvalues to file..."
 
-      open (unit=12, file='result/eigenvalues.txt', status='replace')
+      open (unit=12, file='eigenvalues.txt', status='replace')
       write (12, '(a, i4, a, i4, a, i4)') "Number of BSplines: ", n, " and Order of BSplines: ", d, " and Number of BSplines to remove: ", n_remove
       write (12, '(a)') "Speed of light: "
       call mpwrite(12, 35, 15, C)
