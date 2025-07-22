@@ -44,9 +44,11 @@ fort.11
 log_file
 .vscode/tasks.json
 
-# Sumatra
-.smt
 
 # Result and input
-result/
+experiments
 input.txt
+output.log
+*.csv
+eigenvalues.txt
+log_file
