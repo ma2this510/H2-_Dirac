@@ -20,6 +20,25 @@ def get_git_commit(path="fortran"):
     except Exception:
         return None
 
+def push(message: str):
+    try:
+        # Get hostname using `hostname` command
+        hostname = subprocess.check_output(["hostname"], text=True).strip()
+
+        # Send notification to ntfy.sh
+        response = requests.post(
+            "https://ntfy.sh/q3ApDYVXWdMIEyPQ",
+            data=message.encode("utf-8"),
+            headers={
+                "Title": f"From {hostname}",
+                "Priority": "default"
+            },
+            timeout=5
+        )
+        response.raise_for_status()
+    except (subprocess.CalledProcessError, requests.RequestException) as e:
+        print(f"Notification failed: {e}")
+
 @ex.config
 def config():
     git_commit = get_git_commit()
@@ -76,4 +95,4 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     branch = subprocess.check_output(["git", "-C", "fortran", "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
     cwd = subprocess.check_output(["pwd"]).decode().strip()
     msg = f"✅ Computation finished on branch \"{branch}\" in directory \"{cwd}\""
-    subprocess.run(["push", msg])
+    push(msg)
