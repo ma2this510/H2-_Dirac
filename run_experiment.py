@@ -72,3 +72,8 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
 
     for file in glob.glob("*.csv"):
         ex.add_artifact(file)
+
+    branch = subprocess.check_output(["git", "-C", "fortran", "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
+    cwd = subprocess.check_output(["pwd"]).decode().strip()
+    msg = f"✅ Computation finished on branch \"{branch}\" in directory \"{cwd}\""
+    subprocess.run(["push", msg])
