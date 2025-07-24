@@ -8,8 +8,6 @@ import requests
 
 load_dotenv()
 
-load_dotenv()
-
 ex = Experiment("H2+_Dirac_NKB")
 ex.observers.append(FileStorageObserver("experiments"))
 ex.observers.append(MongoObserver(url=os.environ['URI'], db_name=os.environ['DB']))
