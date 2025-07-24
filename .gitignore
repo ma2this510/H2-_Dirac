@@ -55,3 +55,4 @@ log_file
 
 # Config files
 .env
+bash_exec
