@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 import subprocess
 import os
 import glob
+import requests
+
+load_dotenv()
 
 load_dotenv()
 
@@ -19,6 +22,29 @@ def get_git_commit(path="fortran"):
         ).decode().strip()
     except Exception:
         return None
+
+def extract_last_eigenvalue(filename):
+    try:
+        with open(filename, "rb") as f:
+            f.seek(-2, 2)  # Go to near-end of file
+            lines = []
+            while len(lines) < 4:
+                byte = f.read(1)
+                if byte == b'\n':
+                    lines.append(b"")
+                    f.seek(-2, 1)
+                else:
+                    f.seek(-2, 1) 
+            last_line = f.readline().decode().strip()
+
+        # The value is after the last colon or space
+        parts = last_line.split()
+        return parts
+        if parts:
+            return float(parts[-1])
+    except Exception as e:
+        print(f"Failed to read last eigenvalue: {e}")
+    return None
 
 def push(message: str):
     try:
@@ -96,3 +122,6 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     cwd = subprocess.check_output(["pwd"]).decode().strip()
     msg = f"✅ Computation finished on branch \"{branch}\" in directory \"{cwd}\""
     push(msg)
+
+    last_eigenvalue = extract_last_eigenvalue("eigenvalues.txt")
+    return {"last_eigenvalue": last_eigenvalue}

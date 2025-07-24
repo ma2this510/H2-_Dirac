@@ -52,3 +52,6 @@ output.log
 *.csv
 eigenvalues.txt
 log_file
+
+# Config files
+.env
