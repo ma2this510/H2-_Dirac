@@ -24,22 +24,11 @@ def get_git_commit(path="fortran"):
 def extract_last_eigenvalue(filename):
     try:
         with open(filename, "rb") as f:
-            f.seek(-2, 2)  # Go to near-end of file
-            lines = []
-            while len(lines) < 4:
-                byte = f.read(1)
-                if byte == b'\n':
-                    lines.append(b"")
-                    f.seek(-2, 1)
-                else:
-                    f.seek(-2, 1) 
-            last_line = f.readline().decode().strip()
-
-        # The value is after the last colon or space
-        parts = last_line.split()
-        return parts
-        if parts:
-            return float(parts[-1])
+            one_before_last = deque(f, 2)[0]
+        
+            text = one_before_last.decode("utf-8").strip()
+            parts = text.split()
+            return parts[-1] if parts else None
     except Exception as e:
         print(f"Failed to read last eigenvalue: {e}")
     return None
@@ -51,7 +40,7 @@ def push(message: str):
 
         # Send notification to ntfy.sh
         response = requests.post(
-            "https://ntfy.sh/q3ApDYVXWdMIEyPQ",
+            os.environ['NTFY'],
             data=message.encode("utf-8"),
             headers={
                 "Title": f"From {hostname}",
