@@ -12,16 +12,15 @@ echo "Current branch is: \"$branch\""
 export OMP_NUM_THREADS=$SLURM_TASKS_PER_NODE
 
 # Parameters
-n=12
-r_min=11
-r_max=30
-r_step=1
+eta_min=0.1
+eta_max=0.19
+eta_step=0.01
 
 # Loop over r values
-r=$r_min
-while (( $(echo "$r <= $r_max" | bc -l) )); do
-    echo "Running with R=$r"
-    python3 run_experiment.py with n=$n R=$r
-    r=$(echo "$r + $r_step" | bc -l)
+eta=$eta_min
+while (( $(echo "$eta <= $eta_max" | bc -l) )); do
+    echo "Running with eta_slp=$eta"
+    python3 run_experiment.py with eta_slp=$eta
+    eta=$(echo "$eta + $eta_step" | bc -l)
 done
 
