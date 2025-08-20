@@ -11,16 +11,14 @@ branch=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch is: \"$branch\""
 export OMP_NUM_THREADS=$SLURM_TASKS_PER_NODE
 
-# Parameters
-eta_min=0.1
-eta_max=0.19
-eta_step=0.01
-
-# Loop over r values
-eta=$eta_min
-while (( $(echo "$eta <= $eta_max" | bc -l) )); do
-    echo "Running with eta_slp=$eta"
-    python3 run_experiment.py with eta_slp=$eta
-    eta=$(echo "$eta + $eta_step" | bc -l)
-done
-
+python3 run_experiment.py with n=8 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=10 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=12 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=14 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=16 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=18 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=20 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=22 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=24 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=26 ximax=7 eta_slp=0.029
+python3 run_experiment.py with n=28 ximax=7 eta_slp=0.029
