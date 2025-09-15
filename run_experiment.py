@@ -70,6 +70,23 @@ def config():
     eta_slp = 4.0e-2
     save_step = ".false."
 
+@ex.named_config
+def dithorium():
+    git_commit = get_git_commit()
+    d = 8
+    n = 20
+    n_remove = 0
+    Z1 = 90.0
+    Z2 = 90.0
+    m = 1.0
+    c = 137.035999679
+    R = 1.11e-2
+    ximax = 30.0
+    ximin = 1.0
+    epsilon = 0.0
+    eta_slp = 4.0e-2
+    save_step = ".false."
+
 @ex.automain
 def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_step):
     # Write formatted input file
