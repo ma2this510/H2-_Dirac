@@ -2,6 +2,7 @@ module h2plus_sep
    use mpmodule
    use bspline_gen
    use tools_mp
+   use partial_diag
    implicit none
 
    type(mp_real), save :: one, zero
@@ -869,6 +870,15 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       integer :: ntot, i, j, ierr
       integer :: i2(2)
 
+      ! ----------------------
+      ! Development : Partial diag
+      logical :: tot_diag = .false.
+      integer :: maxit = 10
+      type(mp_real) :: eig
+
+      eig = '-1.1026d0'
+      ! ----------------------
+
       ntot = n + d + 2*n_remove
       zero = '0.d0'
       one = '1.d0'
@@ -1189,11 +1199,15 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       print *, "Calculating the eigenvalues..."
       tm0 = second()
       ! Calculate the eigenvalues and eigenvectors
-      allocate (w(4*n**2), fv1(4*n**2), fv2(4*n**2), vect(4*n**2, 4*n**2))
+      if (tot_diag) then
+         allocate (w(4*n**2), fv1(4*n**2), fv2(4*n**2), vect(4*n**2, 4*n**2))
 
-      call rsg(4*n**2, 4*n**2, C_mat, S_mat, w, 0, vect, fv1, fv2, ierr)
+         call rsg(4*n**2, 4*n**2, C_mat, S_mat, w, 0, vect, fv1, fv2, ierr)
 
-      print *, "Error code: ", ierr
+         print *, "Error code: ", ierr
+      else 
+         call pdiag(4*n**2, C_mat, S_mat, eig, maxit)
+      end if
 
       tm1 = second()
       print *, "Time taken to calculate eigenvalues: ", tm1 - tm0, " seconds"
@@ -1280,14 +1294,23 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       write (1, '(a)') "Value of mc²:"
       call mpwrite(1, 35, 15, m*c*c)
       write (1, '(a)') "--------------------------------------------------------------"
-      write (1, '(a)') "Eigenvalues: "
-      do i = 1, 4*n**2
-         write (1, '(i4, a, i4)', advance='no') i, " "
-         call mpwrite(1, 35, 15, w(4*n**2 - i + 1))
-         write (1, '(i4, a, i4)', advance='no') i, " Translated by -mc^2 : "
-         call mpwrite(1, 35, 15, w(4*n**2 - i + 1) - m*c*c)
-         write (1, '(a)') " "
-      end do
+      if (tot_diag) then
+         write (1, '(a)') "Problem totally diagonalized using the rsg subroutine."
+         write (1, '(a)') "Eigenvalues: "
+         do i = 1, 4*n**2
+            write (1, '(i4, a, i4)', advance='no') i, " "
+            call mpwrite(1, 35, 15, w(4*n**2 - i + 1))
+            write (1, '(i4, a, i4)', advance='no') i, " Translated by -mc^2 : "
+            call mpwrite(1, 35, 15, w(4*n**2 - i + 1) - m*c*c)
+            write (1, '(a)') " "
+         end do
+      else
+         write (1, '(a)') "Problem partially diagonalized using the invsg subroutine."
+         write (1, '(a)') "Eigenvalue :"
+         call mpwrite(1, 35, 15, eig)
+         write (1, '(a)') "Eigenvalue translated by -mc^2 :"
+         call mpwrite(1, 35, 15, eig - m*c*c)
+      end if
       close (1)
 
       print *, "Logs saved to log_file."
@@ -1309,15 +1332,21 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       call write_lists(knoteta, 12, 35, 15)
       write (12, '(a)') "Epsilon: "
       call mpwrite(12, 35, 15, epsilon)
-      do i = 1, 4*n**2
-         if (w(4*n**2 - i + 1) > -m*c*c .and. w(4*n**2 - i + 1) < m*c*c) then
-            write (12, '(i4, a, i4)', advance='no') i, " "
-            call mpwrite(12, 35, 15, w(4*n**2 - i + 1))
-            write (12, '(i4, a, i4)', advance='no') i, " Translated by -mc^2 : "
-            call mpwrite(12, 35, 15, w(4*n**2 - i + 1) - m*c*c)
-            write (12, '(a)') " "
-         end if
-      end do
+      if (tot_diag) then
+         do i = 1, 4*n**2
+            if (w(4*n**2 - i + 1) > -m*c*c .and. w(4*n**2 - i + 1) < m*c*c) then
+               write (12, '(i4, a, i4)', advance='no') i, " "
+               call mpwrite(12, 35, 15, w(4*n**2 - i + 1))
+               write (12, '(i4, a, i4)', advance='no') i, " Translated by -mc^2 : "
+               call mpwrite(12, 35, 15, w(4*n**2 - i + 1) - m*c*c)
+               write (12, '(a)') " "
+            end if
+         end do
+      else
+         call mpwrite(12, 35, 15, eig)
+         write (12, '(a)') "Eigenvalue translated by -mc^2 :"
+         call mpwrite(12, 35, 15, eig - m*c*c)
+      end if
       close (12)
 
       print *, "Eigenvalues saved to eigenvalues.txt."

@@ -1452,7 +1452,7 @@ contains
       print *, "Calculating the eigenvalues..."
       tm0 = second()
       ! Calculate the eigenvalues and eigenvectors
-
+      print *, "Method used: ", tot_diag
       if (tot_diag) then
          allocate (w(4*n**2), fv1(4*n**2), fv2(4*n**2), vect(4*n**2, 4*n**2))
 
