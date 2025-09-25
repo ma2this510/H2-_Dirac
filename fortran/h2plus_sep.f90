@@ -1343,9 +1343,11 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
             end if
          end do
       else
+         write (12, '(i4, a, i4)', advance='no') 1, " "
          call mpwrite(12, 35, 15, eig)
-         write (12, '(a)') "Eigenvalue translated by -mc^2 :"
+         write (12, '(i4, a, i4)', advance='no') 1, " Translated by -mc^2 : "
          call mpwrite(12, 35, 15, eig - m*c*c)
+         write (12, '(a)') " "
       end if
       close (12)
 
