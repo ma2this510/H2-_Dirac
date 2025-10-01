@@ -39,7 +39,7 @@ contains
             rep_S(:) = lin_S(:)
             call invsg(rep_C, rep_S, n, eig, v, eps, ijob, maxit, wa)
             print *, 'Iteration ', i, ', Numerical eigenvalue = '
-            call mpwrite(7, 35, 15, eig)
+            call mpwrite(6, 35, 15, eig)
         end do
 
     end subroutine pdiag

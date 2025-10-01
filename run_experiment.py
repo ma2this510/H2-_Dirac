@@ -6,6 +6,8 @@ import subprocess
 import os
 import glob
 import requests
+import psutil
+import time
 
 load_dotenv()
 
@@ -22,17 +24,19 @@ def get_git_commit(path="fortran"):
     except Exception:
         return None
 
+
 def extract_last_eigenvalue(filename):
     try:
         with open(filename, "rb") as f:
             one_before_last = deque(f, 2)[0]
-        
+
             text = one_before_last.decode("utf-8").strip()
             parts = text.split()
             return parts[-1] if parts else None
     except Exception as e:
         print(f"Failed to read last eigenvalue: {e}")
     return None
+
 
 def push(message: str):
     try:
@@ -70,6 +74,7 @@ def config():
     eta_slp = 4.0e-2
     save_step = ".false."
 
+
 @ex.named_config
 def dithorium():
     git_commit = get_git_commit()
@@ -86,6 +91,7 @@ def dithorium():
     epsilon = 0.0
     eta_slp = 4.0e-2
     save_step = ".false."
+
 
 @ex.automain
 def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_step):
@@ -109,11 +115,26 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
 
     # Compile and run Fortran program
     subprocess.run(["make", "-C", "fortran", "main.out"], check=True)
-    result = subprocess.run(["./fortran/main.out"], input=open("input.txt").read(), text=True, capture_output=True)
+    # result = subprocess.run(["./fortran/main.out"], input=open("input.txt").read(), text=True, capture_output=True)
+    result = subprocess.Popen(["./fortran/main.out < ./input.txt"], stdin=None,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
+
+    # Monitor memory and CPU usage
+    pid = result.pid
+    p = psutil.Process(pid)
+    try:
+        while True:
+            ex.log_scalar("memory_mb", p.memory_info().rss / (1024 * 1024))
+            ex.log_scalar("cpu_percent", p.cpu_percent(interval=None))
+            if result.poll() is not None:
+                break
+            time.sleep(5)
+    except psutil.NoSuchProcess:
+        pass
 
     # Save raw logs and outputs
     with open("output.log", "w") as f:
-        f.write(result.stdout)
+        f.write(result.stdout.read())
 
     ex.add_artifact("input.txt")
     ex.add_artifact("output.log")
@@ -123,7 +144,8 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     for file in glob.glob("*.csv"):
         ex.add_artifact(file)
 
-    branch = subprocess.check_output(["git", "-C", "fortran", "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
+    branch = subprocess.check_output(
+        ["git", "-C", "fortran", "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
     cwd = subprocess.check_output(["pwd"]).decode().strip()
     msg = f"✅ Computation finished on branch \"{branch}\" in directory \"{cwd}\""
     push(msg)
