@@ -8,7 +8,7 @@ contains
         integer, intent(in) :: n, maxit
         type(mp_real), intent(inout) :: eig
         type(mp_real), dimension(n, n), intent(in) :: C_mat, S_mat
-        type(mp_real), dimension(n*(n+1)/2) :: lin_C, lin_S
+        type(mp_real), dimension(n*(n+1)/2) :: lin_C, lin_S, rep_C, rep_S
         type(mp_real), dimension(3*n+1) :: wa
         type(mp_real), dimension(n) :: v
         type(mp_real) :: eps
@@ -34,7 +34,13 @@ contains
         end do
 
         ! Call the partial diagonalization routine
-        call invsg(lin_C, lin_S, n, eig, v, eps, ijob, maxit, wa)
+        do i = 1, 3
+            rep_C(:) = lin_C(:)
+            rep_S(:) = lin_S(:)
+            call invsg(rep_C, rep_S, n, eig, v, eps, ijob, maxit, wa)
+            print *, 'Iteration ', i, ', Numerical eigenvalue = '
+            call mpwrite(7, 35, 15, eig)
+        end do
 
     end subroutine pdiag
 

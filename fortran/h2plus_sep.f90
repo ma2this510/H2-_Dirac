@@ -876,7 +876,7 @@ eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 
       integer :: maxit = 10
       type(mp_real) :: eig
 
-      eig = '-1.1026d0'
+      eig = '1.87777625d4'
       ! ----------------------
 
       ntot = n + d + 2*n_remove
