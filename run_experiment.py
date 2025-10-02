@@ -114,10 +114,11 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
 """)
 
     # Compile and run Fortran program
-    subprocess.run(["make", "-C", "fortran", "main.out"], check=True)
+    print("Compiling and running Fortran code...")
+    subprocess.run(["make", "-C", "fortran", "main.out"], check=True, text=True)
     # result = subprocess.run(["./fortran/main.out"], input=open("input.txt").read(), text=True, capture_output=True)
-    result = subprocess.Popen(["./fortran/main.out < ./input.txt"], stdin=None,
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
+    result = subprocess.Popen(["./fortran/main.out"], stdin=open("input.txt"),
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     # Monitor memory and CPU usage
     pid = result.pid
