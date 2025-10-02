@@ -122,6 +122,8 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     # Monitor memory and CPU usage
     pid = result.pid
     p = psutil.Process(pid)
+    print(f"Monitoring process PID: {pid}")
+    p.cpu_percent(interval=None) # Initialize CPU percent calculation
     try:
         while True:
             ex.log_scalar("memory_mb", p.memory_info().rss / (1024 * 1024))
