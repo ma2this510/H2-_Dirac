@@ -85,11 +85,11 @@ def dithorium():
     Z2 = 90.0
     m = 1.0
     c = 137.035999679
-    R = 1.11e-2
-    ximax = 30.0
+    R = 0.011111
+    ximax = 20.0
     ximin = 1.0
     epsilon = 0.0
-    eta_slp = 4.0e-2
+    eta_slp = 0.029
     save_step = ".false."
 
 
@@ -105,7 +105,7 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     {Z2:.2f},                - Z2 : Z2 value
     {m:.2f},                - m : electron mass
     {c:.9f},       - c : speed of light
-    {R:.1f},                 - R : SEMI-interatomic distance
+    {R:.9f},                 - R : SEMI-interatomic distance
     {ximax:.1f},                - ximax : Maximum xi value
     {ximin:.1f},                 - ximin : Minimum xi value
     {epsilon:.1f},                 - epsilon : to avoid singularities
@@ -124,16 +124,16 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     pid = result.pid
     p = psutil.Process(pid)
     print(f"Monitoring process PID: {pid}")
-    p.cpu_percent(interval=None) # Initialize CPU percent calculation
-    try:
-        while True:
-            ex.log_scalar("memory_mb", p.memory_info().rss / (1024 * 1024))
-            ex.log_scalar("cpu_percent", p.cpu_percent(interval=None))
-            if result.poll() is not None:
-                break
-            time.sleep(5)
-    except psutil.NoSuchProcess:
-        pass
+    # p.cpu_percent(interval=None) # Initialize CPU percent calculation
+    # try:
+    #     while True:
+    #         ex.log_scalar("memory_mb", p.memory_info().rss / (1024 * 1024))
+    #         ex.log_scalar("cpu_percent", p.cpu_percent(interval=None))
+    #         if result.poll() is not None:
+    #             break
+    #         time.sleep(5)
+    # except psutil.NoSuchProcess:
+    #     pass
 
     # Save raw logs and outputs
     with open("output.log", "w") as f:
