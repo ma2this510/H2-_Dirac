@@ -1,0 +1,7 @@
+python3 run_experiment.py with dithorium n=24 -c "dithorium test"
+python3 run_experiment.py with dithorium n=28 -c "dithorium test"
+python3 run_experiment.py with dithorium n=32 -c "dithorium test"
+python3 run_experiment.py with dithorium n=36 -c "dithorium test"
+python3 run_experiment.py with dithorium n=40 -c "dithorium test"
+python3 run_experiment.py with dithorium n=44 -c "dithorium test"
+python3 run_experiment.py with dithorium n=48 -c "dithorium test"
