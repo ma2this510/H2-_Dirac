@@ -60,7 +60,7 @@ contains
                do l = 1, size(prod_xi, 4) ! loop over order
                   alpha = size(prod_xi, 4) - l
                   xi_1(i, j) = xi_1(i, j) + prod_xi(i, j, k, l)*knotxi(k+1)**(2 + alpha)*(-((Z1 + Z2)/(2*R + R*alpha)) + (c**2*m*knotxi(k+1))/(3 + alpha)) ! Finale
-xi_1(i, j) = xi_1(i, j) - prod_xi(i, j, k, l)*knotxi(k)**(2 + alpha)*(-((Z1 + Z2)/(2*R + R*alpha)) + (c**2*m*knotxi(k))/(3 + alpha)) ! Initial
+                  xi_1(i, j) = xi_1(i, j) - prod_xi(i, j, k, l)*knotxi(k)**(2 + alpha)*(-((Z1 + Z2)/(2*R + R*alpha)) + (c**2*m*knotxi(k))/(3 + alpha)) ! Initial
 
                   xi_2(i, j) = xi_2(i, j) + prod_xi(i, j, k, l)*knotxi(k + 1)**(1 + alpha)/(1 + alpha) ! Finale
                   xi_2(i, j) = xi_2(i, j) - prod_xi(i, j, k, l)*knotxi(k)**(1 + alpha)/(1 + alpha) ! Initial
@@ -224,16 +224,16 @@ xi_1(i, j) = xi_1(i, j) - prod_xi(i, j, k, l)*knotxi(k)**(2 + alpha)*(-((Z1 + Z2
                   xi_1(i, j) = xi_1(i, j) + prod_xi(i, j, k, l) *  (knotxi(k + 1)**(2 + alpha)*(-(((Z1 + Z2)*(-(one/(2 + alpha)) + knotxi(k + 1)**2/(4 + alpha)))/R) + c**2*m*knotxi(k + 1)*(-(one/(3 + alpha)) + knotxi(k + 1)**2/(5 + alpha)))) ! Finale
                   xi_1(i, j) = xi_1(i, j) - prod_xi(i, j, k, l) *  knotxi(k)**(2 + alpha)*((((Z1 + Z2)*((one/(2 + alpha)) - knotxi(k)**2/(4 + alpha)))/R) - c**2*m*knotxi(k)*((one/(3 + alpha)) - knotxi(k)**2/(5 + alpha))) ! Initial
 
-xi_2(i, j) = xi_2(i, j) + prod_xi(i, j, k, l)*(-(knotxi(k + 1)**(1 + alpha)/(1 + alpha)) + knotxi(k + 1)**(3 + alpha)/(3 + alpha)) ! Finale
-xi_2(i, j) = xi_2(i, j) - prod_xi(i, j, k, l)*(-(knotxi(k)**(1 + alpha)/(1 + alpha)) + knotxi(k)**(3 + alpha)/(3 + alpha)) ! Initial
+                  xi_2(i, j) = xi_2(i, j) + prod_xi(i, j, k, l)*(-(knotxi(k + 1)**(1 + alpha)/(1 + alpha)) + knotxi(k + 1)**(3 + alpha)/(3 + alpha)) ! Finale
+                  xi_2(i, j) = xi_2(i, j) - prod_xi(i, j, k, l)*(-(knotxi(k)**(1 + alpha)/(1 + alpha)) + knotxi(k)**(3 + alpha)/(3 + alpha)) ! Initial
                end do
             end do
 
             do k = 1, size(prod_eta, 3) - 1 ! Loop over the polynomials
                do l = 1, size(prod_eta, 4) ! loop over order
                   beta = size(prod_eta, 4) - l
-eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 + beta) - knoteta(k + 1)**(3 + beta)/(3 + beta)) ! Finale
-  eta_1(i, j) = eta_1(i, j) - prod_eta(i, j, k, l)*(knoteta(k)**(1 + beta)/(1 + beta) - knoteta(k)**(3 + beta)/(3 + beta)) ! Initial
+                  eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 + beta) - knoteta(k + 1)**(3 + beta)/(3 + beta)) ! Finale
+                  eta_1(i, j) = eta_1(i, j) - prod_eta(i, j, k, l)*(knoteta(k)**(1 + beta)/(1 + beta) - knoteta(k)**(3 + beta)/(3 + beta)) ! Initial
 
                   eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l) * (knoteta(k + 1)**(2 + beta)*((-Z1 + Z2)*(-(one/(2 + beta)) + knoteta(k + 1)**2/(4 + beta)) + c**2*m*R*knoteta(k + 1)*(-(one/(3 + beta)) + knoteta(k + 1)**2/(5 + beta))))/R ! Finale
                   eta_2(i, j) = eta_2(i, j) - prod_eta(i, j, k, l) * (knoteta(k)**(2 + beta)*((-Z1 + Z2)*(-(one/(2 + beta)) + knoteta(k)**2/(4 + beta)) + c**2*m*R*knoteta(k)*(-(one/(3 + beta)) + knoteta(k)**2/(5 + beta))))/R ! Initial
@@ -388,7 +388,7 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
                   do l2 = 1, size(b_eta, 3) ! loop over order
                      beta = size(b_eta, 3) - l1
                      delta = size(b_eta, 3) - l2
-          eta_1(i, j) = eta_1(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k + 1)**(2 + beta + delta)/(2 + beta + delta) ! Finale
+                     eta_1(i, j) = eta_1(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k + 1)**(2 + beta + delta)/(2 + beta + delta) ! Finale
                      eta_1(i, j) = eta_1(i, j) - b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k)**(2 + beta + delta)/(2 + beta + delta) ! Initial
 
                      if (delta /= 0) then
@@ -534,22 +534,23 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
                   do l2 = 1, size(b_xi, 3) ! loop over order of second basis function
                      alpha = size(b_xi, 3) - l1
                      chi = size(b_xi, 3) - l2
-                     xi_1(i, j) = xi_1(i, j) + b_xi(i, k, l1)*b_xi(j, k, l2)*knotxi(k + 1)**(3 + alpha + chi)/(3 + alpha + chi) ! Finale
-                     xi_1(i, j) = xi_1(i, j) - b_xi(i, k, l1)*b_xi(j, k, l2)*knotxi(k)**(3 + alpha + chi)/(3 + alpha + chi) ! Initial
+
+                     if (chi /= 0) then
+                        xi_1(i, j) = xi_1(i, j) + b_xi(i, k, l1)*b_xi(j, k, l2)*chi*(-(knotxi(k + 1)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k + 1)**(3 + alpha + chi)/(3 + alpha + chi)) ! Finale
+                        xi_1(i, j) = xi_1(i, j) - b_xi(i, k, l1)*b_xi(j, k, l2)*chi*(-(knotxi(k)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k)**(3 + alpha + chi)/(3 + alpha + chi)) ! Initial
+                     end if
 
                      xi_2(i, j) = xi_2(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * (-(knotxi(k + 1)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k + 1)**(3 + alpha + chi)/(3 + alpha + chi)) ! Finale
                      xi_2(i, j) = xi_2(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * (-(knotxi(k)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k)**(3 + alpha + chi)/(3 + alpha + chi)) ! Initial
 
-                     xi_3(i, j) = xi_3(i, j) + b_xi(i, k, l1)*b_xi(j, k, l2)*knotxi(k + 1)**(1 + alpha + chi)/(1 + alpha + chi) ! Finale
-                     xi_3(i, j) = xi_3(i, j) - b_xi(i, k, l1)*b_xi(j, k, l2)*knotxi(k)**(1 + alpha + chi)/(1 + alpha + chi) ! Initial
+                     xi_3(i, j) = xi_3(i, j) + b_xi(i, k, l1)*b_xi(j, k, l2)*knotxi(k + 1)**(3 + alpha + chi)/(3 + alpha + chi) ! Finale
+                     xi_3(i, j) = xi_3(i, j) - b_xi(i, k, l1)*b_xi(j, k, l2)*knotxi(k)**(3 + alpha + chi)/(3 + alpha + chi) ! Initial
 
-                     if (chi /= 0) then
-                        xi_4(i, j) = xi_4(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k + 1)**(1 + alpha + chi)*chi*(-(one/(1 + alpha + chi)) + knotxi(k + 1)**2/(3 + alpha + chi)) ! Finale
-                        xi_4(i, j) = xi_4(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k)**(1 + alpha + chi)*chi*(-(one/(1 + alpha + chi)) + knotxi(k)**2/(3 + alpha + chi)) ! Initial
-                     end if
+                     xi_4(i, j) = xi_4(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * (-(knotxi(k + 1)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k + 1)**(3 + alpha + chi)/(3 + alpha + chi)) ! Finale
+                     xi_4(i, j) = xi_4(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * (-(knotxi(k)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k)**(3 + alpha + chi)/(3 + alpha + chi)) ! Initial
 
-                     xi_5(i, j) = xi_5(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * (-(knotxi(k + 1)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k + 1)**(3 + alpha + chi)/(3 + alpha + chi)) ! Finale
-                     xi_5(i, j) = xi_5(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * (-(knotxi(k)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k)**(3 + alpha + chi)/(3 + alpha + chi)) ! Initial
+                     xi_5(i, j) = xi_5(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k + 1)**(1 + alpha + chi)/(1 + alpha + chi) ! Finale
+                     xi_5(i, j) = xi_5(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k)**(1 + alpha + chi)/(1 + alpha + chi) ! Initial
                   end do
                end do
             end do
@@ -559,22 +560,23 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
                   do l2 = 1, size(b_eta, 3) ! loop over order
                      beta = size(b_eta, 3) - l1
                      delta = size(b_eta, 3) - l2
-                     eta_1(i, j) = eta_1(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta)) ! Finale
-                     eta_1(i, j) = eta_1(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k)**(3 + beta + delta)/(3 + beta + delta)) ! Initial
-
-                     eta_2(i, j) = eta_2(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) ! Finale
-                     eta_2(i, j) = eta_2(i, j) - b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k)**(1 + beta + delta)/(1 + beta + delta) ! Initial
-
-                     eta_3(i, j) = eta_3(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta) ! Finale
-                     eta_3(i, j) = eta_3(i, j) - b_eta(i, k, l1)*b_eta(j, k, l2)*knoteta(k)**(3 + beta + delta)/(3 + beta + delta) ! Initial
-
-                     eta_4(i, j) = eta_4(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta)) ! Finale
-                     eta_4(i, j) = eta_4(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k)**(3 + beta + delta)/(3 + beta + delta)) ! Initial
 
                      if (delta /= 0) then
-                        eta_5(i, j) = eta_5(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * delta*knoteta(k + 1)**(1 + beta + delta)*(one/(1 + beta + delta) - knoteta(k + 1)**2/(3 + beta + delta)) ! Finale
-                        eta_5(i, j) = eta_5(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * delta*knoteta(k)**(1 + beta + delta)*(one/(1 + beta + delta) - knoteta(k)**2/(3 + beta + delta)) ! Initial
+                        eta_1(i, j) = eta_1(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta)) ! Finale
+                        eta_1(i, j) = eta_1(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k)**(3 + beta + delta)/(3 + beta + delta)) ! Initial
                      end if
+
+                     eta_2(i, j) = eta_2(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*(-(delta*(-(knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta)) + knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta)))) ! Finale
+                     eta_2(i, j) = eta_2(i, j) - b_eta(i, k, l1)*b_eta(j, k, l2)*(-(delta*(-(knoteta(k)**(1 + beta + delta)/(1 + beta + delta)) + knoteta(k)**(3 + beta + delta)/(3 + beta + delta)))) ! Initial
+
+                     eta_3(i, j) = eta_3(i, j) + b_eta(i, k, l1)*b_eta(j, k, l2)*(knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta)) ! Finale
+                     eta_3(i, j) = eta_3(i, j) - b_eta(i, k, l1)*b_eta(j, k, l2)*(knoteta(k)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k)**(3 + beta + delta)/(3 + beta + delta)) ! Initial
+
+                     eta_4(i, j) = eta_4(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta) ! Finale
+                     eta_4(i, j) = eta_4(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k)**(1 + beta + delta)/(1 + beta + delta) ! Initial
+
+                     eta_5(i, j) = eta_5(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta) ! Finale
+                     eta_5(i, j) = eta_5(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k)**(3 + beta + delta)/(3 + beta + delta) ! Initial
                   end do
                end do
             end do
@@ -588,12 +590,12 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
             i2 = indexToPair(i, size(b_xi, 1))
             j2 = indexToPair(j, size(b_eta, 1))
 
-            ! result(i, j) = 2*c*mppi()*(R**2)*(one*xi_1(i2(1), j2(1))*(eta_1(i2(2), j2(2)) + eta_2(i2(2), j2(2))) + &
-            !                                   one*eta_3(i2(2), j2(2))*(xi_2(i2(1), j2(1)) - xi_3(i2(1), j2(1))) + &
-            !                                   xi_4(i2(1), j2(1))*eta_4(i2(2), j2(2)) - xi_5(i2(1), j2(1))*eta_5(i2(2), j2(2)))
-            result(i, j) = 2*c*mppi()*(R**2)*((one*xi_1(i2(1), j2(1)) + xi_4(i2(1), j2(1)))*(eta_1(i2(2), j2(2))) + &
-                                                xi_2(i2(1), j2(1))*(eta_3(i2(2), j2(2)) - eta_5(i2(2), j2(2))) + &
-                                                xi_1(i2(1), j2(1))*eta_2(i2(2), j2(2)) - xi_3(i2(1), j2(1))*eta_3(i2(2), j2(2)))
+            result(i, j) = 2*c*mppi()*(R**2)*(xi_1(i2(1), j2(1))*eta_1(i2(2), j2(2)) - xi_2(i2(1), j2(1)) * eta_2(i2(2), j2(2)) + &
+                                              one*xi_3(i2(2), j2(2))*(eta_3(i2(1), j2(1)) + eta_4(i2(1), j2(1))) + &
+                                              one*(xi_4(i2(1), j2(1)) - xi_5(i2(1), j2(1)))*eta_5(i2(2), j2(2)))
+            ! result(i, j) = 2*c*mppi()*(R**2)*((one*xi_1(i2(1), j2(1)) + xi_4(i2(1), j2(1)))*(eta_1(i2(2), j2(2))) + &
+            !                                     xi_2(i2(1), j2(1))*(eta_3(i2(2), j2(2)) - eta_5(i2(2), j2(2))) + &
+            !                                     xi_1(i2(1), j2(1))*eta_2(i2(2), j2(2)) - xi_3(i2(1), j2(1))*eta_3(i2(2), j2(2)))
          end do
       end do
 
@@ -636,8 +638,8 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
                      alpha = size(b_xi, 3) - l1
                      chi = size(b_xi, 3) - l2
                      if (chi /= 0) then
-                        xi_1(i, j) = xi_1(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k + 1)**(1 + alpha + chi)*chi*(-(one/(1 + alpha + chi)) + knotxi(k + 1)**2/(3 + alpha + chi))  ! Finale
-                        xi_1(i, j) = xi_1(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k)**(1 + alpha + chi)*chi*(-(one/(1 + alpha + chi)) + knotxi(k)**2/(3 + alpha + chi))  ! Initial
+                        xi_1(i, j) = xi_1(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * chi*(-(knotxi(k + 1)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k + 1)**(3 + alpha + chi)/(3 + alpha + chi))  ! Finale
+                        xi_1(i, j) = xi_1(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * chi*(-(knotxi(k)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k)**(3 + alpha + chi)/(3 + alpha + chi))  ! Initial
                      end if
 
                      xi_2(i, j) = xi_2(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * (-(knotxi(k + 1)**(1 + alpha + chi)/(1 + alpha + chi)) + knotxi(k + 1)**(3 + alpha + chi)/(3 + alpha + chi)) ! Finale
@@ -655,8 +657,8 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
                      eta_1(i, j) = eta_1(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k)**(1 + beta + delta)/(1 + beta + delta) - knoteta(k)**(3 + beta + delta)/(3 + beta + delta)) ! Initial
 
                      if (delta /= 0) then
-                        eta_2(i, j) = eta_2(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * delta*knoteta(k + 1)**(1 + beta + delta)*(one/(1 + beta + delta) - knoteta(k + 1)**2/(3 + beta + delta)) ! Finale
-                        eta_2(i, j) = eta_2(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * delta*knoteta(k)**(1 + beta + delta)*(one/(1 + beta + delta) - knoteta(k)**2/(3 + beta + delta)) ! Initial
+                        eta_2(i, j) = eta_2(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * (-(delta*(-(knoteta(k + 1)**(1 + beta + delta)/(1 + beta + delta)) + knoteta(k + 1)**(3 + beta + delta)/(3 + beta + delta)))) ! Finale
+                        eta_2(i, j) = eta_2(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * (-(delta*(-(knoteta(k)**(1 + beta + delta)/(1 + beta + delta)) + knoteta(k)**(3 + beta + delta)/(3 + beta + delta)))) ! Initial
                      end if
                   end do
                end do
@@ -805,22 +807,22 @@ eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 
             do k = 1, size(prod_xi, 3) - 1! Loop over the polynomials
                do l = 1, size(prod_xi, 4) ! loop over order
                   alpha = size(prod_xi, 4) - l
-xi_1(i, j) = xi_1(i, j) + prod_xi(i, j, k, l)*(-(knotxi(k + 1)**(3 + alpha)/(3 + alpha)) + knotxi(k + 1)**(5 + alpha)/(5 + alpha)) ! Finale
-xi_1(i, j) = xi_1(i, j) - prod_xi(i, j, k, l)*(-(knotxi(k)**(3 + alpha)/(3 + alpha)) + knotxi(k)**(5 + alpha)/(5 + alpha)) ! Initial
+                  xi_1(i, j) = xi_1(i, j) + prod_xi(i, j, k, l)*(-(knotxi(k + 1)**(3 + alpha)/(3 + alpha)) + knotxi(k + 1)**(5 + alpha)/(5 + alpha)) ! Finale
+                  xi_1(i, j) = xi_1(i, j) - prod_xi(i, j, k, l)*(-(knotxi(k)**(3 + alpha)/(3 + alpha)) + knotxi(k)**(5 + alpha)/(5 + alpha)) ! Initial
 
-xi_2(i, j) = xi_2(i, j) + prod_xi(i, j, k, l)*(-(knotxi(k + 1)**(1 + alpha)/(1 + alpha)) + knotxi(k + 1)**(3 + alpha)/(3 + alpha)) ! Finale
-xi_2(i, j) = xi_2(i, j) - prod_xi(i, j, k, l)*(-(knotxi(k)**(1 + alpha)/(1 + alpha)) + knotxi(k)**(3 + alpha)/(3 + alpha)) ! Initial
+                  xi_2(i, j) = xi_2(i, j) + prod_xi(i, j, k, l)*(-(knotxi(k + 1)**(1 + alpha)/(1 + alpha)) + knotxi(k + 1)**(3 + alpha)/(3 + alpha)) ! Finale
+                  xi_2(i, j) = xi_2(i, j) - prod_xi(i, j, k, l)*(-(knotxi(k)**(1 + alpha)/(1 + alpha)) + knotxi(k)**(3 + alpha)/(3 + alpha)) ! Initial
                end do
             end do
 
             do k = 1, size(prod_eta, 3) - 1 ! Loop over the polynomials
                do l = 1, size(prod_eta, 4) ! loop over order
                   beta = size(prod_eta, 4) - l
-eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 + beta) - knoteta(k + 1)**(3 + beta)/(3 + beta)) ! Finale
-  eta_1(i, j) = eta_1(i, j) - prod_eta(i, j, k, l)*(knoteta(k)**(1 + beta)/(1 + beta) - knoteta(k)**(3 + beta)/(3 + beta)) ! Initial
+                  eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(1 + beta)/(1 + beta) - knoteta(k + 1)**(3 + beta)/(3 + beta)) ! Finale
+                  eta_1(i, j) = eta_1(i, j) - prod_eta(i, j, k, l)*(knoteta(k)**(1 + beta)/(1 + beta) - knoteta(k)**(3 + beta)/(3 + beta)) ! Initial
 
-eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 + beta) - knoteta(k + 1)**(5 + beta)/(5 + beta)) ! Finale
-  eta_2(i, j) = eta_2(i, j) - prod_eta(i, j, k, l)*(knoteta(k)**(3 + beta)/(3 + beta) - knoteta(k)**(5 + beta)/(5 + beta)) ! Initial
+                  eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l)*(knoteta(k + 1)**(3 + beta)/(3 + beta) - knoteta(k + 1)**(5 + beta)/(5 + beta)) ! Finale
+                  eta_2(i, j) = eta_2(i, j) - prod_eta(i, j, k, l)*(knoteta(k)**(3 + beta)/(3 + beta) - knoteta(k)**(5 + beta)/(5 + beta)) ! Initial
                end do
             end do
          end do
