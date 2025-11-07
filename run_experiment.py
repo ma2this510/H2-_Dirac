@@ -154,4 +154,13 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     push(msg)
 
     last_eigenvalue = extract_last_eigenvalue("eigenvalues.txt")
+
+    try:
+        os.remove("input.txt")
+        os.remove("output.log")
+        os.remove("eigenvalues.txt")
+        os.remove("log_file")
+    except Exception as error:
+        print(error)
+
     return {"last_eigenvalue": last_eigenvalue}

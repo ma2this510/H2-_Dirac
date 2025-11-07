@@ -372,10 +372,10 @@ contains
                         do l2 = 1, size(b_xi, 3) ! loop over order of second basis function
                             alpha = size(b_xi, 3) - l1
                             chi = size(b_xi, 3) - l2
-!                            if (chi /= 0) then
+                            if (chi /= 0) then
                                 xi_1(i, j) = xi_1(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k + 1)**(alpha + chi) * chi * (-(one / (alpha + chi)) + knotxi(k + 1)**2 / (2 + alpha + chi))  ! Finale
                                 xi_1(i, j) = xi_1(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k)**(alpha + chi) * chi * (-(one / (alpha + chi)) + knotxi(k)**2 / (2 + alpha + chi))  ! Initial
-!                            end if
+                            end if
 
                             xi_2(i, j) = xi_2(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k + 1)**(2 + alpha + chi) / (2 + alpha + chi) ! Finale
                             xi_2(i, j) = xi_2(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k)**(2 + alpha + chi) / (2 + alpha + chi) ! Initial
@@ -391,10 +391,10 @@ contains
                             eta_1(i, j) = eta_1(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k + 1)**(2 + beta + delta) / (2 + beta + delta) ! Finale
                             eta_1(i, j) = eta_1(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k)**(2 + beta + delta) / (2 + beta + delta) ! Initial
 
-!                            if (delta /= 0) then
+                            if (delta /= 0) then
                                 eta_2(i, j) = eta_2(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * delta * knoteta(k + 1)**(beta + delta) * (one / (beta + delta) - knoteta(k + 1)**2 / (2 + beta + delta)) ! Finale
                                 eta_2(i, j) = eta_2(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * delta * knoteta(k)**(beta + delta) * (one / (beta + delta) - knoteta(k)**2 / (2 + beta + delta)) ! Initial
-!                            end if
+                            end if
                         end do
                     end do
                 end do
@@ -450,10 +450,10 @@ contains
                         do l2 = 1, size(b_xi, 3) ! loop over order of second basis function
                             alpha = size(b_xi, 3) - l1
                             chi = size(b_xi, 3) - l2
-!                            if (chi /= 0) then
+                            if (chi /= 0) then
                                 xi_1(i, j) = xi_1(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k + 1)**(alpha + chi) * chi * (one / (alpha + chi) - (2 * knotxi(k + 1)**2) / (2 + alpha + chi) + knotxi(k + 1)**4 / (4 + alpha + chi))  ! Finale
                                 xi_1(i, j) = xi_1(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * knotxi(k)**(alpha + chi) * chi * (one / (alpha + chi) - (2 * knotxi(k)**2) / (2 + alpha + chi) + knotxi(k)**4 / (4 + alpha + chi))  ! Initial
-!                            end if
+                            end if
 
                             xi_2(i, j) = xi_2(i, j) + b_xi(i, k, l1) * b_xi(j, k, l2) * (-(knotxi(k + 1)**(2 + alpha + chi) / (2 + alpha + chi)) + knotxi(k + 1)**(4 + alpha + chi) / (4 + alpha + chi)) ! Finale
                             xi_2(i, j) = xi_2(i, j) - b_xi(i, k, l1) * b_xi(j, k, l2) * (-(knotxi(k)**(2 + alpha + chi) / (2 + alpha + chi)) + knotxi(k)**(4 + alpha + chi) / (4 + alpha + chi)) ! Initial
@@ -469,10 +469,10 @@ contains
                             eta_1(i, j) = eta_1(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k + 1)**(2 + beta + delta) / (2 + beta + delta) - knoteta(k + 1)**(4 + beta + delta) / (4 + beta + delta)) ! Finale
                             eta_1(i, j) = eta_1(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * (knoteta(k)**(2 + beta + delta) / (2 + beta + delta) - knoteta(k)**(4 + beta + delta) / (4 + beta + delta)) ! Initial
 
-!                            if (delta /= 0) then
+                            if (delta /= 0) then
                                 eta_2(i, j) = eta_2(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * delta * knoteta(k + 1)**(beta + delta) * (one / (beta + delta) - (2 * knoteta(k + 1)**2) / (2 + beta + delta) + knoteta(k + 1)**4 / (4 + beta + delta)) ! Finale
                                 eta_2(i, j) = eta_2(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * delta * knoteta(k)**(beta + delta) * (one / (beta + delta) - (2 * knoteta(k)**2) / (2 + beta + delta) + knoteta(k)**4 / (4 + beta + delta)) ! Initial
-!                            end if
+                            end if
                         end do
                     end do
                 end do
