@@ -221,8 +221,8 @@ contains
                 do k = 1, size(prod_xi, 3) - 1! Loop over the polynomials
                     do l = 1, size(prod_xi, 4) ! loop over order
                         alpha = size(prod_xi, 4) - l
-                        xi_1(i, j) = xi_1(i, j) + prod_xi(i, j, k, l) * (knotxi(k + 1)**(2 + alpha) * (-one * (((Z1 + Z2) * ((-one / (2 + alpha)) + knotxi(k + 1)**2 / (4 + alpha))) / R) + c**2 * m * knotxi(k + 1) * ((-one / (3 + alpha)) + knotxi(k + 1)**2 / (5 + alpha)))) ! Finale
-                        xi_1(i, j) = xi_1(i, j) - prod_xi(i, j, k, l) * knotxi(k)**(2 + alpha) * ((((Z1 + Z2) * ((one / (2 + alpha)) - knotxi(k)**2 / (4 + alpha))) / R) - c**2 * m * knotxi(k) * ((one / (3 + alpha)) - knotxi(k)**2 / (5 + alpha))) ! Initial
+                        xi_1(i, j) = xi_1(i, j) + prod_xi(i, j, k, l) * knotxi(k + 1)**(2 + alpha) * (-one * ((Z1 + Z2) * ((-one / (2 + alpha)) + knotxi(k + 1)**2 / (4 + alpha))) / R + c**2 * m * knotxi(k + 1) * ((-one / (3 + alpha)) + knotxi(k + 1)**2 / (5 + alpha))) ! Finale
+                        xi_1(i, j) = xi_1(i, j) - prod_xi(i, j, k, l) * knotxi(k)**(2 + alpha) * (-one * ((Z1 + Z2) * ((-one / (2 + alpha)) + knotxi(k)**2 / (4 + alpha))) / R + c**2 * m * knotxi(k) * ((-one / (3 + alpha)) + knotxi(k)**2 / (5 + alpha))) ! Initial
 
                         xi_2(i, j) = xi_2(i, j) + prod_xi(i, j, k, l) * (knotxi(k + 1)**(3 + alpha) / (3 + alpha) - (knotxi(k + 1)**(1 + alpha) / (1 + alpha))) ! Finale
                         xi_2(i, j) = xi_2(i, j) - prod_xi(i, j, k, l) * (knotxi(k)**(3 + alpha) / (3 + alpha) - (knotxi(k)**(1 + alpha) / (1 + alpha))) ! Initial
@@ -316,8 +316,8 @@ contains
                         eta_1(i, j) = eta_1(i, j) + prod_eta(i, j, k, l) * (knoteta(k + 1)**(1 + beta) / (1 + beta) - knoteta(k + 1)**(3 + beta) / (3 + beta)) ! Finale
                         eta_1(i, j) = eta_1(i, j) - prod_eta(i, j, k, l) * (knoteta(k)**(1 + beta) / (1 + beta) - knoteta(k)**(3 + beta) / (3 + beta)) ! Initial
 
-                        eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l) * ((knoteta(k + 1)**(2 + beta) * ((Z1 - Z2) * ((-one / (2 + beta)) + knoteta(k + 1)**2 / (4 + beta)) + c**2 * m * R * knoteta(k + 1) * ((-one / (3 + beta)) + knoteta(k + 1)**2 / (5 + beta)))) / R) ! Finale
-                        eta_2(i, j) = eta_2(i, j) - prod_eta(i, j, k, l) * ((knoteta(k)**(2 + beta) * ((Z1 - Z2) * ((-one / (2 + beta)) + knoteta(k)**2 / (4 + beta)) + c**2 * m * R * knoteta(k) * ((-one / (3 + beta)) + knoteta(k)**2 / (5 + beta)))) / R) ! Initial
+                        eta_2(i, j) = eta_2(i, j) - prod_eta(i, j, k, l) * ((knoteta(k + 1)**(2 + beta) * ((Z1 - Z2) * ((-one / (2 + beta)) + knoteta(k + 1)**2 / (4 + beta)) + c**2 * m * R * knoteta(k + 1) * ((-one / (3 + beta)) + knoteta(k + 1)**2 / (5 + beta)))) / R) ! Finale
+                        eta_2(i, j) = eta_2(i, j) + prod_eta(i, j, k, l) * ((knoteta(k)**(2 + beta) * ((Z1 - Z2) * ((-one / (2 + beta)) + knoteta(k)**2 / (4 + beta)) + c**2 * m * R * knoteta(k) * ((-one / (3 + beta)) + knoteta(k)**2 / (5 + beta)))) / R) ! Initial
                     end do
                 end do
             end do
@@ -330,7 +330,7 @@ contains
                 i2 = indexToPair(i, size(b_xi, 1))
                 j2 = indexToPair(j, size(b_eta, 1))
 
-                result(i, j) = -2 * mppi() * (R**3) * (xi_1(i2(1), j2(1)) * eta_1(i2(2), j2(2)) + xi_2(i2(1), j2(1)) * eta_2(i2(2), j2(2)))
+                result(i, j) = -2 * mppi() * (R**3) * (xi_1(i2(1), j2(1)) * eta_1(i2(2), j2(2)) - xi_2(i2(1), j2(1)) * eta_2(i2(2), j2(2)))
             end do
         end do
 
