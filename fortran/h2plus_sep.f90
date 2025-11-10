@@ -566,7 +566,7 @@ contains
                             !                            end if
 
                             eta_3(i, j) = eta_3(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k + 1)**(3 + beta + delta) / (3 + beta + delta) ! Finale
-                            eta_3(i, j) = eta_3(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k + 1)**(3 + beta + delta) / (3 + beta + delta) ! Initial
+                            eta_3(i, j) = eta_3(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k)**(3 + beta + delta) / (3 + beta + delta) ! Initial
 
                             eta_4(i, j) = eta_4(i, j) + b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k + 1)**(3 + beta + delta) / (3 + beta + delta) ! Finale
                             eta_4(i, j) = eta_4(i, j) - b_eta(i, k, l1) * b_eta(j, k, l2) * knoteta(k)**(3 + beta + delta) / (3 + beta + delta) ! Initial
