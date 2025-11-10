@@ -163,4 +163,10 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     except Exception as error:
         print(error)
 
+    for file in glob.glob("*.csv"):
+        try:
+            os.remove(file)
+        except Exception as error:
+            print(error)
+
     return {"last_eigenvalue": last_eigenvalue}
