@@ -93,10 +93,23 @@ def dithorium():
     save_step = ".false."
 
 
+@ex.capture
+def get_id(_run):
+    return _run._id
+
 @ex.automain
 def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_step):
+    # Create temporary folder for result
+    result_folder = f"tmp_{get_id()}"
+    try:
+        os.mkdir(result_folder)
+    except Exception as error:
+        print(f"Failed to create output directory: {error}")
+        raise
+    print(f"Temporary folder created: {result_folder}")
+
     # Write formatted input file
-    with open("input.txt", "w") as f:
+    with open(f"{result_folder}/input.txt", "w") as f:
         f.write(f"""\
     {d},                   - d : Order of the B-Spline (order Mathematica + 1)
     {n},                  - n : Number of used B-Splines
@@ -111,13 +124,14 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     {epsilon:.1f},                 - epsilon : to avoid singularities
     {eta_slp:.1e},              - eta_slp : slope value to generate knots on eta
     {save_step},              - save_step : Save every matrices
+    {result_folder},              - name of the temporary folder
 """)
 
     # Compile and run Fortran program
     print("Compiling and running Fortran code...")
     subprocess.run(["make", "-C", "fortran", "main.out"], check=True, text=True)
     # result = subprocess.run(["./fortran/main.out"], input=open("input.txt").read(), text=True, capture_output=True)
-    result = subprocess.Popen(["./fortran/main.out"], stdin=open("input.txt"),
+    result = subprocess.Popen(["./fortran/main.out"], stdin=open(f"{result_folder}/input.txt"),
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     # Monitor memory and CPU usage
@@ -136,15 +150,15 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     #     pass
 
     # Save raw logs and outputs
-    with open("output.log", "w") as f:
+    with open(f"{result_folder}/output.log", "w") as f:
         f.write(result.stdout.read())
 
-    ex.add_artifact("input.txt")
-    ex.add_artifact("output.log")
-    ex.add_artifact("eigenvalues.txt")
-    ex.add_artifact("log_file")
+    ex.add_artifact(f"{result_folder}/input.txt")
+    ex.add_artifact(f"{result_folder}/output.log")
+    ex.add_artifact(f"{result_folder}/eigenvalues.txt")
+    ex.add_artifact(f"{result_folder}/log_file")
 
-    for file in glob.glob("*.csv"):
+    for file in glob.glob(f"{result_folder}/*.csv"):
         ex.add_artifact(file)
 
     branch = subprocess.check_output(
@@ -153,20 +167,20 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     msg = f"✅ Computation finished on branch \"{branch}\" in directory \"{cwd}\""
     push(msg)
 
-    last_eigenvalue = extract_last_eigenvalue("eigenvalues.txt")
+    last_eigenvalue = extract_last_eigenvalue(f"{result_folder}/eigenvalues.txt")
 
-    try:
-        os.remove("input.txt")
-        os.remove("output.log")
-        os.remove("eigenvalues.txt")
-        os.remove("log_file")
-    except Exception as error:
-        print(error)
-
-    for file in glob.glob("*.csv"):
-        try:
-            os.remove(file)
-        except Exception as error:
-            print(error)
+    # try:
+    #     os.remove(f"{result_folder}/input.txt")
+    #     os.remove(f"{result_folder}/output.log")
+    #     os.remove(f"{result_folder}/eigenvalues.txt")
+    #     os.remove(f"{result_folder}/log_file")
+    # except Exception as error:
+    #     print(error)
+    #
+    # for file in glob.glob(f"{result_folder}/*.csv"):
+    #     try:
+    #         os.remove(file)
+    #     except Exception as error:
+    #         print(error)
 
     return {"last_eigenvalue": last_eigenvalue}

@@ -5,7 +5,7 @@ program main
    implicit none
 
    integer :: d, n, n_remove, jz2
-   character(len=20) :: Z1read, Z2read, mread, Cread, Rread, ximaxread, ximinread, jz2read, epsilonread, eta_slpread
+   character(len=20) :: Z1read, Z2read, mread, Cread, Rread, ximaxread, ximinread, jz2read, epsilonread, eta_slpread, folder_name
    type(mp_real) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, zero, one
    logical :: save_step
 
@@ -60,9 +60,11 @@ program main
 
    read(*,*) save_step
 
+   read(*,*) folder_name
+
    ! Start the timer
    tm_init = second()
-   call init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step)
+   call init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step, folder_name)
    tm_fin = second()
    print *, "Elapsed time for global execution: ", tm_fin - tm_init, " seconds"
 end program main
