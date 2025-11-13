@@ -1200,6 +1200,7 @@ contains
         print *, "Time taken to calculate eigenvalues: ", tm1 - tm0, " seconds"
 
         if (compute_wf) then
+            
             print *, "Computing the wavefunction..."
             tm0 = second()
             call get_wavefunc(bspline_xi, bspline_eta, 3*n, 3*n, ximin, ximax, v, folder_name)

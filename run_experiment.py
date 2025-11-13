@@ -78,7 +78,7 @@ def config():
     save_step = ".false."
     tot_diag = ".false."
     maxit = 10
-    eig = 9.27410829e3
+    eig = 1.87777625e4
     compute_wf = ".false."
 
 
@@ -100,7 +100,7 @@ def dithorium():
     save_step = ".false."
     tot_diag = ".false."
     maxit = 10
-    eig = 1.87777625e4
+    eig = 9.27410829e3
     compute_wf = ".false."
 
 
@@ -174,6 +174,12 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     ex.add_artifact(f"{result_folder}/output.log")
     ex.add_artifact(f"{result_folder}/eigenvalues.txt")
     ex.add_artifact(f"{result_folder}/log_file")
+
+    if compute_wf.lower() == ".true.":
+        try:
+            ex.add_artifact(f"{result_folder}/wavefun.txt")
+        except Exception as error:
+            print(f"Failed to add wavefun.txt artifact: {error}")
 
     for file in glob.glob(f"{result_folder}/*.csv"):
         ex.add_artifact(file)

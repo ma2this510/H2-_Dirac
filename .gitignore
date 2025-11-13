@@ -36,6 +36,7 @@
 
 # Temporary files
 @eaDir/
+tmp_*/
 
 # Doxygen directories
 html/

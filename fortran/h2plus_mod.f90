@@ -931,7 +931,7 @@ contains
 
       type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps, knotxi_tmp
       type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three, C22three,C12three, C21three, C_mat, S_mat, vect
-      type(mp_real), dimension(:), allocatable :: w, fv1, fv2
+      type(mp_real), dimension(:), allocatable :: w, fv1, fv2, v
       type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_eta
       logical :: debug_bool = .false.
 
@@ -1460,7 +1460,8 @@ contains
 
          print *, "Error code: ", ierr
       else 
-         call pdiag(4*n**2, C_mat, S_mat, eig, maxit)
+         allocate (v(4 * n**2))
+         call pdiag(4*n**2, C_mat, S_mat, eig, maxit, v)
       end if
 
       tm1 = second()
