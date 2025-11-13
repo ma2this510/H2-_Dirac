@@ -1196,16 +1196,17 @@ contains
             call pdiag(4 * n**2, C_mat, S_mat, eig, maxit, v)
         end if
 
-        if (compute_wf) then
-            tm1 = second()
-            print *, "Time taken to calculate eigenvalues: ", tm1 - tm0, " seconds"
+        tm1 = second()
+        print *, "Time taken to calculate eigenvalues: ", tm1 - tm0, " seconds"
 
+        if (compute_wf) then
             print *, "Computing the wavefunction..."
             tm0 = second()
+            call get_wavefunc(bspline_xi, bspline_eta, 3*n, 3*n, ximin, ximax, v, folder_name)
+
+            tm1 = second()
+            print *, "Time taken to compute wavefunction: ", tm1 - tm0, " seconds"
         end if
-
-
-        call get_wavefunc(bspline_xi, bspline_eta, 3*n, 3*n, ximin, ximax, v, folder_name)
 
         print *, "Saving logs to file..."
         ! Save logs
