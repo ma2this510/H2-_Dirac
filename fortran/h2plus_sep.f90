@@ -827,7 +827,7 @@ contains
 
     end subroutine int_S22one
 
-    subroutine init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step, folder_name)
+    subroutine init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step, folder_name, tot_diag, maxit, eig, compute_wf)
         !> @brief This subroutine initializes the B-spline coefficients for the H2+ molecule.
         !> @param d : integer : the degree of the B-spline
         !> @param n : integer : the number of usable B-splines
@@ -844,9 +844,14 @@ contains
         !> @param eta_slp : real : the parameter for the generation of the knot vector on eta
         !> @param save_step : boolean : whether to save matrices to a file
         !> @param folder_name : string(20) : name of temporary folder
+        !> @param tot_diag : boolean : whether to perform total or partial diagonalization
+        !> @param maxit : integer : maximum number of iterations for the eigensolver (only for tot_diag = .false.)
+        !> @param eig : real : first guess eigenvalue for the eigensolver (only for tot_diag = .false.)
+        !> @param compute_wf : boolean : whether to compute wavefunctions after diagonalization (for now, only for tot_diag = .false.)
         type(mp_real), intent(in) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp
-        integer, intent(in) :: d, n, n_remove, jz2
-        logical, intent(in) :: save_step
+        type(mp_real), intent(inout) :: eig
+        integer, intent(in) :: d, n, n_remove, jz2, maxit
+        logical, intent(in) :: save_step, compute_wf, tot_diag
         character(len=20), intent(in) :: folder_name
 
         double precision :: tm0, tm1
@@ -859,15 +864,6 @@ contains
 
         integer :: ntot, i, j, ierr
         integer :: i2(2)
-
-        ! ----------------------
-        ! Development : Partial diag
-        logical :: tot_diag = .false.
-        integer :: maxit = 10
-        type(mp_real) :: eig
-
-        eig = '1.87777625d4'
-        ! ----------------------
 
         ntot = n + d + 2 * n_remove
         zero = '0.d0'
@@ -1200,11 +1196,13 @@ contains
             call pdiag(4 * n**2, C_mat, S_mat, eig, maxit, v)
         end if
 
-        tm1 = second()
-        print *, "Time taken to calculate eigenvalues: ", tm1 - tm0, " seconds"
+        if (compute_wf) then
+            tm1 = second()
+            print *, "Time taken to calculate eigenvalues: ", tm1 - tm0, " seconds"
 
-        print *, "Computing the wavefunction..."
-        tm0 = second()
+            print *, "Computing the wavefunction..."
+            tm0 = second()
+        end if
 
 
         call get_wavefunc(bspline_xi, bspline_eta, 3*n, 3*n, ximin, ximax, v, folder_name)

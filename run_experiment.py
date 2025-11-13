@@ -13,7 +13,9 @@ load_dotenv()
 
 ex = Experiment("H2+_Dirac_NKB")
 ex.observers.append(FileStorageObserver("experiments"))
-ex.observers.append(MongoObserver(url=os.environ['URI'], db_name=os.environ['DB']))
+ex.observers.append(MongoObserver(
+    url=os.environ['URI'], db_name=os.environ['DB']))
+
 
 def get_git_commit(path="fortran"):
     try:
@@ -57,6 +59,7 @@ def push(message: str):
     except (subprocess.CalledProcessError, requests.RequestException) as e:
         print(f"Notification failed: {e}")
 
+
 @ex.config
 def config():
     git_commit = get_git_commit()
@@ -73,6 +76,10 @@ def config():
     epsilon = 0.0
     eta_slp = 4.0e-2
     save_step = ".false."
+    tot_diag = ".false."
+    maxit = 10
+    eig = 9.27410829e3
+    compute_wf = ".false."
 
 
 @ex.named_config
@@ -91,14 +98,19 @@ def dithorium():
     epsilon = 0.0
     eta_slp = 0.029
     save_step = ".false."
+    tot_diag = ".false."
+    maxit = 10
+    eig = 1.87777625e4
+    compute_wf = ".false."
 
 
 @ex.capture
 def get_id(_run):
     return _run._id
 
+
 @ex.automain
-def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_step):
+def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_step, tot_diag, maxit, eig, compute_wf):
     # Create temporary folder for result
     result_folder = f"tmp_{get_id()}"
     try:
@@ -125,11 +137,16 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     {eta_slp:.1e},              - eta_slp : slope value to generate knots on eta
     {save_step},              - save_step : Save every matrices
     {result_folder},              - name of the temporary folder
+    {tot_diag},              - tot_diag : Perform total diagonalization (true) or partial (false)
+    {maxit},              - maxit : Maximum number of iterations for the eigensolver
+    {eig:.9f},              - eig : Initial eigenvalue guess
+    {compute_wf},              - compute_wf : Compute wavefunction (true/false)
 """)
 
     # Compile and run Fortran program
     print("Compiling and running Fortran code...")
-    subprocess.run(["make", "-C", "fortran", "main.out"], check=True, text=True)
+    subprocess.run(["make", "-C", "fortran", "main.out"],
+                   check=True, text=True)
     # result = subprocess.run(["./fortran/main.out"], input=open("input.txt").read(), text=True, capture_output=True)
     result = subprocess.Popen(["./fortran/main.out"], stdin=open(f"{result_folder}/input.txt"),
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -167,7 +184,8 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     msg = f"✅ Computation finished on branch \"{branch}\" in directory \"{cwd}\""
     push(msg)
 
-    last_eigenvalue = extract_last_eigenvalue(f"{result_folder}/eigenvalues.txt")
+    last_eigenvalue = extract_last_eigenvalue(
+        f"{result_folder}/eigenvalues.txt")
 
     # try:
     #     os.remove(f"{result_folder}/input.txt")

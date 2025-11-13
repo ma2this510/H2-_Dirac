@@ -4,10 +4,10 @@ program main
    use h2plus_sep
    implicit none
 
-   integer :: d, n, n_remove, jz2
-   character(len=20) :: Z1read, Z2read, mread, Cread, Rread, ximaxread, ximinread, jz2read, epsilonread, eta_slpread, folder_name
-   type(mp_real) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, zero, one
-   logical :: save_step
+   integer :: d, n, n_remove, jz2, maxit
+   character(len=20) :: Z1read, Z2read, mread, Cread, Rread, ximaxread, ximinread, jz2read, epsilonread, eta_slpread, eig_read, folder_name
+   type(mp_real) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, zero, one, eig
+   logical :: save_step, compute_wf, tot_diag
 
    double precision :: tm_init, tm_fin
 
@@ -62,9 +62,18 @@ program main
 
    read(*,*) folder_name
 
+   read(*,*) tot_diag
+
+   read(*,*) maxit
+
+   read(*,*) eig_read
+   eig = mpreal(eig_read)
+
+   read(*,*) compute_wf
+
    ! Start the timer
    tm_init = second()
-   call init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step, folder_name)
+   call init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step, folder_name, tot_diag, maxit, eig, compute_wf)
    tm_fin = second()
    print *, "Elapsed time for global execution: ", tm_fin - tm_init, " seconds"
 end program main

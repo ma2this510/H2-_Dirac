@@ -56,3 +56,6 @@ log_file
 # Config files
 .env
 bash_exec
+
+# JetBrains IDEs
+/.idea/
