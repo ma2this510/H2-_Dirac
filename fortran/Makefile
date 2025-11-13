@@ -88,6 +88,9 @@ partial_diag.o : partial_diag.f90
 bspline_gen.o : bspline_gen.f90
 	$(FC) $(FFLAGS) -c bspline_gen.f90
 
+wavefunction.o : wavefunction.f90
+	$(FC) $(FFLAGS) -c wavefunction.f90
+
 h2plus_mod.o : h2plus_mod.f90
 	$(FC) $(FFLAGS) -c h2plus_mod.f90
 
@@ -97,17 +100,18 @@ h2plus_sep.o : h2plus_sep.f90
 main.o : main.f90
 	$(FC) $(FFLAGS) -c main.f90
 
-main.out : mpfun eigen tools_mp.o partial_diag.o bspline_gen.o h2plus_mod.o h2plus_sep.o main.o $(MARG)
-	$(FC) $(FFLAGS) -fmax-stack-var-size=0 -o main.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o invsg.o leq1s.o tools_mp.o partial_diag.o bspline_gen.o h2plus_mod.o h2plus_sep.o main.o
+main.out : mpfun eigen tools_mp.o partial_diag.o bspline_gen.o wavefunction.o h2plus_mod.o h2plus_sep.o main.o $(MARG)
+	$(FC) $(FFLAGS) -fmax-stack-var-size=0 -o main.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o invsg.o leq1s.o tools_mp.o partial_diag.o bspline_gen.o wavefunction.o h2plus_mod.o h2plus_sep.o main.o
 
 debug.out : mpfun eigen $(MARG)
 	$(FC) $(DEBUG_FLAGS) -c tools_mp.f90
 	$(FC) $(DEBUG_FLAGS) -c partial_diag.f90
 	$(FC) $(DEBUG_FLAGS) -c bspline_gen.f90
-	$(FC) $(DEBUG_FLAGS) -c h2plus_mod.f90
+	$(FC) $(DEBUG_FLAGS) -c bspline_gen.f90
+	$(FC) $(DEBUG_FLAGS) -c wavefunction.f90
 	$(FC) $(DEBUG_FLAGS) -c h2plus_sep.f90
 	$(FC) $(DEBUG_FLAGS) -c main.f90
-	$(FC) $(DEBUG_FLAGS) -o debug.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o invsg.o leq1s.o tools_mp.o partial_diag.o bspline_gen.o h2plus_mod.o h2plus_sep.o main.o
+	$(FC) $(DEBUG_FLAGS) -o debug.out mpfuna.o mpfunb.o mpfunc.o mpfund.o mpfune.o mpfunf.o mpfung1.o mpfunh1.o mpmodule.o mpmask13.o second.o pythag.o rebak.o reduc.o rsg.o tql2.o tqlrat.o tred1.o tred2.o invsg.o leq1s.o tools_mp.o partial_diag.o bspline_gen.o wavefunction.o h2plus_mod.o h2plus_sep.o main.o
 
 run : main.out
 	./main.out < input.txt

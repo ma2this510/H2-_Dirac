@@ -4,13 +4,13 @@ module partial_diag
 
 contains
 
-    subroutine pdiag(n, C_mat, S_mat, eig, maxit)
+    subroutine pdiag(n, C_mat, S_mat, eig, maxit, v)
         integer, intent(in) :: n, maxit
         type(mp_real), intent(inout) :: eig
+        type(mp_real), dimension(n), intent(inout) :: v
         type(mp_real), dimension(n, n), intent(in) :: C_mat, S_mat
         type(mp_real), dimension(n*(n+1)/2) :: lin_C, lin_S, rep_C, rep_S
         type(mp_real), dimension(3*n+1) :: wa
-        type(mp_real), dimension(n) :: v
         type(mp_real) :: eps
 
         integer :: i, j, idx, ijob

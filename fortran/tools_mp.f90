@@ -9,6 +9,7 @@ module tools_mp
    public :: progress_bar
    public :: multiply_elem
    public :: indexToPair
+   public :: linespace
 
    interface write_lists
       module procedure write_lists_real
@@ -165,5 +166,22 @@ contains
       pair(2) = mod(index - 1, n) + 1
 
    end function indexToPair
+
+   subroutine linespace(min, max, result)
+      implicit none
+      type(mp_real), intent(in) :: min, max
+      type(mp_real), dimension(:), intent(inout) :: result
+
+      integer :: n, i
+      type(mp_real) :: step
+
+      n = size(result)
+      step = (max-min)/(n - 1)
+
+      do i=1, n
+         result(i) = min + (i-1)*step
+      end do
+
+   end subroutine linespace
 
 end module tools_mp
