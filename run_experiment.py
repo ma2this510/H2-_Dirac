@@ -121,7 +121,7 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     {R:.9f},                 - R : SEMI-interatomic distance
     {ximax:.1f},                - ximax : Maximum xi value
     {ximin:.1f},                 - ximin : Minimum xi value
-    {epsilon:.1f},                 - epsilon : to avoid singularities
+    {epsilon:.1e},                 - epsilon : to avoid singularities
     {eta_slp:.1e},              - eta_slp : slope value to generate knots on eta
     {save_step},              - save_step : Save every matrices
     {result_folder},              - name of the temporary folder
