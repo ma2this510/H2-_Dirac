@@ -856,13 +856,13 @@ contains
 
         double precision :: tm0, tm1
 
-        type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps, knotxi_tmp
+        type(mp_real), dimension(:), allocatable :: knotxi, knoteta, knotxi_eps, knoteta_eps, knotxi_tmp, lin_C, lin_S
         type(mp_real), dimension(:, :), allocatable :: S11one, S22one, C11one, C11two, C22one, C22two, C11three, C22three, C12three, C21three, C_mat, S_mat, vect
         type(mp_real), dimension(:), allocatable :: w, fv1, fv2, v
         type(mp_real), dimension(:, :, :), allocatable :: bspline_xi, bspline_xi_tmp, bspline_eta
         logical :: debug_bool = .false.
 
-        integer :: ntot, i, j, ierr
+        integer :: ntot, i, j, ierr, idx
         integer :: i2(2)
 
         ntot = n + d + 2 * n_remove
@@ -1119,6 +1119,8 @@ contains
             end do
         end do
 
+        deallocate (C11one, C11two, C22one, C22two, C11three, C22three, C12three, C21three)
+
         if (save_step) then
             print *, "Saving C_mat matrix to file..."
             open (unit = 13, file = trim(folder_name)//'/C_mat.csv', status = 'replace')
@@ -1147,7 +1149,9 @@ contains
             end do
         end do
 
-        if (save_step) then
+        deallocate (S11one, S22one)
+
+        if (save_step .or. compute_wf) then
             print *, "Saving S_mat matrix to file..."
             open (unit = 14, file = trim(folder_name)//'/S_mat.csv', status = 'replace')
             do i = 1, 4 * n**2
@@ -1160,7 +1164,7 @@ contains
         print *, "Time taken to generate S matrix: ", tm1 - tm0, " seconds"
         print *, "C matrix and S matrix generated successfully."
 
-        if (debug_bool) then
+        if (debug_bool)  then
             print *, "Check if C is hermitian..."
             do i = 1, 4 * n**2
                 do j = 1, 4 * n**2
@@ -1192,8 +1196,21 @@ contains
 
             print *, "Error code: ", ierr
         else
-            allocate (v(4 * n**2))
-            call pdiag(4 * n**2, C_mat, S_mat, eig, maxit, v)
+            allocate (v(4 * n**2), lin_C((4 * n**2)*(4 * n**2 + 1)/2), lin_S((4 * n**2)*(4 * n**2 + 1)/2))
+
+            ! Convert C_mat and S_mat to linear storage format
+            idx = 1
+            do i = 1, 4 * n**2
+                do j = 1, i
+                    lin_C(idx) = C_mat(i, j)
+                    lin_S(idx) = S_mat(i, j)
+                    idx = idx + 1
+                end do
+            end do
+
+            deallocate (C_mat, S_mat)
+            
+            call pdiag(4 * n**2, lin_C, lin_S, eig, maxit, v)
         end if
 
         tm1 = second()
@@ -1235,58 +1252,6 @@ contains
         call write_lists(knotxi_eps, 1, 35, 15)
         write (1, '(a)') "Adjusted Eta knot vector: "
         call write_lists(knoteta_eps, 1, 35, 15)
-        if (debug_bool) then
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "S11 integral: "
-            do i = 1, n**2
-                call write_lists(S11one(i, :), 1, 35, 15)
-            end do
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "S22 integral: "
-            do i = 1, n**2
-                call write_lists(S22one(i, :), 1, 35, 15)
-            end do
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "C11one integral: "
-            do i = 1, n**2
-                call write_lists(C11one(i, :), 1, 35, 15)
-            end do
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "C11two integral: "
-            do i = 1, n**2
-                call write_lists(C11two(i, :), 1, 35, 15)
-            end do
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "C22one integral: "
-            do i = 1, n**2
-                call write_lists(C22one(i, :), 1, 35, 15)
-            end do
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "C22two integral: "
-            do i = 1, n**2
-                call write_lists(C22two(i, :), 1, 35, 15)
-            end do
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "C11three integral: "
-            do i = 1, n**2
-                call write_lists(C11three(i, :), 1, 35, 15)
-            end do
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "C22three integral: "
-            do i = 1, n**2
-                call write_lists(C22three(i, :), 1, 35, 15)
-            end do
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "C12three integral: "
-            do i = 1, n**2
-                call write_lists(C12three(i, :), 1, 35, 15)
-            end do
-            write (1, '(a)') "--------------------------------------------------------------"
-            write (1, '(a)') "C21three integral: "
-            do i = 1, n**2
-                call write_lists(C21three(i, :), 1, 35, 15)
-            end do
-        end if
         write (1, '(a)') "--------------------------------------------------------------"
         write (1, '(a)') "Value of mc²:"
         call mpwrite(1, 35, 15, m * c * c)

@@ -4,16 +4,16 @@ module partial_diag
 
 contains
 
-    subroutine pdiag(n, C_mat, S_mat, eig, maxit, v)
+    subroutine pdiag(n, lin_C, lin_S, eig, maxit, v)
         integer, intent(in) :: n, maxit
         type(mp_real), intent(inout) :: eig
         type(mp_real), dimension(n), intent(inout) :: v
-        type(mp_real), dimension(n, n), intent(in) :: C_mat, S_mat
-        type(mp_real), dimension(n*(n+1)/2) :: lin_C, lin_S, rep_C, rep_S
+        type(mp_real), dimension(n*(n+1)/2), intent(in) :: lin_C, lin_S
+        type(mp_real), dimension(n*(n+1)/2) :: rep_C, rep_S
         type(mp_real), dimension(3*n+1) :: wa
         type(mp_real) :: eps
 
-        integer :: i, j, idx, ijob
+        integer :: i, ijob
 
         ! Initialize parameters
         ijob = 0
@@ -22,17 +22,7 @@ contains
         do i = 2, n
             v(i) = '0.0d0'
         end do
-
-        ! Convert C_mat and S_mat to linear storage format
-        idx = 1
-        do i = 1, n
-            do j = 1, i
-                lin_C(idx) = C_mat(i, j)
-                lin_S(idx) = S_mat(i, j)
-                idx = idx + 1
-            end do
-        end do
-
+        
         ! Call the partial diagonalization routine
         do i = 1, 3
             rep_C(:) = lin_C(:)
