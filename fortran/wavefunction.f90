@@ -59,25 +59,24 @@ contains
         return
     end function prefactor2
 
-    subroutine get_wavefunc(b_xi, b_eta, n_xi, n_eta, ximax, ximin, eigvec, folder_name)
+    subroutine get_wavefunc(b_xi, b_eta, point_xi, point_eta, ximax, ximin, eigvec, folder_name)
         type(mp_real), dimension(:, :, :), intent(in) :: b_xi, b_eta
         type(mp_real), dimension(:), intent(in) :: eigvec
+        type(mp_real), dimension(:), intent(in) :: point_xi, point_eta
         type(mp_real), intent(in) :: ximax, ximin
-        integer, intent(in) :: n_xi, n_eta
         character(len=20), intent(in) :: folder_name
 
-        type(mp_real), dimension(n_xi) :: point_xi
-        type(mp_real), dimension(n_eta) :: point_eta
-        type(mp_real), dimension(4, n_xi, n_eta) :: wavefun
+        type(mp_real), dimension(:, :, :), allocatable :: wavefun
 
-        integer :: i, j, i1, i2, idx
+        integer :: n_xi, n_eta, i, j, i1, i2, idx
 
         zero = '0.d0'
         one = '1.d0'
 
-        ! Create point list
-        call linespace(ximin, ximax, point_xi)
-        call linespace(-one, one, point_eta)
+        n_xi = size(point_xi) 
+        n_eta = size(point_eta)
+
+        allocate(wavefun(4, n_xi, n_eta))
 
         do i = 1, n_xi ! Loop over first coords
             do j = 1, n_eta ! Loop over seconds coords
@@ -105,6 +104,12 @@ contains
         end do
 
         open(unit = 15, file = trim(folder_name) // '/wavefun.txt', status = 'replace')
+        write(15, '(a)') "Knots in xi :"
+        call write_csv(point_xi, 15, 35, 15)
+
+        write(15, '(a)') "Knots in eta :"
+        call write_csv(point_eta, 15, 35, 15)
+
         write(15, '(a)') "Component 1 of wavefunction :"
 
         do i = 1, n_xi ! Loop over first coords

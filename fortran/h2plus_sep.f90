@@ -1220,7 +1220,7 @@ contains
             
             print *, "Computing the wavefunction..."
             tm0 = second()
-            call get_wavefunc(bspline_xi, bspline_eta, 3*n, 3*n, ximin, ximax, v, folder_name)
+            call get_wavefunc(bspline_xi, bspline_eta, knotxi_eps, knoteta_eps, ximin, ximax, v, folder_name)
 
             tm1 = second()
             print *, "Time taken to compute wavefunction: ", tm1 - tm0, " seconds"
