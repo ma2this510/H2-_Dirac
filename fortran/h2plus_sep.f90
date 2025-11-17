@@ -878,7 +878,7 @@ contains
 
         knotxi_tmp = knot_xi(d, n + 1, n_remove, ximin, ximax)
         knotxi = knotxi_tmp(1:ntot) ! Remove the last knot to avoid singularities
-        knoteta = knot_eta(d, n, n_remove, eta_slp)
+        knoteta = knot_eta_lin(d, n, n_remove, eta_slp)
 
         tm1 = second()
         print *, "Time taken to generate knots: ", tm1 - tm0, " seconds"

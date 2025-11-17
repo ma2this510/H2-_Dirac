@@ -9,7 +9,7 @@ module bspline_gen
    public :: fusion_coef
    public :: print_table
    public :: init_bspine
-   public :: knot_xi, knot_eta
+   public :: knot_xi, knot_eta, knot_eta_lin
 
 contains
 
@@ -305,4 +305,42 @@ contains
       end do
 
    end function knot_eta
+
+   function knot_eta_lin(d, n, n_remove, eta_slp) result(result)
+      !> @brief This function generates the knot vector for eta.
+      !> @param d : integer : the degree of the B-spline
+      !> @param n : integer : the number of usable B-splines
+      !> @param n_remove : integer : the number of knots to remove from each end
+      !> @param eta_slp : real : the parameter for the generation of the knot vector on eta
+      !> @return result : real(:) : the knot vector of the B-spline
+      integer, intent(in) :: d, n, n_remove
+      type(mp_real), intent(in) :: eta_slp
+      type(mp_real), dimension(:), allocatable :: result
+
+      type(mp_real) :: one, zero
+      integer :: ntot, i, itot
+
+      zero = '0.d0'
+      one = '1.d0'
+      ntot = n + d + 2*n_remove
+
+      allocate (result(ntot))
+      itot = 0
+
+      do i = 1, d
+         itot = itot + 1
+         result(itot) = -1*one
+      end do
+
+      do i = 1, n - d + 2*n_remove
+         itot = itot + 1
+         result(itot) = -1*one + 2*one*i / ( (n - d + 2*n_remove + 1)*one )
+      end do
+
+      do i = 1, d
+         itot = itot + 1
+         result(itot) = one
+      end do
+
+   end function knot_eta_lin
 end module bspline_gen
