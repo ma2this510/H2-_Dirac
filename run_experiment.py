@@ -75,6 +75,7 @@ def config():
     ximin = 1.0
     epsilon = 0.0
     eta_slp = 4.0e-2
+    xi_slp = 4.0e1
     save_step = ".false."
     tot_diag = ".false."
     maxit = 10
@@ -97,6 +98,7 @@ def dithorium():
     ximin = 1.0
     epsilon = 0.0
     eta_slp = 0.029
+    xi_slp = 4.0e1
     save_step = ".false."
     tot_diag = ".false."
     maxit = 10
@@ -110,7 +112,7 @@ def get_id(_run):
 
 
 @ex.automain
-def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_step, tot_diag, maxit, eig, compute_wf):
+def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, xi_slp, save_step, tot_diag, maxit, eig, compute_wf):
     # Create temporary folder for result
     result_folder = f"tmp_{get_id()}"
     try:
@@ -135,6 +137,7 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, save_st
     {ximin:.1f},                 - ximin : Minimum xi value
     {epsilon:.1e},                 - epsilon : to avoid singularities
     {eta_slp:.1e},              - eta_slp : slope value to generate knots on eta
+    {xi_slp:.1e},              - xi_slp : slope value to generate knots on xi
     {save_step},              - save_step : Save every matrices
     {result_folder},              - name of the temporary folder
     {tot_diag},              - tot_diag : Perform total diagonalization (true) or partial (false)

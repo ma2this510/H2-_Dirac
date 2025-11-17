@@ -827,7 +827,7 @@ contains
 
     end subroutine int_S22one
 
-    subroutine init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step, folder_name, tot_diag, maxit, eig, compute_wf)
+    subroutine init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, xi_slp, save_step, folder_name, tot_diag, maxit, eig, compute_wf)
         !> @brief This subroutine initializes the B-spline coefficients for the H2+ molecule.
         !> @param d : integer : the degree of the B-spline
         !> @param n : integer : the number of usable B-splines
@@ -842,13 +842,14 @@ contains
         !> @param jz2 : real : the quantum number (2*jz)
         !> @param epsilon : real : the machine epsilon
         !> @param eta_slp : real : the parameter for the generation of the knot vector on eta
+        !> @param xi_slp : real : the parameter for the generation of the knot vector on xi
         !> @param save_step : boolean : whether to save matrices to a file
         !> @param folder_name : string(20) : name of temporary folder
         !> @param tot_diag : boolean : whether to perform total or partial diagonalization
         !> @param maxit : integer : maximum number of iterations for the eigensolver (only for tot_diag = .false.)
         !> @param eig : real : first guess eigenvalue for the eigensolver (only for tot_diag = .false.)
         !> @param compute_wf : boolean : whether to compute wavefunctions after diagonalization (for now, only for tot_diag = .false.)
-        type(mp_real), intent(in) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp
+        type(mp_real), intent(in) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, xi_slp
         type(mp_real), intent(inout) :: eig
         integer, intent(in) :: d, n, n_remove, jz2, maxit
         logical, intent(in) :: save_step, compute_wf, tot_diag
@@ -876,7 +877,7 @@ contains
         ! Generate the knot vectors for xi and eta
         allocate (knotxi_tmp(ntot + 1), knotxi(ntot), knoteta(ntot))
 
-        knotxi_tmp = knot_xi(d, n + 1, n_remove, ximin, ximax)
+        knotxi_tmp = knot_xi(d, n + 1, n_remove, ximin, ximax, xi_slp)
         knotxi = knotxi_tmp(1:ntot) ! Remove the last knot to avoid singularities
         knoteta = knot_eta_lin(d, n, n_remove, eta_slp)
 

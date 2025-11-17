@@ -5,8 +5,8 @@ program main
    implicit none
 
    integer :: d, n, n_remove, jz2, maxit
-   character(len=20) :: Z1read, Z2read, mread, Cread, Rread, ximaxread, ximinread, jz2read, epsilonread, eta_slpread, eig_read, folder_name
-   type(mp_real) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, zero, one, eig
+   character(len=20) :: Z1read, Z2read, mread, Cread, Rread, ximaxread, ximinread, jz2read, epsilonread, eta_slpread, xi_slpread, eig_read, folder_name
+   type(mp_real) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, xi_slp, zero, one, eig
    logical :: save_step, compute_wf, tot_diag
 
    double precision :: tm_init, tm_fin
@@ -58,6 +58,9 @@ program main
    read(*,*) eta_slpread
    eta_slp = mpreal(eta_slpread)
 
+   read(*,*) xi_slpread
+   xi_slp = mpreal(xi_slpread)
+
    read(*,*) save_step
 
    read(*,*) folder_name
@@ -73,7 +76,7 @@ program main
 
    ! Start the timer
    tm_init = second()
-   call init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, save_step, folder_name, tot_diag, maxit, eig, compute_wf)
+   call init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, xi_slp, save_step, folder_name, tot_diag, maxit, eig, compute_wf)
    tm_fin = second()
    print *, "Elapsed time for global execution: ", tm_fin - tm_init, " seconds"
 end program main

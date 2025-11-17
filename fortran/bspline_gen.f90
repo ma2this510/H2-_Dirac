@@ -211,15 +211,16 @@ contains
 
    end subroutine init_bspine
 
-   function knot_xi(d, n, n_remove, ximin, ximax) result(result)
+   function knot_xi(d, n, n_remove, ximin, ximax, xi_slp) result(result)
       !> @brief This function generates the knot vector for xi.
       !> @param d : integer : the degree of the B-spline
       !> @param n : integer : the number of usable B-splines
       !> @param n_remove : integer : the number of knots to remove from each end
       !> @param ximin : real : the minimum position of the B-spline on xi-axis
       !> @param ximax : real : the maximum position of the B-spline on xi-axis
+      !> @param xi_slp : real : the parameter for the generation of the knot vector on xi
       !> @return result : real(:) : the knot vector of the B-spline
-      type(mp_real), intent(in) :: ximin, ximax
+      type(mp_real), intent(in) :: ximin, ximax, xi_slp
       integer, intent(in) :: d, n, n_remove
       type(mp_real), dimension(:), allocatable :: result
 
@@ -246,7 +247,7 @@ contains
          if (i == 1) then
             result(itot) = ximin
          else
-            result(itot) = ximin*(ximax/ximin)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
+            result(itot) = (ximin/xi_slp)*(xi_slp*ximax/ximin)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
          end if
       end do
 
