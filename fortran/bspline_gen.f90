@@ -283,12 +283,12 @@ contains
       if (mod(n - d + 2*n_remove, 4) == 0) then
          do i = 1, (n - d + 2*n_remove)/4 ! Exponential regime - negative side
             itot = itot + 1
-            result(itot) = -1 * (eta_slp)**(4 * (i - 1) / (n - d + 2*n_remove))
+            result(itot) = -1 * (eta_slp)**(4 * (i) / (n - d + 2*n_remove))
          end do
 
          do i = 1, (n - d + 2*n_remove)/4 ! Linear regime - negative side
             itot = itot + 1
-            result(itot) = -eta_slp + 4 * (i - 1) * eta_slp / (n - d + 2*n_remove)
+            result(itot) = -eta_slp + 4 * (i) * eta_slp / (n - d + 2*n_remove)
          end do
 
          do i = (n - d + 2*n_remove)/4, 1, -1 ! Linear regime - positive side
@@ -298,29 +298,29 @@ contains
 
          do i = (n - d + 2*n_remove)/4, 1, -1 ! Exponential regime - positive side
             itot = itot + 1
-            result(itot) = 1 * (eta_slp)**(4 * (i - 1) / (n - d + 2*n_remove))
+            result(itot) = 1 * (eta_slp)**(4 * (i) / (n - d + 2*n_remove))
          end do
 
       else
 
          do i = 1, (n - d + 2*n_remove)/4 + 1 ! Exponential regime - negative side
             itot = itot + 1
-            result(itot) = -1 * (eta_slp)**((i - 1) / ((n - d + 2*n_remove)/4 + 1))
+            result(itot) = -1 * (eta_slp)**((i) / ((n - d + 2*n_remove)/4 + 1))
          end do
 
          do i = 1, (n - d + 2*n_remove)/4 - 1 ! Linear regime - negative side
             itot = itot + 1
-            result(itot) = -eta_slp + (i - 1) * eta_slp / ((n - d + 2*n_remove)/4 - 1)
+            result(itot) = -eta_slp + (i) * eta_slp / ((n - d + 2*n_remove)/4 - 1)
          end do
 
          do i = (n - d + 2*n_remove)/4 - 1, 1, -1 ! Linear regime - positive side
             itot = itot + 1
-            result(itot) = eta_slp - (i - 1) * eta_slp / ((n - d + 2*n_remove)/4 - 1)
+            result(itot) = eta_slp - (i) * eta_slp / ((n - d + 2*n_remove)/4 - 1)
          end do
 
          do i = (n - d + 2*n_remove)/4 + 1, 1, -1 ! Exponential regime - positive side
             itot = itot + 1
-            result(itot) = 1 * (eta_slp)**((i - 1) / ((n - d + 2*n_remove)/4 + 1))
+            result(itot) = 1 * (eta_slp)**((i) / ((n - d + 2*n_remove)/4 + 1))
          end do
 
       end if
