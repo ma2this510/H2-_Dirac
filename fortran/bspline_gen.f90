@@ -237,21 +237,17 @@ contains
 
       itot = 0
 
-      do i = 1, d - 1
+      do i = 1, d
          itot = itot + 1
          result(itot) = ximin
       end do
 
-      do i = 1, n - d + 2 + 2*n_remove
+      do i = 1, n - d + 2*n_remove
          itot = itot + 1
-         if (i == 1) then
-            result(itot) = ximin
-         else
-            result(itot) = (ximin)*(ximax/ximin)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
-         end if
+         result(itot) = ximin + (ximax - ximin) * (exp(xi_slp * i / (n - d + 2*n_remove + 1)) - 1) / (exp(xi_slp) - 1)
       end do
 
-      do i = 1, d - 1
+      do i = 1, d
          itot = itot + 1
          result(itot) = ximax
       end do
