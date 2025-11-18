@@ -247,7 +247,7 @@ contains
          if (i == 1) then
             result(itot) = ximin
          else
-            result(itot) = (ximin/xi_slp)*(xi_slp*ximax/ximin)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
+            result(itot) = (ximin)*(ximax/ximin)**(((i - 1)*one)/((n - d + 1 + 2*n_remove)*one))
          end if
       end do
 

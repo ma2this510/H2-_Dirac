@@ -1152,7 +1152,7 @@ contains
 
         deallocate (S11one, S22one)
 
-        if (save_step .or. compute_wf) then
+        if (save_step) then
             print *, "Saving S_mat matrix to file..."
             open (unit = 14, file = trim(folder_name)//'/S_mat.csv', status = 'replace')
             do i = 1, 4 * n**2

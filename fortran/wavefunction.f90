@@ -67,8 +67,7 @@ contains
         character(len=20), intent(in) :: folder_name
 
         type(mp_real), dimension(:, :, :), allocatable :: wavefun
-
-        integer :: n_xi, n_eta, i, j, i1, i2, idx
+        integer :: n_xi, n_eta, i, j, i1, i2, i3, i4, idx1, idx2
 
         zero = '0.d0'
         one = '1.d0'
@@ -88,15 +87,20 @@ contains
 
                 do i1 = 1, size(b_xi, 1) ! Loop over first dim basis fun
                     do i2 = 1, size(b_eta, 1) ! Loop over second dim basis fun
-                        idx = (i1 - 1) * size(b_xi, 1) + i2
+                        do i3 = 1, size(b_xi, 1) ! Loop over first dim basis fun
+                            do i4 = 1, size(b_eta, 1) ! Loop over second dim basis fun 
+                                idx1 = (i1 - 1) * size(b_xi, 1) + i2
+                                idx2 = (i3 - 1) * size(b_eta, 1) + i4
 
-                        wavefun(1, i, j) = wavefun(1, i, j) + eigvec(idx) * bspline_val_xi(point_xi(i), b_xi(i1, :, :)) * bspline_val_xi(point_eta(j), b_xi(i2, :, :))
+                                wavefun(1, i, j) = wavefun(1, i, j) + eigvec(idx1) * bspline_val_xi(point_xi(i), b_xi(i1, :, :)) * bspline_val_eta(point_eta(j), b_xi(i2, :, :)) * eigvec(idx2) * bspline_val_xi(point_xi(i), b_xi(i3, :, :)) * bspline_val_eta(point_eta(j), b_xi(i4, :, :))
 
-                        wavefun(2, i, j) = wavefun(2, i, j) + eigvec(size(b_xi, 1) + idx) * prefactor2(point_xi(i), point_eta(j)) * bspline_val_xi(point_xi(i), b_xi(i1, :, :)) * bspline_val_xi(point_eta(j), b_xi(i2, :, :))
+                                wavefun(2, i, j) = wavefun(2, i, j) + eigvec(size(b_xi, 1) + idx1) * prefactor2(point_xi(i), point_eta(j))**2 * bspline_val_eta(point_xi(i), b_xi(i1, :, :)) * bspline_val_xi(point_eta(j), b_xi(i2, :, :)) * eigvec(size(b_xi, 1) + idx2) * bspline_val_xi(point_xi(i), b_xi(i3, :, :)) * bspline_val_eta(point_eta(j), b_xi(i4, :, :))
 
-                        wavefun(3, i, j) = wavefun(3, i, j) + eigvec(2 * size(b_xi, 1) + idx) * bspline_val_xi(point_xi(i), b_xi(i1, :, :)) * bspline_val_xi(point_eta(j), b_xi(i2, :, :))
+                                wavefun(3, i, j) = wavefun(3, i, j) + eigvec(2 * size(b_xi, 1) + idx1) * bspline_val_xi(point_xi(i), b_xi(i1, :, :)) * bspline_val_eta(point_eta(j), b_xi(i2, :, :)) * eigvec(2 * size(b_xi, 1) + idx2) * bspline_val_xi(point_xi(i), b_xi(i3, :, :)) * bspline_val_eta(point_eta(j), b_xi(i4, :, :))
 
-                        wavefun(4, i, j) = wavefun(4, i, j) + eigvec(3 * size(b_xi, 1) + idx) * prefactor2(point_xi(i), point_eta(j)) * bspline_val_xi(point_xi(i), b_xi(i1, :, :)) * bspline_val_xi(point_eta(j), b_xi(i2, :, :))
+                                wavefun(4, i, j) = wavefun(4, i, j) + eigvec(3 * size(b_xi, 1) + idx1) * prefactor2(point_xi(i), point_eta(j))**2 * bspline_val_xi(point_xi(i), b_xi(i1, :, :)) * bspline_val_eta(point_eta(j), b_xi(i2, :, :)) * eigvec(3 * size(b_xi, 1) + idx2) * bspline_val_xi(point_xi(i), b_xi(i3, :, :)) * bspline_val_eta(point_eta(j), b_xi(i4, :, :))
+                            end do
+                        end do
                     end do
                 end do
 
