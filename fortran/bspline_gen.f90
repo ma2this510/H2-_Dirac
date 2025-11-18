@@ -283,7 +283,7 @@ contains
       if (mod(n - d + 2*n_remove, 4) == 0) then
          do i = 1, (n - d + 2*n_remove)/4 ! Exponential regime - negative side
             itot = itot + 1
-            result(itot) = -1 * (eta_slp)**(4 * (i) / (n - d + 2*n_remove))
+            result(itot) = -one * (eta_slp)**(4 * one * (i) / (n - d + 2*n_remove))
          end do
 
          do i = 1, (n - d + 2*n_remove)/4 ! Linear regime - negative side
@@ -298,29 +298,29 @@ contains
 
          do i = (n - d + 2*n_remove)/4, 1, -1 ! Exponential regime - positive side
             itot = itot + 1
-            result(itot) = 1 * (eta_slp)**(4 * (i) / (n - d + 2*n_remove))
+            result(itot) = one * (eta_slp)**(4 * one * (i) / (n - d + 2*n_remove))
          end do
 
       else
 
          do i = 1, (n - d + 2*n_remove)/4 + 1 ! Exponential regime - negative side
             itot = itot + 1
-            result(itot) = -1 * (eta_slp)**((i) / ((n - d + 2*n_remove)/4 + 1))
+            result(itot) = -one * (eta_slp)**((i * one) / ((n - d + 2*n_remove)/4 + one))
          end do
 
-         do i = 1, (n - d + 2*n_remove)/4 - 1 ! Linear regime - negative side
+         do i = 1, (n - d + 2*n_remove)/4 ! Linear regime - negative side
             itot = itot + 1
-            result(itot) = -eta_slp + (i) * eta_slp / ((n - d + 2*n_remove)/4 - 1)
+            result(itot) = -eta_slp + (i) * eta_slp / ((n - d + 2*n_remove)/4)
          end do
 
-         do i = (n - d + 2*n_remove)/4 - 1, 1, -1 ! Linear regime - positive side
+         do i = (n - d + 2*n_remove)/4, 1, -1 ! Linear regime - positive side
             itot = itot + 1
-            result(itot) = eta_slp - (i) * eta_slp / ((n - d + 2*n_remove)/4 - 1)
+            result(itot) = eta_slp - (i) * eta_slp / ((n - d + 2*n_remove)/4)
          end do
 
          do i = (n - d + 2*n_remove)/4 + 1, 1, -1 ! Exponential regime - positive side
             itot = itot + 1
-            result(itot) = 1 * (eta_slp)**((i) / ((n - d + 2*n_remove)/4 + 1))
+            result(itot) = one * (eta_slp)**((i * one) / ((n - d + 2*n_remove)/4 + one))
          end do
 
       end if
