@@ -75,7 +75,7 @@ def config():
     ximin = 1.0
     epsilon = 0.0
     eta_slp = 4.0e-2
-    xi_slp = 4.0e1
+    xi_slp = 7.0
     save_step = ".false."
     tot_diag = ".false."
     maxit = 10

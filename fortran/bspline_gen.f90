@@ -273,7 +273,7 @@ contains
       ntot = n + d + 2*n_remove
 
       nhalf = (n - d + 2*n_remove) / 2
-      nexp = 2 * nhalf / 3
+      nexp = 3 * nhalf / 4
       nlin = nhalf - nexp
 
       allocate (result(ntot))
