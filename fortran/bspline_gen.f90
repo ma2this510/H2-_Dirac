@@ -266,11 +266,15 @@ contains
       type(mp_real), dimension(:), allocatable :: result
 
       type(mp_real) :: one, zero
-      integer :: ntot, i, itot
+      integer :: ntot, i, itot, nhalf, nexp, nlin
 
       zero = '0.d0'
       one = '1.d0'
       ntot = n + d + 2*n_remove
+
+      nhalf = (n - d + 2*n_remove) / 2
+      nexp = 2 * nhalf / 3
+      nlin = nhalf - nexp
 
       allocate (result(ntot))
       itot = 0
@@ -280,50 +284,25 @@ contains
          result(itot) = -1*one
       end do
 
-      if (mod(n - d + 2*n_remove, 4) == 0) then
-         do i = 1, (n - d + 2*n_remove)/4 ! Exponential regime - negative side
-            itot = itot + 1
-            result(itot) = -one * (eta_slp)**(4 * one * (i) / (n - d + 2*n_remove))
-         end do
+      do i = 1, nexp ! Exponential regime - negative side
+         itot = itot + 1
+         result(itot) = -one * (eta_slp)**(one * (i) / nexp)
+      end do
 
-         do i = 1, (n - d + 2*n_remove)/4 ! Linear regime - negative side
-            itot = itot + 1
-            result(itot) = -eta_slp + 4 * (i) * eta_slp / (n - d + 2*n_remove)
-         end do
+      do i = 1, nlin ! Linear regime - negative side
+         itot = itot + 1
+         result(itot) = -eta_slp + (i) * eta_slp / nlin
+      end do
 
-         do i = (n - d + 2*n_remove)/4, 1, -1 ! Linear regime - positive side
-            itot = itot + 1
-            result(itot) = eta_slp - 4 * (i) * eta_slp / (n - d + 2*n_remove)
-         end do
+      do i = nlin, 1, -1 ! Linear regime - positive side
+         itot = itot + 1
+         result(itot) = eta_slp - (i) * eta_slp / nlin
+      end do
 
-         do i = (n - d + 2*n_remove)/4, 1, -1 ! Exponential regime - positive side
-            itot = itot + 1
-            result(itot) = one * (eta_slp)**(4 * one * (i) / (n - d + 2*n_remove))
-         end do
-
-      else
-
-         do i = 1, (n - d + 2*n_remove)/4 + 1 ! Exponential regime - negative side
-            itot = itot + 1
-            result(itot) = -one * (eta_slp)**((i * one) / ((n - d + 2*n_remove)/4 + one))
-         end do
-
-         do i = 1, (n - d + 2*n_remove)/4 ! Linear regime - negative side
-            itot = itot + 1
-            result(itot) = -eta_slp + (i) * eta_slp / ((n - d + 2*n_remove)/4)
-         end do
-
-         do i = (n - d + 2*n_remove)/4, 1, -1 ! Linear regime - positive side
-            itot = itot + 1
-            result(itot) = eta_slp - (i) * eta_slp / ((n - d + 2*n_remove)/4)
-         end do
-
-         do i = (n - d + 2*n_remove)/4 + 1, 1, -1 ! Exponential regime - positive side
-            itot = itot + 1
-            result(itot) = one * (eta_slp)**((i * one) / ((n - d + 2*n_remove)/4 + one))
-         end do
-
-      end if
+      do i = nexp, 1, -1 ! Exponential regime - positive side
+         itot = itot + 1
+         result(itot) = one * (eta_slp)**(one * (i) / nexp)
+      end do
 
       do i = 1, d
          itot = itot + 1
