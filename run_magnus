@@ -1,7 +1,23 @@
-python3 run_experiment.py with dithorium n=24 -c "dithorium test"
-python3 run_experiment.py with dithorium n=28 -c "dithorium test"
-python3 run_experiment.py with dithorium n=32 -c "dithorium test"
-python3 run_experiment.py with dithorium n=36 -c "dithorium test"
-python3 run_experiment.py with dithorium n=40 -c "dithorium test"
-python3 run_experiment.py with dithorium n=44 -c "dithorium test"
-python3 run_experiment.py with dithorium n=48 -c "dithorium test"
+nohup python3 run_experiment.py with n=10 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=12 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=14 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=16 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=18 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=20 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=22 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=24 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=26 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=28 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=30 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
+sleep .5
+nohup python3 run_experiment.py with n=32 d=8 ximax=30 eta_slp=0.82 xi_slp=7.0 -c "evol eta regime quart opti 1" &
