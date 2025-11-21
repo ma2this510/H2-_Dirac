@@ -131,18 +131,18 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, xi_slp,
     {Z1:.2f},                - Z1 : Z1 value
     {Z2:.2f},                - Z2 : Z2 value
     {m:.2f},                - m : electron mass
-    {c:.9f},       - c : speed of light
-    {R:.9f},                 - R : SEMI-interatomic distance
-    {ximax:.1f},                - ximax : Maximum xi value
-    {ximin:.1f},                 - ximin : Minimum xi value
-    {epsilon:.1e},                 - epsilon : to avoid singularities
-    {eta_slp:.1e},              - eta_slp : slope value to generate knots on eta
-    {xi_slp:.1e},              - xi_slp : slope value to generate knots on xi
+    {c:.15e},       - c : speed of light
+    {R:.15e},                 - R : SEMI-interatomic distance
+    {ximax:.15e},                - ximax : Maximum xi value
+    {ximin:.15e},                 - ximin : Minimum xi value
+    {epsilon:.15e},                 - epsilon : to avoid singularities
+    {eta_slp:.15e},              - eta_slp : slope value to generate knots on eta
+    {xi_slp:.15e},              - xi_slp : slope value to generate knots on xi
     {save_step},              - save_step : Save every matrices
     {result_folder},              - name of the temporary folder
     {tot_diag},              - tot_diag : Perform total diagonalization (true) or partial (false)
     {maxit},              - maxit : Maximum number of iterations for the eigensolver
-    {eig:.9f},              - eig : Initial eigenvalue guess
+    {eig:.15e},              - eig : Initial eigenvalue guess
     {compute_wf},              - compute_wf : Compute wavefunction (true/false)
 """)
 
