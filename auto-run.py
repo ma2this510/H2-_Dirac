@@ -7,10 +7,10 @@ import os
 mem = psutil.virtual_memory().percent
 cpu = psutil.cpu_percent(interval=1)
 
-# eta_slp_list = np.round(np.linspace(5, 9, 10), 2)
-# xi_slp_list = np.round(np.linspace(0.6, 0.95, 10), 2)
-eta_slp_list = 0.82
-xi_slp_list = np.round(np.linspace(7.6, 8.6, 40), 2)
+xi_slp_list = np.round(np.linspace(5,10.6, 18), 7)
+eta_slp_list = np.round(np.linspace(0.96, 0.99, 6), 7)
+#eta_slp_list = 0.88
+#xi_slp_list = np.round(np.linspace(7.6, 8.6, 40), 2)
 param_list = np.array(np.meshgrid(eta_slp_list, xi_slp_list)).T.reshape(-1, 2)
 
 if os.path.exists("current_run"):
@@ -31,11 +31,11 @@ with open("current_run", "w") as f:
         mem = psutil.virtual_memory().percent
         cpu = psutil.cpu_percent(interval=None)
 
-        if mem < 50 and cpu < 50 :
+        if mem < 60 and cpu < 60 :
             eta_slp = param_list[i_run, 0]
             xi_slp = param_list[i_run, 1]
 
-            command = f"nohup python3 run_experiment.py with n=24 d=10 ximax=30 eta_slp={eta_slp} xi_slp={xi_slp} -c 'test xi regime quarter 3' &"
+            command = f"nohup python3 run_experiment.py with n=30 d=10 ximax=30 eta_slp={eta_slp} xi_slp={xi_slp} -c 'analysis grid slp param' &"
 
             subprocess.run(command, shell=True)
             i_run += 1
@@ -47,6 +47,6 @@ with open("current_run", "w") as f:
                 time.sleep(120)
         else:
             print(f"System busy (Memory: {mem}%, CPU: {cpu}%), waiting to submit next job...")
-            time.sleep(400)
+            time.sleep(120)
 
-        time.sleep(20)
+        time.sleep(5)

@@ -1,0 +1,14 @@
+#!/bin/bash
+#SBATCH --job-name=h2p_nkb
+#SBATCH -t 3-00:00:00
+#SBATCH -p max_120_hours
+#SBATCH -n 2
+#SBATCH -w b52
+
+hostname
+echo $(date -u)
+branch=$(git rev-parse --abbrev-ref HEAD)
+echo "Current branch is: \"$branch\""
+export OMP_NUM_THREADS=$SLURM_TASKS_PER_NODE
+
+python3 run_experiment.py with n=42 d=10 ximax=30 eta_slp=0.88923 xi_slp=9.82222 -c "evol eta regime best"
