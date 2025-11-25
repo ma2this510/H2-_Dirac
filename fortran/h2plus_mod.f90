@@ -958,7 +958,7 @@ contains
       ! Generate the knot vectors for xi and eta
       allocate (knotxi_tmp(ntot+1), knotxi(ntot), knoteta(ntot))
 
-      knotxi_tmp = knot_xi(d, n+1, n_remove, ximin, ximax)
+      knotxi_tmp = knot_xi(d, n+1, n_remove, ximin, ximax, eta_slp)
       knotxi = knotxi_tmp(1:ntot) ! Remove the last knot to avoid singularities
       knoteta = knot_eta(d, n, n_remove, eta_slp)
 
