@@ -195,6 +195,8 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, xi_slp,
 
     last_eigenvalue = extract_last_eigenvalue(
         f"{result_folder}/eigenvalues.txt")
+    
+    print(f"Last eigenvalue extracted: {last_eigenvalue}")
 
     # try:
     #     os.remove(f"{result_folder}/input.txt")
