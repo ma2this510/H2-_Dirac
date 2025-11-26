@@ -2,8 +2,9 @@
 #SBATCH --job-name=h2p_nkb
 #SBATCH -t 3-00:00:00
 #SBATCH -p max_120_hours
-#SBATCH -n 64
-#SBATCH -w roland
+#SBATCH -n 24
+#SBATCH -w b52
+#SBATCH --mem-per-cpu 5Gb
 
 hostname
 echo $(date -u)

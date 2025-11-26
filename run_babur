@@ -11,4 +11,5 @@ branch=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch is: \"$branch\""
 export OMP_NUM_THREADS=$SLURM_TASKS_PER_NODE
 
-python3 run_experiment.py with n=20 d=10 ximax=30 eta_slp=0.88923 xi_slp=9.82222 -c "evol eta regime best"
+python3 run_experiment.py with n=36 d=10 ximax=30 eta_slp=0.8905556 xi_slp=9.3142857 -c "evol eta regime best 2"
+python3 run_experiment.py with n=38 d=10 ximax=30 eta_slp=0.86 xi_slp=8.79 -c "evol eta regime best 3"

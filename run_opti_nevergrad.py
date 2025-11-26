@@ -8,7 +8,9 @@ import threading
 
 worker_counter = 0
 counter_lock = threading.Lock()
-thread_num = 5
+
+thread_num = 24 
+max_run = 700
 
 print("Nevergrad version:", ng.__version__)
 print("Numpy version:", np.__version__)
@@ -17,7 +19,7 @@ def run_fun(xi_slp, eta_slp, xi_max):
 
     print(f"Running with parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max}")
 
-    command = f"python3 run_experiment.py with n=14 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c 'Nevergrad optimization test 3'"
+    command = f"python3 run_experiment.py with n=26 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c 'Nevergrad optimization test 6'"
 
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     print("Subprocess finished with return code:", result.returncode)
@@ -58,7 +60,7 @@ instrum = ng.p.Instrumentation(
     ng.p.Scalar(lower=1, upper=100)  # xi_max
 )
 
-optimizer = ng.optimizers.NGOpt(parametrization=instrum, budget=20, num_workers=thread_num)
+optimizer = ng.optimizers.registry["TwoPointsDE"](parametrization=instrum, budget=max_run, num_workers=thread_num)
 with futures.ThreadPoolExecutor(max_workers=optimizer.num_workers) as executor:
     recommendation = optimizer.minimize(delayed_run_fun, executor=executor, batch_mode=False)
 
