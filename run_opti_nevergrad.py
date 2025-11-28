@@ -36,13 +36,13 @@ def run_fun(xi_slp, eta_slp, xi_max):
     
     value = np.inf
     for line in output.splitlines():
-        if "Last eigenvalue extracted:" in line:
-            # Extract the float part
-            num = line.split(":")[1].strip()
-            try:
+        try:
+            if b"Last eigenvalue extracted:" in line:
+                # Extract the float part
+                num = line.split(":")[1].strip()
                 value = np.float64(num)
-            except Exception as err:
-                print(f"Unexpected error : {err}")
+        except Exception as err:
+            print(f"Unexpected error : {err}")
             break
 
     print(f"Evaluated parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max} => last_eigenvalue={value}")
