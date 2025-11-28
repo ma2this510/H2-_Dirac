@@ -76,7 +76,7 @@ optimizer = ng.optimizers.registry["NgIohTuned"](parametrization=instrum, budget
 load_dotenv()
 
 client = MongoClient(os.environ['URI'])
-db = client[os.environ['DB_NAME']]
+db = client[os.environ['DB']]
 runs_collection = db['runs']
 
 runs = list(runs_collection.find({"meta.comment": comment_id}, {"config": 1, "result": 1}))
@@ -108,10 +108,12 @@ else:
     for index, row in df_final_01.iterrows():
         xi_slp = row['conf_xi_slp']
         eta_slp = row['conf_eta_slp']
-        xi_max = row['conf_xi_max']
+        xi_max = row['conf_ximax']
         log_error = row['res_log_error']
 
-        candidate = optimizer.parametrization.new_child((xi_slp, eta_slp, xi_max))
+        #candidate = optimizer.parametrization.spawn_child(new_value={xi_slp, eta_slp, xi_max})
+        optimizer.suggest(xi_slp, eta_slp, xi_max)
+        candidate = optimizer.ask()
         optimizer.tell(candidate, log_error)
         print(f"Imported run {index}: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max}, log_error={log_error}")
 

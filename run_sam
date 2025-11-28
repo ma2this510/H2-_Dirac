@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=dkb_conv
+#SBATCH --job-name=h2+-nkb
 #SBATCH -t 3-00:00:00
 #SBATCH -p max_120_hours
 #SBATCH -n 24
@@ -11,4 +11,4 @@ branch=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch is: \"$branch\""
 export OMP_NUM_THREADS=$SLURM_TASKS_PER_NODE
 
-python3 slurm_run.py $SLURM_TASKS_PER_NODE
+python3 run_opti_nevergrad.py $SLURM_TASKS_PER_NODE
