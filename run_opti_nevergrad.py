@@ -10,7 +10,7 @@ worker_counter = 0
 counter_lock = threading.Lock()
 
 thread_num = 24 
-max_run = 700
+max_run = 400
 
 print("Nevergrad version:", ng.__version__)
 print("Numpy version:", np.__version__)
@@ -19,7 +19,7 @@ def run_fun(xi_slp, eta_slp, xi_max):
 
     print(f"Running with parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max}")
 
-    command = f"python3 run_experiment.py with n=26 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c 'Nevergrad optimization test 6'"
+    command = f"python3 run_experiment.py with n=20 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c 'Nevergrad optimization test 6'"
 
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     print("Subprocess finished with return code:", result.returncode)
@@ -33,7 +33,10 @@ def run_fun(xi_slp, eta_slp, xi_max):
         if "Last eigenvalue extracted:" in line:
             # Extract the float part
             num = line.split(":")[1].strip()
-            value = np.float64(num)
+            try:
+                value = np.float64(num)
+            except Exception as err:
+                print(f"Unexpected error : {err}")
             break
 
     print(f"Evaluated parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max} => last_eigenvalue={value}")
@@ -41,7 +44,7 @@ def run_fun(xi_slp, eta_slp, xi_max):
     e_ref = -1.10264158103257716412
     error = abs(value - e_ref)
     print(f"Error with respect to reference: {error}")
-    return error
+    return np.log10(error)
 
 def delayed_run_fun(xi_slp, eta_slp, xi_max):
     global worker_counter
@@ -60,7 +63,7 @@ instrum = ng.p.Instrumentation(
     ng.p.Scalar(lower=1, upper=100)  # xi_max
 )
 
-optimizer = ng.optimizers.registry["TwoPointsDE"](parametrization=instrum, budget=max_run, num_workers=thread_num)
+optimizer = ng.optimizers.registry["NgIohTuned"](parametrization=instrum, budget=max_run, num_workers=thread_num)
 with futures.ThreadPoolExecutor(max_workers=optimizer.num_workers) as executor:
     recommendation = optimizer.minimize(delayed_run_fun, executor=executor, batch_mode=False)
 
