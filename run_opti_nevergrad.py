@@ -27,7 +27,7 @@ def run_fun(xi_slp, eta_slp, xi_max):
 
     command = f"python3 run_experiment.py with n=18 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c '{comment_id}'"
 
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    result = subprocess.run(command, shell=True, capture_output=True)
     print("Subprocess finished with return code:", result.returncode)
     if result.returncode != 0:
         print("Subprocess error output:", result.stderr)
