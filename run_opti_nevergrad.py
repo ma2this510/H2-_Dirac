@@ -19,7 +19,7 @@ def run_fun(xi_slp, eta_slp, xi_max):
 
     print(f"Running with parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max}")
 
-    command = f"python3 run_experiment.py with n=20 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c 'Nevergrad optimization test 6'"
+    command = f"python3 run_experiment.py with n=18 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c 'Nevergrad optimization test n=18'"
 
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     print("Subprocess finished with return code:", result.returncode)
