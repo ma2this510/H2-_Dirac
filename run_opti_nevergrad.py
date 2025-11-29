@@ -39,7 +39,7 @@ def run_fun(xi_slp, eta_slp, xi_max):
         try:
             if b"Last eigenvalue extracted:" in line:
                 # Extract the float part
-                num = str(line).split(":")[1].strip()
+                num = str(line).split(":")[1].replace("'", "").strip()
                 value = np.float64(num)
         except Exception as err:
             print(f"Unexpected error : {err}")
