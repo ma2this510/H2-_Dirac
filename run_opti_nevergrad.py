@@ -14,9 +14,9 @@ worker_counter = 0
 counter_lock = threading.Lock()
 
 thread_num = 24 
-max_run = 460
+max_run = 300
 
-comment_id = "Nevergrad optimization test n=22"
+comment_id = "Nevergrad optimization test n=30"
 
 print("Nevergrad version:", ng.__version__)
 print("Numpy version:", np.__version__)
@@ -25,7 +25,7 @@ def run_fun(xi_slp, eta_slp, xi_max):
 
     print(f"Running with parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max}")
 
-    command = f"python3 run_experiment.py with n=22 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c '{comment_id}'"
+    command = f"python3 run_experiment.py with n=30 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c '{comment_id}'"
 
     result = subprocess.run(command, shell=True, capture_output=True)
     print("Subprocess finished with return code:", result.returncode)
