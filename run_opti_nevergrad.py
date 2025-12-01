@@ -13,12 +13,12 @@ import os
 worker_counter = 0
 counter_lock = threading.Lock()
 
-thread_num = 8 
+thread_num = 24 
 max_run = 300
 
 n = 12
 
-comment_id = f"Nevergrad optimization test n={n} CMA"
+comment_id = f"Nevergrad optimization test n={n} MultiCobyla"
 
 print("Nevergrad version:", ng.__version__)
 print("Numpy version:", np.__version__)
@@ -76,7 +76,7 @@ instrum = ng.p.Instrumentation(
     ng.p.Scalar(lower=0, upper=1)  # xi_max_norm
 )
 
-optimizer = ng.optimizers.CMA(parametrization=instrum, budget=max_run, num_workers=thread_num)
+optimizer = ng.optimizers.MultiCobyla(parametrization=instrum, budget=max_run, num_workers=thread_num)
 
 # -------------------------------------------------------------------------------------------------
 # Import already existing data from MongoDB
