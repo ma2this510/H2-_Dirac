@@ -29,7 +29,8 @@ def run_fun_optuna(trial):
     with counter_lock:
         worker_id = worker_counter
         worker_counter += 1
-    delay = (worker_id % thread_num) * 1.0  # 1 sec delay between workers
+    delay = (worker_id % thread_num) * 1.2  # 1.2 sec delay between workers
+    print(f"Worker {worker_id} starting after {delay:.1f}s delay")
     time.sleep(delay)
 
     # Scale parameters to their actual ranges
