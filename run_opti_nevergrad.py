@@ -13,19 +13,26 @@ import os
 worker_counter = 0
 counter_lock = threading.Lock()
 
-thread_num = 24 
-max_run = 600
+thread_num = 8 
+max_run = 300
 
-comment_id = "Nevergrad optimization test n=28"
+n = 12
+
+comment_id = f"Nevergrad optimization test n={n} CMA"
 
 print("Nevergrad version:", ng.__version__)
 print("Numpy version:", np.__version__)
 
-def run_fun(xi_slp, eta_slp, xi_max):
+def run_fun(xi_slp_norm, eta_slp_norm, xi_max_norm):
+
+    # Scale parameters to their actual ranges
+    xi_slp = xi_slp_norm * 10.0                  # 0 to 10
+    eta_slp = eta_slp_norm * 1.0              # 0 to 1 
+    xi_max = xi_max_norm * (100.0 - 1.0) + 1.0  # 1 to 100
 
     print(f"Running with parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max}")
 
-    command = f"python3 run_experiment.py with n=28 d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c '{comment_id}'"
+    command = f"python3 run_experiment.py with n={n} d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c '{comment_id}'"
 
     result = subprocess.run(command, shell=True, capture_output=True)
     print("Subprocess finished with return code:", result.returncode)
@@ -40,19 +47,19 @@ def run_fun(xi_slp, eta_slp, xi_max):
             if b"Last eigenvalue extracted:" in line:
                 # Extract the float part
                 num = str(line).split(":")[1].replace("'", "").strip()
-                value = np.float64(num)
+                value = np.float128(num)
         except Exception as err:
             print(f"Unexpected error : {err}")
             break
 
     print(f"Evaluated parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max} => last_eigenvalue={value}")
     
-    e_ref = -1.10264158103257716412
-    error = abs(value - e_ref)
+    e_ref = np.float128(-1.10264158103257716412)
+    error = np.abs(value - e_ref)
     print(f"Error with respect to reference: {error}")
     return np.log10(error)
 
-def delayed_run_fun(xi_slp, eta_slp, xi_max):
+def delayed_run_fun(xi_slp_norm, eta_slp_norm, xi_max_norm):
     global worker_counter
     with counter_lock:
         worker_id = worker_counter
@@ -61,15 +68,15 @@ def delayed_run_fun(xi_slp, eta_slp, xi_max):
     delay = (worker_id % thread_num) * 2.0  # 1 sec delay between workers
     time.sleep(delay)
     print(f"Worker {worker_id} starting after {delay:.1f}s delay")
-    return run_fun(xi_slp, eta_slp, xi_max)
+    return run_fun(xi_slp_norm, eta_slp_norm, xi_max_norm)
 
 instrum = ng.p.Instrumentation(
-    ng.p.Scalar(lower=0, upper=10),  # xi_slp
-    ng.p.Scalar(lower=0, upper=1),  # eta_slp
-    ng.p.Scalar(lower=1, upper=100)  # xi_max
+    ng.p.Scalar(lower=0, upper=1),  # xi_slp_norm
+    ng.p.Scalar(lower=0, upper=1),  # eta_slp_norm
+    ng.p.Scalar(lower=0, upper=1)  # xi_max_norm
 )
 
-optimizer = ng.optimizers.registry["NgIohTuned"](parametrization=instrum, budget=max_run, num_workers=thread_num)
+optimizer = ng.optimizers.CMA(parametrization=instrum, budget=max_run, num_workers=thread_num)
 
 # -------------------------------------------------------------------------------------------------
 # Import already existing data from MongoDB
@@ -111,8 +118,12 @@ else:
         xi_max = row['conf_ximax']
         log_error = row['res_log_error']
 
+        xi_slp_norm = xi_slp / 10.0
+        eta_slp_norm = eta_slp / 1.0
+        xi_max_norm = (xi_max - 1.0) / (100.0 - 1.0)
+
         #candidate = optimizer.parametrization.spawn_child(new_value={xi_slp, eta_slp, xi_max})
-        optimizer.suggest(xi_slp, eta_slp, xi_max)
+        optimizer.suggest(xi_slp_norm, eta_slp_norm, xi_max_norm)
         candidate = optimizer.ask()
         optimizer.tell(candidate, log_error)
         print(f"Imported run {index}: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max}, log_error={log_error}")
@@ -120,6 +131,6 @@ else:
 # -------------------------------------------------------------------------------------------------
 
 with futures.ThreadPoolExecutor(max_workers=optimizer.num_workers) as executor:
-    recommendation = optimizer.minimize(delayed_run_fun, executor=executor, batch_mode=False)
+    recommendation = optimizer.minimize(delayed_run_fun, executor=executor, batch_mode=True)
 
 print("Best parameters found: ", recommendation.value)
