@@ -12,7 +12,7 @@ import time
 
 thread_num = 24 
 trial_num = 300
-n = 12
+n = 30
 
 comment_id = f"Optuna optimization test n={n} default"
 
