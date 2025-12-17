@@ -1,0 +1,25 @@
+    8,                   - d : Order of the B-Spline (order Mathematica + 1)
+    26,                  - n : Number of used B-Splines
+    0,                   - n_remove : Number of B-Splines to remove at each end
+    6,                   - Ncircle : Number of circles in the angular grid
+    2,                   - Ntheta : Number of theta points in the angular grid
+    6,                  - Nexp : Number of exponential radial points
+    1.00,                - Z1 : Z1 value
+    1.00,                - Z2 : Z2 value
+    1.00,                - m : electron mass
+    137.035999679000014,       - c : speed of light
+    1.000000000000000,                 - R : SEMI-interatomic distance
+    0.950000000000000,              - rmax : Maximum r value
+    0.010000000000000,              - rmin : Minimum r value
+    5.000000000000000,               - rslp : slope value to generate knots on r
+    30.00000000000000,                - ximax : Maximum xi value
+    1.170000000000000,                 - ximin : Minimum xi value
+    0.000000000000000,                 - epsilon : to avoid singularities
+    0.700000000000000,              - eta_slp : slope value to generate knots on eta
+    7.000000000000000,              - xi_slp : slope value to generate knots on xi
+    .false.,              - save_step : Save every matrices
+    tmp_ex,              - name of the temporary folder
+    .false.,              - tot_diag : Perform total diagonalization (true) or partial (false)
+    10,              - maxit : Maximum number of iterations for the eigensolver
+    18777.762500000000728,              - eig : Initial eigenvalue guess
+    .false.,              - compute_wf : Compute wavefunction (true/false)
