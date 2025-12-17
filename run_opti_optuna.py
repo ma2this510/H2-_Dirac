@@ -14,7 +14,7 @@ thread_num = 24
 trial_num = 300
 n = 26
 
-comment_id = f"Optuna optimization test n={n} default"
+comment_id = f"Optuna optimization New Grid n={n} default parameters"
 
 worker_counter = 0
 counter_lock = threading.Lock()
