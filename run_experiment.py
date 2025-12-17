@@ -64,17 +64,23 @@ def push(message: str):
 def config():
     git_commit = get_git_commit()
     d = 8
-    n = 20
+    n = 26
     n_remove = 0
+    Ncircle = 6
+    Ntheta = 2
+    Nexp = 4
     Z1 = 1.0
     Z2 = 1.0
     m = 1.0
     c = 137.035999679
     R = 1.0
+    Rmax = 0.95
+    Rmin = 0.01
+    Rslp = 5.0
     ximax = 30.0
-    ximin = 1.0
+    ximin = 1.17
     epsilon = 0.0
-    eta_slp = 4.0e-2
+    eta_slp = 7.0e-1
     xi_slp = 7.0
     save_step = ".false."
     tot_diag = ".false."
@@ -112,7 +118,7 @@ def get_id(_run):
 
 
 @ex.automain
-def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, xi_slp, save_step, tot_diag, maxit, eig, compute_wf):
+def run(d, n, n_remove, Ncircle, Ntheta, Nexp, Z1, Z2, m, c, R, Rmax, Rmin, Rslp, ximax, ximin, epsilon, eta_slp, xi_slp, save_step, tot_diag, maxit, eig, compute_wf):
     # Create temporary folder for result
     result_folder = f"tmp_{get_id()}"
     try:
@@ -128,11 +134,17 @@ def run(d, n, n_remove, Z1, Z2, m, c, R, ximax, ximin, epsilon, eta_slp, xi_slp,
     {d},                   - d : Order of the B-Spline (order Mathematica + 1)
     {n},                  - n : Number of used B-Splines
     {n_remove},                   - n_remove : Number of B-Splines to remove at each end
+    {Ncircle},              - Ncircle : Number of points on the circular regime
+    {Ntheta},              - Ntheta : Number of points on a circle for the circular regime
+    {Nexp},              - Nexp : Number of points on the exponential regime
     {Z1:.2f},                - Z1 : Z1 value
     {Z2:.2f},                - Z2 : Z2 value
     {m:.2f},                - m : electron mass
     {c:.15f},       - c : speed of light
     {R:.15f},                 - R : SEMI-interatomic distance
+    {Rmax:.15f},                 - Rmax : Maximum r value
+    {Rmin:.15f},                 - Rmin : Minimum r value
+    {Rslp:.15f},                 - Rslp : slope value to generate r values
     {ximax:.15f},                - ximax : Maximum xi value
     {ximin:.15f},                 - ximin : Minimum xi value
     {epsilon:.15f},                 - epsilon : to avoid singularities

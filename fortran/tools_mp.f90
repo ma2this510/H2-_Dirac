@@ -10,6 +10,7 @@ module tools_mp
    public :: multiply_elem
    public :: indexToPair
    public :: linespace
+   public :: sort_mp_real
 
    interface write_lists
       module procedure write_lists_real
@@ -183,5 +184,29 @@ contains
       end do
 
    end subroutine linespace
+
+   subroutine sort_mp_real(arr)
+      !> @brief Sort an array of mp_real in ascending order using bubble sort
+      !> @param arr : mp_real(:) : the array to be sorted
+      implicit none
+      type(mp_real), dimension(:), intent(inout) :: arr
+
+      integer :: i, j
+      type(mp_real) :: tmp
+      integer :: n
+
+      n = size(arr)
+
+      do i = 1, n - 1
+         do j = 1, n - i
+            if (arr(j) > arr(j + 1)) then
+               tmp = arr(j)
+               arr(j) = arr(j + 1)
+               arr(j + 1) = tmp
+            end if
+         end do
+      end do
+
+   end subroutine sort_mp_real
 
 end module tools_mp

@@ -1,5 +1,6 @@
 module bspline_gen
    use mpmodule
+   use tools_mp
    implicit none
 
    type(mp_real), save :: one, zero
@@ -10,6 +11,7 @@ module bspline_gen
    public :: print_table
    public :: init_bspine
    public :: knot_xi, knot_eta, knot_eta_lin
+   public :: gen_new_knots
 
 contains
 
@@ -348,4 +350,166 @@ contains
       end do
 
    end function knot_eta_lin
+
+   subroutine gen_new_knots(d, n, n_remove, rmin, rmax, rslp, Ncircle, Ntheta, ximin, ximax, xislp, eta_cut, nexp, knot_xi_vec_tmp, knot_xi_vec, knot_eta_vec)
+      !> @brief This subroutine generates the knot vectors for xi and eta using two different regimes (concentric crcle and exponential)
+      !> @param d : integer : the degree of the B-spline
+      !> @param n : integer : the number of usable B-splines
+      !> @param n_remove : integer : the number of knots to remove from each end
+      !> @param rmin : mp_real : the minimum radius for the circular regime
+      !> @param rmax : mp_real : the maximum radius for the circular regime
+      !> @param rslp : mp_real : the parameter for the generation of the radius in the circular regime
+      !> @param Ncircle : integer : the number of usable B-splines in the circular regime PER NUCLEUS
+      !> @param Ntheta : integer : the number of knots on each circle
+      !> @param ximin : mp_real : the minimum position of the B-spline on xi-axis
+      !> @param ximax : mp_real : the maximum position of the B-spline on xi-axis
+      !> @param xislp : mp_real : the parameter for the generation of the knot vector on xi
+      !> @param eta_cut : mp_real : the parameter for the generation of the knot vector on eta
+      !> @param nexp : integer : number of exponential points in eta direction
+      !> @param knot_xi_vec : mp_real(:) : the knot vector of the B-spline on xi (output)
+      !> @param knot_eta_vec : mp_real(:) : the knot vector of the B-spline on eta (output)
+      integer, intent(in) :: d, n, n_remove, Ncircle, Ntheta, nexp
+      type(mp_real), intent(in) :: rmin, rmax, rslp, ximin, ximax, xislp, eta_cut
+      type(mp_real), dimension(:), intent(inout) :: knot_xi_vec_tmp, knot_xi_vec, knot_eta_vec
+
+      type(mp_real) :: zero, one, theta
+      integer :: Nnormal, Nr, i, j
+      type(mp_real), dimension(:), allocatable :: rlist, thetalist, x_pts, z_pts_minus, z_pts_plus, xi_circle, eta_circle_minus, eta_circle_plus, xi_normal, eta_normal, xi_tot, eta_tot
+
+      zero = '0.d0'
+      one = '1.d0'
+
+      print *, "Generating new knot vectors..."
+      Nr = Ncircle / Ntheta ! Number of radius points
+      Nnormal = n - d + 2 * n_remove - 2*Ncircle + 2 ! Number of points in normal regime
+      print *, "Number of normal points: ", Nnormal
+      print *, "Number of circles: ", Nr
+
+      ! Generate radius list
+      allocate (rlist(Nr))
+      do i = 1, Nr
+         rlist(i) = rmin + (rmax - rmin) * (exp(rslp * (i - 1) / (Nr - 1)) - one) / (exp(rslp) - one)
+      end do
+
+      ! Generate theta list
+      print *, "Generating theta points..."
+      allocate (thetalist(Ntheta))
+      do j = 1, Ntheta
+         thetalist(j) = mppi() * j / (Ntheta + 1)
+      end do
+
+      ! Generate (x,z) points from (r,theta)
+      print *, "Generating circle points..."
+      allocate (x_pts(Ncircle), z_pts_plus(Ncircle), z_pts_minus(Ncircle))
+      do i = 1, Nr
+         do j = 1, Ntheta
+            if (i==1) then
+               theta = mppi() * (j - 1) / (Ntheta - 1)
+            else 
+               theta = thetalist(j)
+            end if
+            x_pts( (i - 1)*Ntheta + j ) = rlist(i) * sin(theta)
+            z_pts_plus( (i - 1)*Ntheta + j ) = one + rlist(i) * cos(theta)
+            z_pts_minus( (i - 1)*Ntheta + j ) = -one + rlist(i) * cos(theta)
+         end do
+      end do
+
+      ! Generate circle knot vector in prolate
+      print *, "Generating circle knot vectors..."
+      allocate (xi_circle(Ncircle), eta_circle_minus(Ncircle), eta_circle_plus(Ncircle))
+      do i = 1, Ncircle
+         xi_circle(i) = (sqrt( x_pts(i)**2 + (z_pts_minus(i) + one)**2 ) + sqrt( x_pts(i)**2 + (z_pts_minus(i) - one)**2 )) / (2*one)
+         eta_circle_minus(i) = (sqrt( x_pts(i)**2 + (z_pts_minus(i) + one)**2 ) - sqrt( x_pts(i)**2 + (z_pts_minus(i) - one)**2 )) / (2*one)
+         xi_circle(i) = (sqrt( x_pts(i)**2 + (z_pts_plus(i) + one)**2 ) + sqrt( x_pts(i)**2 + (z_pts_plus(i) - one)**2 )) / (2*one)
+         eta_circle_plus(i) = (sqrt( x_pts(i)**2 + (z_pts_plus(i) + one)**2 ) - sqrt( x_pts(i)**2 + (z_pts_plus(i) - one)**2 )) / (2*one)
+      end do
+
+      ! Generate normal knot vector in prolate
+      print *, "Generating normal knot vectors..."
+      allocate (xi_normal(Nnormal + Ncircle + 1), eta_normal(Nnormal))
+      do i = 1, Nnormal + Ncircle + 1
+         xi_normal(i) = ximin + (ximax - ximin) * (exp(xislp * (i - one) / (Nnormal + Ncircle)) - one) / (exp(xislp) - one)
+      end do
+
+      do i = 1, Nnormal
+         if (i <= nexp / 2) then
+            eta_normal(i) = -one * (eta_cut)**(one * (i) / (nexp / 2)) ! i from 1 to nexp/2
+         else if (i > Nnormal - nexp / 2) then
+            eta_normal(i) = one * (eta_cut)**(one * (Nnormal - i + one) / (nexp / 2)) ! i from Nnormal - nexp/2 + 1 to Nnormal
+         else
+            eta_normal(i) = -eta_cut + (2*eta_cut) * (i - nexp/2) / (Nnormal - 2*(nexp/2) + one) ! i from nexp/2 + 1 to Nnormal - nexp/2
+         end if
+      end do
+      
+      ! Combine circle and normal knot vectors
+      print *, "Combining knot vectors..."
+      allocate (xi_tot(2*Ncircle + Nnormal + 1))
+      allocate (eta_tot(2*Ncircle + Nnormal))
+
+      do i = 1, Ncircle
+         xi_tot(i) = xi_circle(i)
+         
+         eta_tot(i) = eta_circle_minus(i)
+         eta_tot(i + Ncircle) = eta_circle_plus(i)
+      end do
+
+      do i = 1, Nnormal + Ncircle + 1
+         xi_tot(i + Ncircle) = xi_normal(i)
+      end do
+
+      do i = 1, Nnormal
+         eta_tot(i + 2*Ncircle) = eta_normal(i)
+      end do
+
+      ! Sort the combined knot vectors
+      print *, "Sorting knot vectors..."
+      call sort_mp_real(xi_tot)
+      call sort_mp_real(eta_tot)
+
+
+      ! Finally fill the output knot vectors
+      print *, "Filling output knot vectors..."
+      knot_xi_vec_tmp = zero
+      knot_xi_vec = zero
+      knot_eta_vec = zero
+
+      ! First d knots
+      do i = 1, d - 1
+         knot_xi_vec_tmp(i) = xi_tot(1)
+         knot_xi_vec(i) = xi_tot(1)
+         knot_eta_vec(i) = eta_tot(1)
+      end do
+
+      ! Middle knots
+      do i = 1, n - d + 2*n_remove + 2
+         knot_xi_vec_tmp(i + d - 1) = xi_tot(i)
+         knot_xi_vec(i + d - 1) = xi_tot(i)
+         knot_eta_vec(i + d - 1) = eta_tot(i)
+      end do
+
+      ! Last d knots
+      do i = 1, d - 1
+         knot_xi_vec_tmp(i + n + n_remove + 1) = xi_tot(size(xi_tot))
+         knot_xi_vec(i + n + n_remove + 1) = xi_tot(size(xi_tot))
+         knot_eta_vec(i + n + n_remove + 1) = eta_tot(size(eta_tot))
+      end do
+
+      knot_xi_vec_tmp(size(knot_xi_vec_tmp)) = xi_tot(size(xi_tot))
+
+      ! Save knot vectors to files
+      open(unit=10, file = 'tmp_ex/knot_xi.txt', status='replace', action='write')
+      do i = 1, size(knot_xi_vec)
+         call mpwrite(10, 35, 15, knot_xi_vec(i))
+      end do
+      close(10)
+
+      open(unit=11, file = 'tmp_ex/knot_eta.txt', status='replace', action='write')
+      do i = 1, size(knot_eta_vec)
+         call mpwrite(11, 35, 15, knot_eta_vec(i))
+      end do
+      close(11)
+
+      print *, "Knot vectors saved to knot_xi.txt and knot_eta.txt"
+
+   end subroutine gen_new_knots
 end module bspline_gen

@@ -827,21 +827,27 @@ contains
 
     end subroutine int_S22one
 
-    subroutine init_h2plus_sep(d, n, n_remove, Z1, Z2, m, C, R, ximax, ximin, jz2, epsilon, eta_slp, xi_slp, save_step, folder_name, tot_diag, maxit, eig, compute_wf)
+    subroutine init_h2plus_sep(d, n, n_remove, Ncircle, Ntheta, Nexp, Z1, Z2, m, C, R, rmax, rmin, rslp, ximax, ximin, jz2, epsilon, eta_cut, xi_slp, save_step, folder_name, tot_diag, maxit, eig, compute_wf)
         !> @brief This subroutine initializes the B-spline coefficients for the H2+ molecule.
         !> @param d : integer : the degree of the B-spline
         !> @param n : integer : the number of usable B-splines
         !> @param n_remove : integer : the number of knots to remove from each end
+        !> @param Ncircle : integer : the number of points for the circular regime
+        !> @param Ntheta : integer : the number of points for each circle
+        !> @param Nexp : integer : the number of points for the exponential regime
         !> @param Z1 : real : the number of protons for the first atom
         !> @param Z2 : real : the number of protons for the second atom
         !> @param m : real : the mass of the electron
         !> @param C : real : the speed of light
         !> @param R : real : the distance between the two nuclei
+        !> @param rmax : real : the maximum radius for the circular regime
+        !> @param rmin : real : the minimum radius for the circular regime
+        !> @param rslp : real : the parameter for the generation of the different radius
         !> @param ximax : real : the maximum position of the B-spline on xi-axis
         !> @param ximin : real : the minimum position of the B-spline on xi-axis
         !> @param jz2 : real : the quantum number (2*jz)
         !> @param epsilon : real : the machine epsilon
-        !> @param eta_slp : real : the parameter for the generation of the knot vector on eta
+        !> @param eta_cut : real : the parameter for the generation of the knot vector on eta
         !> @param xi_slp : real : the parameter for the generation of the knot vector on xi
         !> @param save_step : boolean : whether to save matrices to a file
         !> @param folder_name : string(20) : name of temporary folder
@@ -849,9 +855,9 @@ contains
         !> @param maxit : integer : maximum number of iterations for the eigensolver (only for tot_diag = .false.)
         !> @param eig : real : first guess eigenvalue for the eigensolver (only for tot_diag = .false.)
         !> @param compute_wf : boolean : whether to compute wavefunctions after diagonalization (for now, only for tot_diag = .false.)
-        type(mp_real), intent(in) :: Z1, Z2, m, C, R, ximax, ximin, epsilon, eta_slp, xi_slp
+        type(mp_real), intent(in) :: Z1, Z2, m, C, R, rmax, rmin, rslp, ximax, ximin, epsilon, eta_cut, xi_slp
         type(mp_real), intent(inout) :: eig
-        integer, intent(in) :: d, n, n_remove, jz2, maxit
+        integer, intent(in) :: d, n, n_remove, jz2, maxit, Ncircle, Ntheta, Nexp
         logical, intent(in) :: save_step, compute_wf, tot_diag
         character(len=20), intent(in) :: folder_name
 
@@ -877,9 +883,11 @@ contains
         ! Generate the knot vectors for xi and eta
         allocate (knotxi_tmp(ntot + 1), knotxi(ntot), knoteta(ntot))
 
-        knotxi_tmp = knot_xi(d, n + 1, n_remove, ximin, ximax, xi_slp)
-        knotxi = knotxi_tmp(1:ntot) ! Remove the last knot to avoid singularities
-        knoteta = knot_eta(d, n, n_remove, eta_slp)
+        call gen_new_knots(d, n, n_remove, rmin, rmax, rslp, Ncircle, Ntheta, ximin, ximax, xi_slp, eta_cut, Nexp, knotxi_tmp, knotxi, knoteta)
+
+        ! knotxi_tmp = knot_xi(d, n + 1, n_remove, ximin, ximax, xi_slp)
+        ! knotxi = knotxi_tmp(1:ntot) ! Remove the last knot to avoid singularities
+        ! knoteta = knot_eta(d, n, n_remove, eta_slp)
 
         tm1 = second()
         print *, "Time taken to generate knots: ", tm1 - tm0, " seconds"
@@ -1236,7 +1244,7 @@ contains
         write (1, '(a)') "Mass of the electron: "
         call mpwrite(1, 35, 15, m)
         write (1, '(a)') "Slope for eta: "
-        call mpwrite(1, 35, 15, eta_slp)
+        call mpwrite(1, 35, 15, eta_cut)
         write (1, '(a)') "Non-adjusted Xi knot vector: "
         call write_lists(knotxi, 1, 35, 15)
         write (1, '(a)') "Non-adjusted Eta knot vector: "
@@ -1286,7 +1294,7 @@ contains
         write (12, '(a)') "Mass of the electron: "
         call mpwrite(12, 35, 15, m)
         write (12, '(a)') "Slope for eta: "
-        call mpwrite(12, 35, 15, eta_slp)
+        call mpwrite(12, 35, 15, eta_cut)
         write (12, '(a)') "Internuclear distance: "
         call mpwrite(12, 35, 15, R)
         write (12, '(a)') "Non-adjusted Xi knot vector: "

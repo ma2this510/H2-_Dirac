@@ -12,7 +12,7 @@ import time
 
 thread_num = 24 
 trial_num = 300
-n = 12
+n = 26
 
 comment_id = f"Optuna optimization test n={n} default"
 
@@ -20,9 +20,13 @@ worker_counter = 0
 counter_lock = threading.Lock()
 
 def run_fun_optuna(trial):
-    xi_slp_norm = trial.suggest_float("xi_slp_norm", 0.0, 1.0)
-    eta_slp_norm = trial.suggest_float("eta_slp_norm", 0.0, 1.0)
+    r_max_norm = trial.suggest_float("R_max_norm", 0.0, 1.0)
+    r_min_norm = trial.suggest_float("R_min_norm", 0.0, 1.0)
+    r_slp_norm = trial.suggest_float("R_slp_norm", 0.0, 1.0)
+    xi_min_norm = trial.suggest_float("xi_min_norm", 0.0, 1.0)
     xi_max_norm = trial.suggest_float("xi_max_norm", 0.0, 1.0)
+    xi_slp_norm = trial.suggest_float("xi_slp_norm", 0.0, 1.0)
+    eta_slp_norm = trial.suggest_float("eta_slp_norm", 0.0, 1.0)    
 
     # Wait to prevent main.out being overloaded
     global worker_counter
@@ -34,13 +38,17 @@ def run_fun_optuna(trial):
     time.sleep(delay)
 
     # Scale parameters to their actual ranges
+    r_max = r_max_norm * (3.0 - 0.1) + 0.1    # 0.1 to 3.0
+    r_min = 1e-6* 10**(r_min_norm * 5.0)      # 1e-6 to .1
+    r_slp = r_slp_norm * 10.0                # 0 to 10
+    xi_min = xi_min_norm * 5.0 + 1.0          # 1 to 6
+    xi_max = xi_max_norm * (100.0 - 1.0) + 1.0  # 1 to 100
     xi_slp = xi_slp_norm * 10.0                  # 0 to 10
     eta_slp = eta_slp_norm * 1.0              # 0 to 1 
-    xi_max = xi_max_norm * (100.0 - 1.0) + 1.0  # 1 to 100
 
     print(f"Running with parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max}")
 
-    command = f"python3 run_experiment.py with n={n} d=10 ximax={xi_max} eta_slp={eta_slp} xi_slp={xi_slp} -c '{comment_id}'"
+    command = f"python3 run_experiment.py with n={n} d=10 Rmax={r_max} Rmin={r_min} Rslp={r_slp} ximin={xi_min} ximax={xi_max} xi_slp={xi_slp} eta_slp={eta_slp} -c '{comment_id}'"
 
     result = subprocess.run(command, shell=True, capture_output=True)
     print("Subprocess finished with return code:", result.returncode)
