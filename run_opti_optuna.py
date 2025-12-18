@@ -13,8 +13,12 @@ import time
 thread_num = 24 
 trial_num = 300
 n = 26
+d = 6
+Ncircle = 9
+Ntheta = 3
+Nexp = 2
 
-comment_id = f"Optuna optimization New Grid n={n} default parameters"
+comment_id = f"Optuna optimization New Grid n={n} d={d} Ncircle={Ncircle} Ntheta={Ntheta} Nexp={Nexp}"
 
 worker_counter = 0
 counter_lock = threading.Lock()
@@ -48,7 +52,7 @@ def run_fun_optuna(trial):
 
     print(f"Running with parameters: xi_slp={xi_slp}, eta_slp={eta_slp}, xi_max={xi_max}")
 
-    command = f"python3 run_experiment.py with n={n} d=10 Rmax={r_max} Rmin={r_min} Rslp={r_slp} ximin={xi_min} ximax={xi_max} xi_slp={xi_slp} eta_slp={eta_slp} -c '{comment_id}'"
+    command = f"python3 run_experiment.py with n={n} d={d} Ncircle={Ncircle} Ntheta={Ntheta} Nexp={Nexp} Rmax={r_max} Rmin={r_min} Rslp={r_slp} ximin={xi_min} ximax={xi_max} xi_slp={xi_slp} eta_slp={eta_slp} -c '{comment_id}'"
 
     result = subprocess.run(command, shell=True, capture_output=True)
     print("Subprocess finished with return code:", result.returncode)

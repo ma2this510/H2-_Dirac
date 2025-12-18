@@ -497,19 +497,19 @@ contains
       knot_xi_vec_tmp(size(knot_xi_vec_tmp)) = xi_tot(size(xi_tot))
 
       ! Save knot vectors to files
-      open(unit=10, file = 'tmp_ex/knot_xi.txt', status='replace', action='write')
-      do i = 1, size(knot_xi_vec)
-         call mpwrite(10, 35, 15, knot_xi_vec(i))
-      end do
-      close(10)
+      !open(unit=10, file = 'tmp_ex/knot_xi.txt', status='replace', action='write')
+      !do i = 1, size(knot_xi_vec)
+      !   call mpwrite(10, 35, 15, knot_xi_vec(i))
+      !end do
+      !close(10)
 
-      open(unit=11, file = 'tmp_ex/knot_eta.txt', status='replace', action='write')
-      do i = 1, size(knot_eta_vec)
-         call mpwrite(11, 35, 15, knot_eta_vec(i))
-      end do
-      close(11)
+      !open(unit=11, file = 'tmp_ex/knot_eta.txt', status='replace', action='write')
+      !do i = 1, size(knot_eta_vec)
+      !   call mpwrite(11, 35, 15, knot_eta_vec(i))
+      !end do
+      !close(11)
 
-      print *, "Knot vectors saved to knot_xi.txt and knot_eta.txt"
+      !print *, "Knot vectors saved to knot_xi.txt and knot_eta.txt"
 
    end subroutine gen_new_knots
 end module bspline_gen
