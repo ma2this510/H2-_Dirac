@@ -86,7 +86,11 @@ study.optimize(run_fun_optuna, n_trials=trial_num, n_jobs=thread_num)
 best_params = study.best_params
 print("Best parameters found (norm):", best_params)
 # Scale back to actual ranges
+best_r_max = best_params["R_max_norm"] * (3.0 - 0.1) + 0.1
+best_r_min = 1e-6 * 10**(best_params["R_min_norm"] * 5.0)
+best_r_slp = best_params["R_slp_norm"] * 10.0
+best_xi_min = best_params["xi_min_norm"] * 5.0 + 1.0
 best_xi_slp = best_params["xi_slp_norm"] * 10.0
 best_eta_slp = best_params["eta_slp_norm"] * 1.0
 best_xi_max = best_params["xi_max_norm"] * (100.0 - 1.0) + 1.0
-print(f"Best parameters found (actual): xi_slp={best_xi_slp}, eta_slp={best_eta_slp}, xi_max={best_xi_max}")
+print(f"Best parameters found (actual): Rmax={best_r_max}, Rmin={best_r_min}, Rslp={best_r_slp}, ximin={best_xi_min}, xi_max={best_xi_max}, xi_slp={best_xi_slp}, eta_slp={best_eta_slp}")  
